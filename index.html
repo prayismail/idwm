@@ -86,23 +86,24 @@ var lulcLegend = L.control({ position: "topright" });
 
 lulcLegend.onAdd = function (map) {
     var div = L.DomUtil.create("div", "info legend");
-    div.innerHTML += "<strong>Kategori Tutupan Lahan</strong><br>";
+    div.innerHTML += "<strong>Tutupan Lahan</strong><br>";
     var lulcColors = {
-        "#006400": "Hutan",
-        "#ffbb22": "Lahan Pertanian",
-        "#ffff4c": "Rumput/Semak",
-        "#f096ff": "Lahan Terbangun",
-        "#fa0000": "Tanah Kosong",
-        "#b4b4b4": "Area Kering/Gurun",
+        "#006400": "Vegetasi",
+        "#ffbb22": "Semak Belukar",
+        "#ffff4c": "Padang Rumput",
+        "#f096ff": "Lahan Pertanian",
+        "#fa0000": "Lahan Terbangun",
+        "#b4b4b4": "Tanah Terbuka",
         "#f0f0f0": "Salju/Es",
-        "#0064c8": "Air",
+        "#0064c8": "Tubuh Air",
         "#0096a0": "Lahan Basah",
-        "#00cf75": "Mangrove"
+        "#00cf75": "Mangrove",
+        "#f7f5bc": "Lumut"
     };
 
     for (var color in lulcColors) {
         div.innerHTML +=
-            '<i style="background:' + color + '; width: 15px; height: 15px; display: inline-block;"></i> ' +
+            '<i style="background:white' + color + '; width: 15px; height: 15px; display: inline-block;"></i> ' +
             lulcColors[color] + "<br>";
     }
 
