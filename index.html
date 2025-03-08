@@ -166,6 +166,12 @@ L.control.layers(baseMaps, overlayMaps, { collapsed: true, position: 'bottomleft
 
     radarLayer.addTo(map);
 
+function preloadImage(url, callback) {
+    let img = new Image();
+    img.onload = callback;
+    img.src = url;
+}
+        
     function updateRadar(timeOffset = 0) {
         fetch('https://api.rainviewer.com/public/weather-maps.json')
             .then(response => response.json())
