@@ -24,14 +24,13 @@
     width: 100vw;  /* Lebar penuh sesuai viewport */
     height: 100vh; /* Tinggi penuh sesuai viewport */
     position: absolute;
-    bottom: 20px;
+    bottom: 0;
     left: 0;
     z-index: 0; /* Pastikan map ada di layer bawah */
 }
  @media screen and (max-width: 768px) {
     #map {
-        height: 90vh;
-        bottom: 20px; /* Geser lebih naik di layar kecil */
+        height: 90vh; /* Geser lebih naik di layar kecil */
        
     }
 }
@@ -50,7 +49,7 @@
 }
 @media screen and (max-width: 768px) {
     #legend {
-        bottom: 40px; /* Geser lebih naik di layar kecil */
+        bottom:100px; /* Geser lebih naik di layar kecil */
         right: 10px;
     }
 }
