@@ -22,15 +22,23 @@
         }
         #map {
     width: 100vw;  /* Lebar penuh sesuai viewport */
-    height: 95vh; /* Tinggi penuh sesuai viewport */
+    height: 100vh; /* Tinggi penuh sesuai viewport */
     position: absolute;
     bottom: 20px;
     left: 0;
     z-index: 0; /* Pastikan map ada di layer bawah */
 }
-        #legend {
+ @media screen and (max-width: 768px) {
+    #map {
+        height: 90vh;
+        bottom: 20px; /* Geser lebih naik di layar kecil */
+       
+    }
+}
+        
+       #legend {
     position: absolute;
-    bottom: 60px;  /* Tetap di kanan bawah */
+    bottom: 40px;  /* Tetap di kanan bawah */
     right: 10px;
     background: rgba(255, 255, 255, 0.6); /* Semi-transparan agar floating */
     padding: 10px;
@@ -42,7 +50,7 @@
 }
 @media screen and (max-width: 768px) {
     #legend {
-        bottom: 20px; /* Geser lebih naik di layar kecil */
+        bottom: 40px; /* Geser lebih naik di layar kecil */
         right: 10px;
     }
 }
