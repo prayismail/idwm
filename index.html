@@ -92,20 +92,18 @@
 <body>
     <div id="time-indicator">Waktu: Memuat...</div>
     <div id="map"></div>
-    <div id="legend">
-        <strong>Interpretasi Citra Radar</strong><br><br>
+   // <div id="legend">
+     //   <strong>Interpretasi Citra Radar</strong><br><br>
         
-        <div style="background-color: #cec087; width: 20px; height: 10px; display: inline-block;"></div> Berawan<br>
-        <div style="background-color: #17acdb; width: 20px; height: 10px; display: inline-block;"></div> Hujan Ringan<br>
-        <div style="background-color: #FFFF00; width: 20px; height: 10px; display: inline-block;"></div> Hujan Sedang<br>
-        <div style="background-color: #FFA500; width: 20px; height: 10px; display: inline-block;"></div> Hujan Lebat<br>
-        <div style="background-color: #FF0000; width: 20px; height: 10px; display: inline-block;"></div> Hujan Sangat Lebat<br>
-        <div style="background-color: #eb83f4; width: 20px; height: 10px; display: inline-block;"></div> Hujan Ekstrem
-    </div>
+       // <div style="background-color: #cec087; width: 20px; height: 10px; display: inline-block;"></div> Berawan<br>
+       // <div style="background-color: #17acdb; width: 20px; height: 10px; display: inline-block;"></div> Hujan Ringan<br>
+       // <div style="background-color: #FFFF00; width: 20px; height: 10px; display: inline-block;"></div> Hujan Sedang<br>
+       // <div style="background-color: #FFA500; width: 20px; height: 10px; display: inline-block;"></div> Hujan Lebat<br>
+      //  <div style="background-color: #FF0000; width: 20px; height: 10px; display: inline-block;"></div> Hujan Sangat Lebat<br>
+      //  <div style="background-color: #eb83f4; width: 20px; height: 10px; display: inline-block;"></div> Hujan Ekstrem
+    // </div>
 
 
-
-    
     <script>
 
     var map = L.map('map', {
@@ -115,30 +113,37 @@
     });
 
     L.control.attribution({ position: 'bottomright' }).addAttribution('&copy; Proposed by Prayoga Ismail').addTo(map);
-// Fungsi untuk menambahkan legenda stretch
-var legend = L.control({ position: "bottomright" });
 
-legend.onAdd = function (map) {
+    var legend = L.control({ position: "bottomright" });
+
+legend.onAdd = function () {
     var div = L.DomUtil.create("div", "info legend"),
-        categories = [
-            { label: "Hujan Ringan", color: "#69B2FF" },
-            { label: "Hujan Sedang", color: "#FFFF00" },
-            { label: "Hujan Lebat", color: "#FF9900" },
-            { label: "Hujan Sangat Lebat", color: "#FF0000" },
-            { label: "Hujan Ekstrem", color: "#CC00CC" }
+        colors = [
+            "#ffffff", "#e0e0ff", "#c0c0ff", "#a0a0ff", "#8080ff", "#6060ff", 
+            "#4040ff", "#2020ff", "#0000ff", "#00e000", "#00c000", "#00a000", 
+            "#fffa00", "#ffaa00", "#ff5500", "#ff0000"
+        ],
+        labels = [
+            "No Data", "0-5 dBZ", "5-10 dBZ", "10-15 dBZ", "15-20 dBZ", "20-25 dBZ", 
+            "25-30 dBZ", "30-35 dBZ", "35-40 dBZ", "40-45 dBZ", "45-50 dBZ", "50-55 dBZ", 
+            "55-60 dBZ", "60-65 dBZ", "65-70 dBZ", "70+ dBZ"
         ];
 
-    // Buat gradient untuk stretch
     div.innerHTML += '<div class="legend-title">Interpretasi Citra Radar</div>';
-    div.innerHTML += '<div class="legend-scale"><span class="legend-gradient"></span></div>';
+    div.innerHTML += '<div class="legend-scale">';
     
-    // Tambahkan label kategori
-    div.innerHTML += '<div class="legend-labels">';
-    categories.forEach(cat => {
-        div.innerHTML += `<div class="legend-label"><span style="background:${cat.color}"></span>${cat.label}</div>`;
+    // Tambahkan gradient bar
+    div.innerHTML += '<div class="legend-gradient" style="width: 100%; height: 20px; background: linear-gradient(to right, ' + colors.join(', ') + ');"></div>';
+    
+    div.innerHTML += '</div>';
+    
+    // Tambahkan label angka sesuai skala warna
+    div.innerHTML += '<div class="legend-labels" style="display: flex; justify-content: space-between;">';
+    labels.forEach(label => {
+        div.innerHTML += `<span style="font-size: 12px;">${label}</span>`;
     });
     div.innerHTML += '</div>';
-
+    
     return div;
 };
 
