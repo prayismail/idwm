@@ -108,18 +108,6 @@ lulcLegend.onAdd = function (map) {
 
     return div;
 };
-    var legendDiv = document.getElementById("lulcLegend");
-legendDiv.style.position = "absolute";
-legendDiv.style.top = "50%";
-legendDiv.style.right = "10px";
-legendDiv.style.transform = "translateY(-50%)";
-legendDiv.style.background = "rgba(255, 255, 255, 0.8)";
-legendDiv.style.padding = "10px";
-legendDiv.style.borderRadius = "5px";
-legendDiv.style.fontFamily = "Arial, sans-serif";
-legendDiv.style.fontSize = "12px";
-legendDiv.style.boxShadow = "0px 0px 10px rgba(0, 0, 0, 0.3)";
-legendDiv.style.zIndex = "1000";
 
 // Event listener untuk menampilkan/menyembunyikan legenda LULC
 map.on("baselayerchange", function (eventLayer) {
