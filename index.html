@@ -108,6 +108,18 @@ lulcLegend.onAdd = function (map) {
 
     return div;
 };
+    var legendDiv = document.getElementById("lulcLegend");
+legendDiv.style.position = "absolute";
+legendDiv.style.top = "50%";
+legendDiv.style.right = "10px";
+legendDiv.style.transform = "translateY(-50%)";
+legendDiv.style.background = "rgba(255, 255, 255, 0.8)";
+legendDiv.style.padding = "10px";
+legendDiv.style.borderRadius = "5px";
+legendDiv.style.fontFamily = "Arial, sans-serif";
+legendDiv.style.fontSize = "12px";
+legendDiv.style.boxShadow = "0px 0px 10px rgba(0, 0, 0, 0.3)";
+legendDiv.style.zIndex = "1000";
 
 // Event listener untuk menampilkan/menyembunyikan legenda LULC
 map.on("baselayerchange", function (eventLayer) {
@@ -117,19 +129,7 @@ map.on("baselayerchange", function (eventLayer) {
         map.removeControl(lulcLegend);
     }
 });
-.lulc-legend {
-    position: absolute;
-    right: 10px; /* Jarak dari kanan */
-    top: 50%; /* Letakkan di tengah vertikal */
-    transform: translateY(-50%); /* Geser ke atas sebesar 50% dari tinggi elemen */
-    background: rgba(255, 255, 255, 0.8);
-    padding: 10px;
-    border-radius: 5px;
-    font-family: Arial, sans-serif;
-    font-size: 12px;
-    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
-    z-index: 1000;
-}
+
         
         
 var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
