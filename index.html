@@ -88,9 +88,8 @@ lulcLegend.onAdd = function (map) {
     var div = L.DomUtil.create("div", "info legend");
     
     // Tambahkan styling langsung di JavaScript
-    div.style.position = "absolute";
-    div.style.bottom = "50%";
-    div.style.top = "auto";
+    div.style.position = "fixed";
+    div.style.top = "60%";
     div.style.right = "10px";
     div.style.transform = "translateY(-50%)";
     div.style.background = "rgba(255, 255, 255, 0.8)";
