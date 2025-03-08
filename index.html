@@ -82,7 +82,7 @@
     L.control.attribution({ position: 'bottomright' }).addAttribution('&copy; Proposed by Prayoga Ismail').addTo(map);
 
 // Buat elemen legenda LULC
-var lulcLegend = L.control({ position: "bottomright" });
+var lulcLegend = L.control({ position: "topright" });
 
 lulcLegend.onAdd = function (map) {
     var div = L.DomUtil.create("div", "info legend");
@@ -117,6 +117,20 @@ map.on("baselayerchange", function (eventLayer) {
         map.removeControl(lulcLegend);
     }
 });
+.lulc-legend {
+    position: absolute;
+    right: 10px; /* Jarak dari kanan */
+    top: 50%; /* Letakkan di tengah vertikal */
+    transform: translateY(-50%); /* Geser ke atas sebesar 50% dari tinggi elemen */
+    background: rgba(255, 255, 255, 0.8);
+    padding: 10px;
+    border-radius: 5px;
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+}
+        
         
 var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
@@ -130,8 +144,8 @@ var esriImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/servi
 var cartoPositron = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; CartoDB'
 });
-var esriTerrain = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Terrain_Base/MapServer/tile/{z}/{y}/{x}', {
-    attribution: '&copy; Esri, USGS, NOAA'
+var topoMap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://opentopomap.org/">OpenTopoMap</a> contributors'
 });
 
 // Peta LULC (Gunakan ESA WorldCover sebagai contoh)
@@ -202,7 +216,7 @@ setTimeout(() => {
         "Peta OSM": osmLayer,
         "Peta Esri Imagery": esriImagery,
     	"Peta CartoDB": cartoPositron,
-    "Peta Elevasi (Esri Terrain)": esriTerrain,
+    "Peta Topografi (OpenTopoMap)": topoMap,
     "Peta LULC (ESA WorldCover)": lulcMap
     };
 
@@ -254,6 +268,15 @@ function preloadImage(url, callback) {
             })
             .catch(error => console.error("Gagal mengambil data radar:", error));
     }
+
+        // Event listener untuk menampilkan/menyembunyikan legenda radar
+map.on("baselayerchange", function (eventLayer) {
+    if (eventLayer.name === "Radar Cuaca") {
+        legend.addTo(map); // Menampilkan legenda radar
+    } else {
+        map.removeControl(legend); // Menyembunyikan legenda radar
+    }
+});
 
     function updateIRSatellite(timeOffset = 0) { 
         fetch('https://api.rainviewer.com/public/weather-maps.json') 
