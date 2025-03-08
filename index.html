@@ -95,7 +95,7 @@
     <div id="legend">
         <strong>Interpretasi Citra Radar</strong><br><br>
         
-        <div style="background-color: #cec087f4; width: 20px; height: 10px; display: inline-block;"></div> Berawan<br>
+        <div style="background-color: #cec087; width: 20px; height: 10px; display: inline-block;"></div> Berawan<br>
         <div style="background-color: #17acdb; width: 20px; height: 10px; display: inline-block;"></div> Hujan Ringan<br>
         <div style="background-color: #FFFF00; width: 20px; height: 10px; display: inline-block;"></div> Hujan Sedang<br>
         <div style="background-color: #FFA500; width: 20px; height: 10px; display: inline-block;"></div> Hujan Lebat<br>
@@ -108,6 +108,13 @@
     
     <script>
 
+    var map = L.map('map', {
+        center: [-2.5, 118],
+        zoom: 5,
+        attributionControl: false // Menonaktifkan attribution bawaan
+    });
+
+    L.control.attribution({ position: 'bottomright' }).addAttribution('&copy; Proposed by Prayoga Ismail').addTo(map);
 // Fungsi untuk menambahkan legenda stretch
 var legend = L.control({ position: "bottomright" });
 
@@ -137,14 +144,6 @@ legend.onAdd = function (map) {
 
 legend.addTo(map);
 
-
-    var map = L.map('map', {
-        center: [-2.5, 118],
-        zoom: 5,
-        attributionControl: false // Menonaktifkan attribution bawaan
-    });
-
-    L.control.attribution({ position: 'bottomright' }).addAttribution('&copy; Proposed by Prayoga Ismail').addTo(map);
 
 
     var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
