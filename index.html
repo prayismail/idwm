@@ -53,12 +53,29 @@
         right: 10px;
     }
 }
-    
+/* Styling untuk iframe Nullschool agar overlay di atas Leaflet */
+        #windIframe {
+            position: absolute;
+            top: 10px;  /* Jarak dari atas */
+            right: 10px; /* Jarak dari kanan */
+            width: 300px;  /* Ukuran iframe */
+            height: 300px;
+            border: none;
+            z-index: 1000; /* Supaya tetap di atas peta */
+            background: rgba(255, 255, 255, 0.7); /* Background semi-transparan */
+            border-radius: 8px; /* Sudut membulat */
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2); /* Efek bayangan */
+        }
+
+        
     </style>
 </head>
 <body>
     <div id="time-indicator">Waktu: Memuat...</div>
     <div id="map"></div>
+    <!-- Iframe Nullschool sebagai overlay -->
+    <iframe id="windIframe" src="https://earth.nullschool.net/#current/wind/surface/level/orthographic=-240.00,0.00,450"></iframe>
+
     <div id="legend">
         <strong>Interpretasi Citra Radar</strong><br><br>
         
@@ -164,11 +181,6 @@ var lulcMap = L.tileLayer.wms("https://services.terrascope.be/wms/v2", {
 var radarLayer = L.tileLayer('', { opacity: 0.8, attribution: 'Radar data &copy; RainViewer' });
 var IRsatelliteLayer = L.tileLayer('', { opacity: 0.6, attribution: 'Satellite data &copy; RainViewer' });
 
-var waqiLayer = L.tileLayer('https://tiles.aqicn.org/tiles/usepa-aqi/{z}/{x}/{y}.png', {
-    attribution: 'Air Quality Data © WAQI',
-    opacity: 0.7
-});
-
         
 // Fungsi untuk mendapatkan lokasi pengguna
 function addUserLocation() {
@@ -233,8 +245,8 @@ setTimeout(() => {
 
     var overlayMaps = { 
         "Satelit Inframerah": IRsatelliteLayer,
-        "Radar Cuaca": radarLayer,
-        "Indeks Kualitas Udara": waqiLayer
+        "Radar Cuaca": radarLayer
+
     };
 
   
