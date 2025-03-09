@@ -60,9 +60,6 @@
 <body>
     <div id="time-indicator">Waktu: Memuat...</div>
     <div id="map"></div>
-    <!-- Iframe Nullschool sebagai overlay -->
-    <iframe id="windIframe" src="https://earth.nullschool.net/#current/wind/surface/level/orthographic=-240.00,0.00,450"></iframe>
-
     <div id="legend">
         <strong>Interpretasi Citra Radar</strong><br><br>
         
@@ -85,16 +82,56 @@
 
     L.control.attribution({ position: 'bottomright' }).addAttribution('&copy; Proposed by Prayoga Ismail').addTo(map);
 
-        //Layer data angin
-    fetch('https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.20240309/12/atmos/gfs.t12z.pgrb2.0p25.f000')
-    .then(response => response.arrayBuffer())
-    .then(data => {
-        var windLayer = L.windLayer(data, {
-            velocityScale: 0.005,
-            maxVelocity: 10,
-            colorScale: ["#00f", "#0ff", "#0f0", "#ff0", "#f00"],
-        });
+        //layer angin
+function getLatestGFSUrl(timeOffset = 0) {
+    // Ambil waktu UTC sekarang
+    let now = new Date();
+    now.setUTCDate(now.getUTCDate() - timeOffset); // Sesuaikan dengan time offset
 
+    let year = now.getUTCFullYear();
+    let month = String(now.getUTCMonth() + 1).padStart(2, "0");
+    let day = String(now.getUTCDate()).padStart(2, "0");
+
+    // Tentukan waktu rilis terbaru (00Z, 06Z, 12Z, 18Z)
+    let hours = now.getUTCHours();
+    let latestRun;
+    if (hours >= 18) {
+        latestRun = "18";
+    } else if (hours >= 12) {
+        latestRun = "12";
+    } else if (hours >= 6) {
+        latestRun = "06";
+    } else {
+        latestRun = "00";
+    }
+
+    return `https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.${year}${month}${day}/${latestRun}/atmos/gfs.t${latestRun}z.pgrb2.0p25.f000`;
+}
+
+function updateAngin(timeOffset = 0) {
+    let gfsUrl = getLatestGFSUrl(timeOffset);
+
+    fetch(gfsUrl)
+        .then(response => {
+            if (!response.ok) throw new Error("Data GFS tidak tersedia.");
+            return response.arrayBuffer();
+        })
+        .then(data => {
+            var windLayer = L.windLayer(data, {
+                velocityScale: 0.005,
+                maxVelocity: 10,
+                colorScale: ["#00f", "#0ff", "#0f0", "#ff0", "#f00"],
+            }).addTo(map);  // Tambahkan layer ke peta
+
+            console.log("Layer angin berhasil diperbarui.");
+        })
+        .catch(error => console.error("Gagal mengambil data angin:", error));
+}
+
+// Panggil fungsi untuk update layer angin
+updateAngin();
+
+        
         
 // Buat elemen legenda LULC
 var lulcLegend = L.control({ position: "topright" });
@@ -312,11 +349,11 @@ function preloadImage(url, callback) {
 
     updateRadar();
     updateIRSatellite();
-    
+
     
     setInterval(updateRadar, 600000);
     setInterval(updateIRSatellite, 600000);
-    
+
 
     function addTimeControls() {
     let controlContainer = document.createElement("div");
