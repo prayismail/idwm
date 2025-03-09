@@ -90,10 +90,10 @@ lulcLegend.onAdd = function (map) {
     // Tambahkan styling langsung di JavaScript
     div.style.position = "absolute";
     div.style.right = "10px";
-    div.style.width = "150px";
+    div.style.width = "120px";
     div.style.top = "150px";
     div.style.background = "rgba(255, 255, 255, 0.8)";
-    div.style.padding = "12px";
+    div.style.padding = "10px";
     div.style.borderRadius = "5px";
     div.style.fontFamily = "Arial, sans-serif";
     div.style.fontSize = "10px";
@@ -151,14 +151,7 @@ var cartoPositron = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/
 var topoMap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://opentopomap.org/">OpenTopoMap</a> contributors'
 });
-
-var esriHillshade = L.tileLayer(
-    "https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}",
-    {
-        attribution: "Tiles &copy; Esri &mdash; Source: Esri",
-        maxZoom: 16
-    }
-);        
+        
 
 // Peta LULC (Gunakan ESA WorldCover sebagai contoh)
 var lulcMap = L.tileLayer.wms("https://services.terrascope.be/wms/v2", {
@@ -229,8 +222,7 @@ setTimeout(() => {
         "Peta Esri Imagery": esriImagery,
     	"Peta CartoDB": cartoPositron,
     "Peta Topografi (OpenTopoMap)": topoMap,
-    "Peta LULC (ESA WorldCover)": lulcMap,
-    "Peta Esri World Terrain": esriHillshade
+    "Peta LULC (ESA WorldCover)": lulcMap
     };
 
     var overlayMaps = { 
