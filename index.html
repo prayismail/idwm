@@ -6,7 +6,7 @@
     <title>Peta Inderaja Cuaca</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/wind-gl"></script>
+    
     <style>
         #time-indicator {
             position: absolute;
@@ -80,58 +80,7 @@
         attributionControl: false // Menonaktifkan attribution bawaan
     });
 
-    L.control.attribution({ position: 'bottomright' }).addAttribution('&copy; Proposed by Prayoga Ismail').addTo(map);
-
-        //layer angin
-function getLatestGFSUrl(timeOffset = 0) {
-    // Ambil waktu UTC sekarang
-    let now = new Date();
-    now.setUTCDate(now.getUTCDate() - timeOffset); // Sesuaikan dengan time offset
-
-    let year = now.getUTCFullYear();
-    let month = String(now.getUTCMonth() + 1).padStart(2, "0");
-    let day = String(now.getUTCDate()).padStart(2, "0");
-
-    // Tentukan waktu rilis terbaru (00Z, 06Z, 12Z, 18Z)
-    let hours = now.getUTCHours();
-    let latestRun;
-    if (hours >= 18) {
-        latestRun = "18";
-    } else if (hours >= 12) {
-        latestRun = "12";
-    } else if (hours >= 6) {
-        latestRun = "06";
-    } else {
-        latestRun = "00";
-    }
-
-    return `https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.${year}${month}${day}/${latestRun}/atmos/gfs.t${latestRun}z.pgrb2.0p25.f000`;
-}
-
-function updateAngin(timeOffset = 0) {
-    let gfsUrl = getLatestGFSUrl(timeOffset);
-
-    fetch(gfsUrl)
-        .then(response => {
-            if (!response.ok) throw new Error("Data GFS tidak tersedia.");
-            return response.arrayBuffer();
-        })
-        .then(data => {
-            var windLayer = L.windLayer(data, {
-                velocityScale: 0.005,
-                maxVelocity: 10,
-                colorScale: ["#00f", "#0ff", "#0f0", "#ff0", "#f00"],
-            }).addTo(map);  // Tambahkan layer ke peta
-
-            console.log("Layer angin berhasil diperbarui.");
-        })
-        .catch(error => console.error("Gagal mengambil data angin:", error));
-}
-
-// Panggil fungsi untuk update layer angin
-updateAngin();
-
-        
+    L.control.attribution({ position: 'bottomright' }).addAttribution('&copy; Proposed by Prayoga Ismail').addTo(map);    
         
 // Buat elemen legenda LULC
 var lulcLegend = L.control({ position: "topright" });
@@ -280,8 +229,7 @@ setTimeout(() => {
 
     var overlayMaps = { 
         "Satelit Inframerah": IRsatelliteLayer,
-        "Radar Cuaca": radarLayer,
-        "Angin": windLayer
+        "Radar Cuaca": radarLayer 
     };
 
   
