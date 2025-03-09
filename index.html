@@ -192,40 +192,51 @@ function addUserLocation() {
 
 // Panggil fungsi untuk menambahkan lokasi pengguna
 addUserLocation();
+// Buat layer group untuk SO2 dan PM2.5
+var so2Layer = L.layerGroup();
+var pm25Layer = L.layerGroup();
+map.addLayer(so2Layer);
+map.addLayer(pm25Layer);
 
-// Layer grup untuk SO2 dan PM2.5
-var so2Layer = L.layerGroup().addTo(map);
-var pm25Layer = L.layerGroup().addTo(map);
+// Fungsi untuk mengambil dan menampilkan data OpenAQ
+function fetchOpenAQData(parameter, layer, color) {
+    var url = `https://api.openaq.org/v3/latest?parameters=${parameter}&country=ID&limit=50`;
 
-// Fungsi untuk mengambil data OpenAQ
-function getOpenAQData(parameter, layerGroup, color) {
-    var url = `https://api.openaq.org/v2/measurements?country=ID&parameter=${parameter}&limit=100&page=1&order_by=datetime`;
+    fetch(url, {
+        headers: { "Accept": "application/json" } // Pastikan format JSON
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log(data); // Debugging: lihat data di console
 
-    fetch(url)
-        .then(response => response.json())
-        .then(data => {
-            data.results.forEach(station => {
-                if (station.coordinates) {
-                    var marker = L.circleMarker([station.coordinates.latitude, station.coordinates.longitude], {
+        // Bersihkan layer sebelum menambahkan data baru
+        layer.clearLayers();
+
+        data.results.forEach(station => {
+            if (station.coordinates) {
+                var marker = L.circleMarker(
+                    [station.coordinates.latitude, station.coordinates.longitude], {
                         radius: 7,
                         color: color,
                         fillColor: color,
                         fillOpacity: 0.7
-                    }).bindPopup(`<b>Lokasi:</b> ${station.location} <br>
-                                  <b>${parameter.toUpperCase()}:</b> ${station.value} ${station.unit} <br>
-                                  <b>Waktu:</b> ${station.date.utc}`);
+                    }
+                ).bindPopup(
+                    `<b>Lokasi:</b> ${station.location} <br>
+                     <b>${parameter.toUpperCase()}:</b> ${station.measurements[0].value} ${station.measurements[0].unit} <br>
+                     <b>Waktu:</b> ${new Date(station.measurements[0].lastUpdated).toLocaleString()}`
+                );
 
-                    marker.addTo(layerGroup);
-                }
-            });
-        })
-        .catch(error => console.error("Gagal mengambil data OpenAQ:", error));
+                marker.addTo(layer);
+            }
+        });
+    })
+    .catch(error => console.error("Gagal mengambil data OpenAQ:", error));
 }
 
-// Panggil fungsi untuk SO₂ dan PM2.5
-getOpenAQData("so2", so2Layer, "purple");   // SO2 ditampilkan dengan warna ungu
-getOpenAQData("pm25", pm25Layer, "red");    // PM2.5 ditampilkan dengan warna merah
-
+// Panggil fungsi untuk SO2 dan PM2.5
+fetchOpenAQData("so2", so2Layer, "red"); // SO2 warna merah
+fetchOpenAQData("pm25", pm25Layer, "blue"); // PM2.5 warna biru
 
 // Tambahkan CSS untuk mengatur font size pada nama layer
 var style = document.createElement('style');
