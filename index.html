@@ -164,24 +164,26 @@ var lulcMap = L.tileLayer.wms("https://services.terrascope.be/wms/v2", {
 var radarLayer = L.tileLayer('', { opacity: 0.8, attribution: 'Radar data &copy; RainViewer' });
 var IRsatelliteLayer = L.tileLayer('', { opacity: 0.6, attribution: 'Satellite data &copy; RainViewer' });
 
-// Tambahkan layer ECMWF CAMS untuk PM2.5
-var ecmwfPM25 = L.tileLayer.wms("https://attiles.ecmwf.int/data/CAMS_PM2p5/", {
-    layers: "pm2p5", 
+// Tambahkan layer SO2 dari ECMWF CAMS
+var so2Layer = L.tileLayer.wms("https://ads.atmosphere.copernicus.eu/wms", {
+    layers: "composition_so2_total_column",
+    format: "image/png",
+    transparent: true,
+    opacity: 0.7,  // Sesuaikan transparansi
+    attribution: "ECMWF Copernicus Atmosphere Monitoring Service (CAMS)"
+});
+
+// Tambahkan layer PM2.5 dari ECMWF CAMS
+var pm25Layer = L.tileLayer.wms("https://ads.atmosphere.copernicus.eu/wms", {
+    layers: "composition_pm2p5",
     format: "image/png",
     transparent: true,
     opacity: 0.7,
     attribution: "ECMWF Copernicus Atmosphere Monitoring Service (CAMS)"
 });
 
-// Tambahkan layer ECMWF CAMS untuk SO2
-var ecmwfSO2 = L.tileLayer.wms("https://attiles.ecmwf.int/data/CAMS_SO2/", {
-    layers: "so2", 
-    format: "image/png",
-    transparent: true,
-    opacity: 0.7,
-    attribution: "ECMWF Copernicus Atmosphere Monitoring Service (CAMS)"
-});
-  
+
+        
 // Fungsi untuk mendapatkan lokasi pengguna
 function addUserLocation() {
     if ("geolocation" in navigator) {
@@ -246,8 +248,8 @@ setTimeout(() => {
     var overlayMaps = { 
         "Satelit Inframerah": IRsatelliteLayer,
         "Radar Cuaca": radarLayer,
-        "PM2.5": ecmwfPM25,
-    "SO₂": ecmwfSO2
+        "CAMS SO₂ (Sulfur Dioksida)": so2Layer,
+    "CAMS PM₂.₅ (Particulate Matter)": pm25Layer
     };
 
   
