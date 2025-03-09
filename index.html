@@ -6,6 +6,7 @@
     <title>Peta Inderaja Cuaca</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/wind-gl"></script>
     <style>
         #time-indicator {
             position: absolute;
@@ -53,21 +54,7 @@
         right: 10px;
     }
 }
-/* Styling untuk iframe Nullschool agar overlay di atas Leaflet */
-        #windIframe {
-            position: absolute;
-            top: 10px;  /* Jarak dari atas */
-            right: 10px; /* Jarak dari kanan */
-            width: 300px;  /* Ukuran iframe */
-            height: 300px;
-            border: none;
-            z-index: 1000; /* Supaya tetap di atas peta */
-            background: rgba(255, 255, 255, 0.7); /* Background semi-transparan */
-            border-radius: 8px; /* Sudut membulat */
-            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2); /* Efek bayangan */
-        }
 
-        
     </style>
 </head>
 <body>
@@ -98,6 +85,17 @@
 
     L.control.attribution({ position: 'bottomright' }).addAttribution('&copy; Proposed by Prayoga Ismail').addTo(map);
 
+        //Layer data angin
+    fetch('https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.20240309/12/atmos/gfs.t12z.pgrb2.0p25.f000')
+    .then(response => response.arrayBuffer())
+    .then(data => {
+        var windLayer = L.windLayer(data, {
+            velocityScale: 0.005,
+            maxVelocity: 10,
+            colorScale: ["#00f", "#0ff", "#0f0", "#ff0", "#f00"],
+        });
+
+        
 // Buat elemen legenda LULC
 var lulcLegend = L.control({ position: "topright" });
 
@@ -245,8 +243,8 @@ setTimeout(() => {
 
     var overlayMaps = { 
         "Satelit Inframerah": IRsatelliteLayer,
-        "Radar Cuaca": radarLayer
-
+        "Radar Cuaca": radarLayer,
+        "Angin": windLayer
     };
 
   
