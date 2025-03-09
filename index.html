@@ -164,6 +164,24 @@ var lulcMap = L.tileLayer.wms("https://services.terrascope.be/wms/v2", {
 var radarLayer = L.tileLayer('', { opacity: 0.8, attribution: 'Radar data &copy; RainViewer' });
 var IRsatelliteLayer = L.tileLayer('', { opacity: 0.6, attribution: 'Satellite data &copy; RainViewer' });
 
+// Tambahkan layer ECMWF CAMS untuk PM2.5
+var ecmwfPM25 = L.tileLayer.wms("https://attiles.ecmwf.int/data/CAMS_PM2p5/", {
+    layers: "pm2p5", 
+    format: "image/png",
+    transparent: true,
+    opacity: 0.7,
+    attribution: "ECMWF Copernicus Atmosphere Monitoring Service (CAMS)"
+});
+
+// Tambahkan layer ECMWF CAMS untuk SO2
+var ecmwfSO2 = L.tileLayer.wms("https://attiles.ecmwf.int/data/CAMS_SO2/", {
+    layers: "so2", 
+    format: "image/png",
+    transparent: true,
+    opacity: 0.7,
+    attribution: "ECMWF Copernicus Atmosphere Monitoring Service (CAMS)"
+});
+  
 // Fungsi untuk mendapatkan lokasi pengguna
 function addUserLocation() {
     if ("geolocation" in navigator) {
@@ -193,51 +211,6 @@ function addUserLocation() {
 // Panggil fungsi untuk menambahkan lokasi pengguna
 addUserLocation();
 
-// Buat layer group untuk SO2 dan PM2.5
-var so2Layer = L.layerGroup();
-var pm25Layer = L.layerGroup();
-map.addLayer(so2Layer);
-map.addLayer(pm25Layer);
-
-// Fungsi untuk mengambil dan menampilkan data OpenAQ
-function fetchOpenAQData(parameter, layer, color) {
-    var url = `https://api.openaq.org/v3/measurements?parameter=${parameter}&country=ID&limit=50`;
-
-    fetch(url, {
-        headers: { "Accept": "application/json" }
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log(data); // Debugging: cek di console
-
-        // Bersihkan layer sebelum menambahkan data baru
-        layer.clearLayers();
-
-        data.results.forEach(station => {
-            if (station.coordinates) {
-                var marker = L.circleMarker(
-                    [station.coordinates.latitude, station.coordinates.longitude], {
-                        radius: 7,
-                        color: color,
-                        fillColor: color,
-                        fillOpacity: 0.7
-                    }
-                ).bindPopup(
-                    `<b>Lokasi:</b> ${station.location} <br>
-                     <b>${parameter.toUpperCase()}:</b> ${station.value} ${station.unit} <br>
-                     <b>Waktu:</b> ${new Date(station.date.utc).toLocaleString()}`
-                );
-
-                marker.addTo(layer);
-            }
-        });
-    })
-    .catch(error => console.error("Gagal mengambil data OpenAQ:", error));
-}
-
-// Panggil fungsi untuk SO2 dan PM2.5
-fetchOpenAQData("so2", so2Layer, "red"); // SO2 warna merah
-fetchOpenAQData("pm25", pm25Layer, "blue"); // PM2.5 warna biru
 
 // Tambahkan CSS untuk mengatur font size pada nama layer
 var style = document.createElement('style');
@@ -273,9 +246,8 @@ setTimeout(() => {
     var overlayMaps = { 
         "Satelit Inframerah": IRsatelliteLayer,
         "Radar Cuaca": radarLayer,
-        "SO₂ (Sulfur Dioksida)": so2Layer,
-    "PM2.5 (Partikulat Halus)": pm25Layer
-
+        "PM2.5": ecmwfPM25,
+    "SO₂": ecmwfSO2
     };
 
   
