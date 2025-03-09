@@ -192,6 +192,7 @@ function addUserLocation() {
 
 // Panggil fungsi untuk menambahkan lokasi pengguna
 addUserLocation();
+
 // Buat layer group untuk SO2 dan PM2.5
 var so2Layer = L.layerGroup();
 var pm25Layer = L.layerGroup();
@@ -200,14 +201,14 @@ map.addLayer(pm25Layer);
 
 // Fungsi untuk mengambil dan menampilkan data OpenAQ
 function fetchOpenAQData(parameter, layer, color) {
-    var url = `https://api.openaq.org/v3/latest?parameters=${parameter}&country=ID&limit=50`;
+    var url = `https://api.openaq.org/v3/measurements?parameter=${parameter}&country=ID&limit=50`;
 
     fetch(url, {
-        headers: { "Accept": "application/json" } // Pastikan format JSON
+        headers: { "Accept": "application/json" }
     })
     .then(response => response.json())
     .then(data => {
-        console.log(data); // Debugging: lihat data di console
+        console.log(data); // Debugging: cek di console
 
         // Bersihkan layer sebelum menambahkan data baru
         layer.clearLayers();
@@ -223,8 +224,8 @@ function fetchOpenAQData(parameter, layer, color) {
                     }
                 ).bindPopup(
                     `<b>Lokasi:</b> ${station.location} <br>
-                     <b>${parameter.toUpperCase()}:</b> ${station.measurements[0].value} ${station.measurements[0].unit} <br>
-                     <b>Waktu:</b> ${new Date(station.measurements[0].lastUpdated).toLocaleString()}`
+                     <b>${parameter.toUpperCase()}:</b> ${station.value} ${station.unit} <br>
+                     <b>Waktu:</b> ${new Date(station.date.utc).toLocaleString()}`
                 );
 
                 marker.addTo(layer);
