@@ -164,8 +164,8 @@ var lulcMap = L.tileLayer.wms("https://services.terrascope.be/wms/v2", {
 var radarLayer = L.tileLayer('', { opacity: 0.8, attribution: 'Radar data &copy; RainViewer' });
 var IRsatelliteLayer = L.tileLayer('', { opacity: 0.6, attribution: 'Satellite data &copy; RainViewer' });
 
-var waqiLayer = L.tileLayer('https://tiles.aqicn.org/tiles/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://waqi.info">WAQI</a>',
+var waqiLayer = L.tileLayer('https://tiles.aqicn.org/tiles/usepa-aqi/{z}/{x}/{y}.png', {
+    attribution: 'Air Quality Data © WAQI',
     opacity: 0.7
 });
 
