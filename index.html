@@ -19,6 +19,7 @@
             border-radius: 5px;
             font-family: Arial, sans-serif;
             font-size: 12px;
+	    text-align: center; 
             z-index: 1000;
         }
         #map {
@@ -102,19 +103,19 @@ lulcLegend.onAdd = function (map) {
     div.style.zIndex = "1000";
 
     // Tambahkan teks legenda
-    div.innerHTML += "<strong>Kelas Tutupan Lahan</strong><br>";
+    div.innerHTML += "<strong>Kelas Tutupan Lahan</strong><br><br>";
     var lulcColors = {
         "#006400": "Vegetasi",
         "#ffbb22": "Semak Belukar",
         "#ffff4c": "Padang Rumput",
         "#f096ff": "Lahan Pertanian",
-        "#fa0000": "Lahan Terbangun",
+        "#fa0000": "Bangunan",
         "#b4b4b4": "Tanah Terbuka",
         "#f0f0f0": "Salju/Es",
         "#0064c8": "Tubuh Air",
         "#0096a0": "Lahan Basah",
-        "#00cf75": "Mangrove",
-        "#f7f5bc": "Lumut"
+        "#00cf75": "Mangrove"
+        
     };
 
     for (var color in lulcColors) {
@@ -180,7 +181,7 @@ function addUserLocation() {
                     .openPopup();
 
                 // Pusatkan peta ke lokasi pengguna
-                map.setView([userLat, userLng], 6);
+                map.setView([userLat, userLng], 8);
             },
             function (error) {
                 console.error("Gagal mendapatkan lokasi:", error.message);
@@ -258,23 +259,35 @@ function preloadImage(url, callback) {
 }
         
     function updateRadar(timeOffset = 0) {
-        fetch('https://api.rainviewer.com/public/weather-maps.json')
-            .then(response => response.json())
-            .then(data => {
-                if (data.radar && data.radar.past.length > 0) {
-                    let index = Math.max(0, data.radar.past.length - 1 - timeOffset);
-                    let timestamp = data.radar.past[index].time;
-                    let radarUrl = `https://tilecache.rainviewer.com/v2/radar/${timestamp}/256/{z}/{x}/{y}/2/1_1.png`;
-                    radarLayer.setUrl(radarUrl);
+    fetch('https://api.rainviewer.com/public/weather-maps.json')
+        .then(response => response.json())
+        .then(data => {
+            if (data.radar && data.radar.past.length > 0) {
+                let index = Math.max(0, data.radar.past.length - 1 - timeOffset);
+                let timestamp = data.radar.past[index].time;
+                let radarUrl = `https://tilecache.rainviewer.com/v2/radar/${timestamp}/256/{z}/{x}/{y}/2/1_1.png`;
+                radarLayer.setUrl(radarUrl);
 
-                    let utcTime = new Date(timestamp * 1000);
-                    document.getElementById('time-indicator').innerHTML = `<strong>${utcTime.getUTCDate()} ${utcTime.toLocaleString('default', { month: 'long' })} ${utcTime.getUTCFullYear()}</strong><br> <span style="color: #FFD700;">${utcTime.getUTCHours().toString().padStart(2, '0')}:${utcTime.getUTCMinutes().toString().padStart(2, '0')} UTC</span>`;
-                } else {
-                    console.error("Data radar tidak tersedia.");
-                }
-            })
-            .catch(error => console.error("Gagal mengambil data radar:", error));
-    }
+                let utcTime = new Date(timestamp * 1000);
+
+                // Array nama bulan dalam bahasa Indonesia
+                let bulanIndonesia = [
+                    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+                    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+                ];
+
+                let bulan = bulanIndonesia[utcTime.getUTCMonth()]; // Ambil nama bulan dari array
+
+                document.getElementById('time-indicator').innerHTML = 
+                    `<strong>${utcTime.getUTCDate()} ${bulan} ${utcTime.getUTCFullYear()}</strong><br> 
+                     <span style="color: #FFD700;">${utcTime.getUTCHours().toString().padStart(2, '0')}:${utcTime.getUTCMinutes().toString().padStart(2, '0')} UTC</span>`;
+            } else {
+                console.error("Data radar tidak tersedia.");
+            }
+        })
+        .catch(error => console.error("Gagal mengambil data radar:", error));
+}
+
 
     function updateIRSatellite(timeOffset = 0) { 
         fetch('https://api.rainviewer.com/public/weather-maps.json') 
@@ -303,7 +316,7 @@ function preloadImage(url, callback) {
     setInterval(updateIRSatellite, 600000);
 
 
-    function addTimeControls() {
+function addTimeControls() {
     let controlContainer = document.createElement("div");
     controlContainer.style.position = "absolute";
     controlContainer.style.top = "60px";
@@ -319,73 +332,81 @@ function preloadImage(url, callback) {
     controlContainer.style.alignItems = "center";
     controlContainer.style.gap = "10px";
 
+    // Label kiri (akan berubah sesuai waktu)
+    let timeLabel = document.createElement("span");
+    timeLabel.textContent = "Saat Ini";  // Default teks
+    timeLabel.style.fontSize = "10px";
+
     // SLIDER TIME CONTROL
     let timeSlider = document.createElement("input");
     timeSlider.type = "range";
     timeSlider.min = "0";
     timeSlider.max = "12";
-    timeSlider.value = "0";
-    timeSlider.style.width = "120px";
+    timeSlider.value = "12";  // Default: "Saat Ini"
+    timeSlider.style.width = "150px";
     timeSlider.style.cursor = "pointer";
 
-    let timeLabel = document.createElement("span");
-    timeLabel.textContent = "Saat Ini";
-// Atur ukuran font untuk teks waktu
-timeLabel.style.fontSize = "12px"; // Ukuran font
-timeLabel.style.color = "#ffffff"; // Opsional: Warna teks agar lebih kontras
+    
 
-    // PLAY & PAUSE BUTTONS
+    // TOMBOL PLAY & PAUSE
     let playButton = document.createElement("button");
     playButton.textContent = "▶️";
     playButton.style.cursor = "pointer";
     playButton.style.border = "none";
-    playButton.style.background = "rgba(255, 255, 255, 0.2)";
+    playButton.style.background = "transparent";
     playButton.style.color = "white";
-    playButton.style.padding = "5px 10px";
-    playButton.style.borderRadius = "3px";
+    playButton.style.fontSize = "12px";
 
     let pauseButton = document.createElement("button");
     pauseButton.textContent = "⏸️";
     pauseButton.style.cursor = "pointer";
     pauseButton.style.border = "none";
-    pauseButton.style.background = "rgba(255, 255, 255, 0.2)";
+    pauseButton.style.background = "transparent";
     pauseButton.style.color = "white";
-    pauseButton.style.padding = "5px 10px";
-    pauseButton.style.borderRadius = "3px";
+    pauseButton.style.fontSize = "12px";
 
     let animationInterval = null;
-    let currentTime = 0;
 
-    function updateTime(offset) {
-        updateRadar(offset);
-        updateIRSatellite(offset);
-        timeLabel.textContent = offset === 0 ? "Saat Ini" : `${offset * 10} menit yang lalu`;
-        timeSlider.value = offset;
+    // Fungsi untuk memperbarui label kiri sesuai slider
+    function updateTimeLabel() {
+        let step = 12 - parseInt(timeSlider.value); // 0 = Saat Ini, 1 = 10 menit lalu, dst.
+        if (step === 0) {
+            timeLabel.textContent = "Saat Ini";
+        } else {
+            timeLabel.textContent = `${step * 10} menit lalu`;
+        }
     }
 
-    timeSlider.addEventListener("input", function () {
-        let timeOffset = parseInt(this.value);
-        updateTime(timeOffset);
-    });
+    // FUNGSI PLAY (animasi mundur dari saat ini ke 120 menit lalu)
+    playButton.onclick = function () {
+        if (animationInterval) return; // Cegah duplikasi interval
 
-    playButton.addEventListener("click", function () {
-        if (!animationInterval) {
-            currentTime = parseInt(timeSlider.value);
-            animationInterval = setInterval(() => {
-                if (currentTime >= 12) {
-                    currentTime = 0; // Reset ke awal
-                } else {
-                    currentTime++;
-                }
-                updateTime(currentTime);
-            }, 3000); // Tambahkan delay
-        }
-    });
+        let step = parseInt(timeSlider.value);
+        animationInterval = setInterval(() => {
+            if (step > 0) {
+                step--;
+                timeSlider.value = step;
+                updateRadar(12 - step);
+                updateTimeLabel();
+            } else {
+                clearInterval(animationInterval);
+                animationInterval = null;
+            }
+        }, 3000);
+    };
 
-    pauseButton.addEventListener("click", function () {
+    // FUNGSI PAUSE
+    pauseButton.onclick = function () {
         clearInterval(animationInterval);
         animationInterval = null;
-    });
+    };
+
+    // Event listener untuk slider manual
+    timeSlider.oninput = function () {
+        let timeOffset = 12 - parseInt(timeSlider.value);
+        updateRadar(timeOffset);
+        updateTimeLabel();
+    };
 
     controlContainer.appendChild(timeLabel);
     controlContainer.appendChild(timeSlider);
@@ -395,7 +416,10 @@ timeLabel.style.color = "#ffffff"; // Opsional: Warna teks agar lebih kontras
     document.body.appendChild(controlContainer);
 }
 
+// Panggil fungsi untuk menambahkan kontrol waktu
 addTimeControls();
+
+
 
 
 </script>
