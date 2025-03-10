@@ -169,7 +169,7 @@ map.on("baselayerchange", function (eventLayer) {
         
         
 var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
+    attribution: 'Base map &copy; OpenStreetMap contributors'
 }).addTo(map);
 
 
@@ -205,10 +205,7 @@ function addUserLocation() {
                 let userLat = position.coords.latitude;
                 let userLng = position.coords.longitude;
 
-                // Tambahkan marker ke peta
-                let userMarker = L.marker([userLat, userLng]).addTo(map)
-                    .bindPopup("Lokasi Anda")
-                    .openPopup();
+                
 
                 // Pusatkan peta ke lokasi pengguna
                 map.setView([userLat, userLng], 8);
@@ -373,7 +370,7 @@ function addTimeControls() {
     timeSlider.min = "0";
     timeSlider.max = "12";
     timeSlider.value = "12";  // Default: "Saat Ini"
-    timeSlider.style.width = "150px";
+    timeSlider.style.width = "180px";
     timeSlider.style.cursor = "pointer";
 
     
@@ -449,7 +446,8 @@ function addTimeControls() {
 // Panggil fungsi untuk menambahkan kontrol waktu
 addTimeControls();
 
- var marker;
+ 	var marker;
+        var userMarker;
         var weatherChart;
         var chartPopup = document.getElementById('chart-popup');
         var closePopup = document.getElementById('close-popup');
@@ -471,12 +469,17 @@ addTimeControls();
                     windDirection.push(hourly.wind_direction_10m[i]);
                 }
 
+                // Hapus marker sebelumnya jika ada
                 if (marker) {
                     map.removeLayer(marker);
                 }
-                
+                if (userMarker) {
+                    map.removeLayer(userMarker);
+                    userMarker = null; // Reset userMarker agar tidak muncul kembali
+                }
+
                 marker = L.marker([lat, lon]).addTo(map)
-                    .bindPopup("Klik untuk lihat prakiraan hari ini (waktu setempat)")
+                    .bindPopup("Klik untuk lihat prakiraan cuaca.")
                     .openPopup()
                     .on('click', function() {
                         showChart(times, precipitation, windSpeed, windDirection);
@@ -486,63 +489,92 @@ addTimeControls();
         }
 
         function showChart(times, precipitation, windSpeed, windDirection) {
-            chartPopup.style.display = 'block';
-            let ctx = document.getElementById('weatherChart').getContext('2d');
-            if (weatherChart) {
-                weatherChart.destroy();
-            }
-            weatherChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: times,
-                    datasets: [
-                        {
-                            label: 'Curah Hujan (mm)',
-                            data: precipitation,
-                            backgroundColor: 'rgba(0, 0, 255, 0.6)',
-                            borderColor: 'blue',
-                            borderWidth: 1,
-                            type: 'bar',
-                            yAxisID: 'y1'
-                        },
-                        {
-                            label: 'Kecepatan Angin (kn)',
-                            data: windSpeed,
-                            borderColor: 'red',
-                            backgroundColor: 'rgba(255, 0, 0, 0.2)',
-                            fill: false,
-                            type: 'line',
-                            yAxisID: 'y2'
-                        },
-                        {
-                            label: 'Arah Angin (°)',
-                            data: windDirection,
-                            borderColor: 'green',
-                            backgroundColor: 'rgba(0, 255, 0, 0.2)',
-                            fill: false,
-                            type: 'line',
-                            yAxisID: 'y2'
-                        }
-                    ]
+    chartPopup.style.display = 'block';
+    let ctx = document.getElementById('weatherChart').getContext('2d');
+    if (weatherChart) {
+        weatherChart.destroy();
+    }
+    weatherChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: times,
+            datasets: [
+                {
+                    label: 'Curah Hujan (mm)',
+                    data: precipitation,
+                    backgroundColor: 'rgba(0, 0, 255, 0.6)',
+                    borderColor: 'blue',
+                    borderWidth: 1,
+                    type: 'bar',
+                    yAxisID: 'y1'
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y1: {
-                            type: 'linear',
-                            position: 'left',
-                            beginAtZero: true
-                        },
-                        y2: {
-                            type: 'linear',
-                            position: 'right',
-                            beginAtZero: true
-                        }
+                {
+                    label: 'Kecepatan Angin (knot)',
+                    data: windSpeed,
+                    borderColor: 'red',
+                    backgroundColor: 'rgba(255, 0, 0, 0.2)',
+                    fill: false,
+                    type: 'line',
+                    yAxisID: 'y2'
+                },
+                {
+                    label: 'Arah Angin (°)',
+                    data: windDirection,
+                    borderColor: 'green',
+                    backgroundColor: 'rgba(0, 255, 0, 0.2)',
+                    fill: false,
+                    type: 'line',
+                    yAxisID: 'y2'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Waktu Setempat' // Tambahkan judul X-axis
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    position: 'left',
+                    beginAtZero: true
+                },
+                y2: {
+                    type: 'linear',
+                    position: 'right',
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top'
+                },
+                title: {
+                    display: true,
+                    text: ' ', // Kosongkan title agar tidak bentrok
+                },
+                subtitle: {
+                    display: true,
+                    text: 'Prakiraan cuaca oleh IFS, ECMWF.',
+                    align: 'right',
+                    font: {
+                        size: 10,
+                        weight: 'normal'
+                    },
+                    padding: {
+                        bottom: 5
                     }
                 }
-            });
+            }
         }
+    });
+}
+
+
 
         closePopup.addEventListener('click', function() {
             chartPopup.style.display = 'none';
@@ -554,6 +586,14 @@ addTimeControls();
                     let userLat = position.coords.latitude;
                     let userLon = position.coords.longitude;
                     map.setView([userLat, userLon], 12);
+
+                    // Hapus marker lokasi pengguna sebelumnya
+                    if (userMarker) {
+                        map.removeLayer(userMarker);
+                    }
+
+                    userMarker = L.marker([userLat, userLon]).addTo(map)
+                        .bindPopup("Lokasi Anda").openPopup();
                     fetchWeatherData(userLat, userLon);
                 },
                 function() {
@@ -563,10 +603,20 @@ addTimeControls();
         }
         
         map.on('click', function(e) {
+            // Hapus marker sebelumnya jika ada
+            if (marker) {
+                map.removeLayer(marker);
+            }
+            if (userMarker) {
+                map.removeLayer(userMarker);
+                userMarker = null; // Pastikan userMarker direset agar tidak muncul kembali
+            }
+
             let lat = e.latlng.lat;
             let lon = e.latlng.lng;
             fetchWeatherData(lat, lon);
         });
+
 
 
 
