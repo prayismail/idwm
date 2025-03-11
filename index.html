@@ -633,23 +633,32 @@ addTimeControls();
 
 
 	function downloadCSVFile() {
-    let csvContent = "data:text/csv;charset=utf-8,Tanggal,Waktu Setempat,Curah Hujan (mm),Kecepatan Angin (knot),Arah Angin (°) \n";
-    
+    let csvContent = "Tanggal,Waktu Setempat,Curah Hujan (mm),Kecepatan Angin (knot),Arah Angin (°)\n";
+
     currentData.times.forEach((time, index) => {
-        let dateTime = new Date(time); // Ubah string waktu menjadi objek Date
-        let date = dateTime.toISOString().split('T')[0]; // Ambil bagian tanggal (YYYY-MM-DD)
-        let timeOnly = dateTime.toTimeString().split(' ')[0]; // Ambil bagian waktu (HH:MM:SS)
+        let dateTime = new Date(time);
+        if (isNaN(dateTime.getTime())) {
+            console.error(`Invalid date format: ${time}`);
+            return; // Skip jika format waktu tidak valid
+        }
+        
+        let date = dateTime.toISOString().split('T')[0]; // Format YYYY-MM-DD
+        let timeOnly = dateTime.toTimeString().split(' ')[0]; // Format HH:MM:SS
         
         csvContent += `${date},${timeOnly},${currentData.precipitation[index]},${currentData.windSpeed[index]},${currentData.windDirection[index]}\n`;
     });
 
-    let encodedUri = encodeURI(csvContent);
+    let blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     let link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
+    let url = URL.createObjectURL(blob);
+
+    link.setAttribute("href", url);
     link.setAttribute("download", "Prakiraan_Cuaca.csv");
     document.body.appendChild(link);
     link.click();
+    
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 
         function downloadImage() {
