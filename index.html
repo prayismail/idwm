@@ -515,7 +515,7 @@ addTimeControls();
                 let windSpeed = [];
                 let windDirection = [];
 
-                for (let i = 0; i < hourly.time.length; i += 3) {
+                for (let i = 0; i < hourly.time.length; i += 1) {
                     times.push(hourly.time[i].substring(11, 16));
                     precipitation.push(hourly.precipitation[i]);
                     windSpeed.push(hourly.wind_speed_10m[i]);
