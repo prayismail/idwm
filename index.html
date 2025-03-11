@@ -54,8 +54,9 @@
             overflow-y: auto;
         }
         #chart-popup canvas { width: 100%; height: 70%; }
-        .popup-buttons {
-            margin-top: 5px;
+        
+	.popup-buttons {
+            margin-bottom: 10px;
             display: flex;
             justify-content: center;
             gap: 5px;
@@ -98,12 +99,13 @@
     <div id="time-indicator">Waktu: Memuat...</div>
     <div id="map"></div>
     <div id="chart-popup">
-    <canvas id="weatherChart"></canvas>
+    
 	<div class="popup-buttons">
             <button id="download-csv">Unduh CSV</button>
             <button id="download-img">Unduh Meteogram</button>
             <button id="close-popup" style="background: red;">Tutup</button>
         </div>   
+	<canvas id="weatherChart"></canvas>
 </div>
 
     <div id="legend">
@@ -583,7 +585,7 @@ addTimeControls();
                 },
                 subtitle: {
                     display: true,
-                    text: 'Prakiraan cuaca oleh Open-Meteo. Sumber data: IFS 0.25, ECMWF',
+                    text: 'Prakiraan cuaca oleh Open-Meteo. Sumber data: IFS 0.25, ECMWF.',
                     align: 'center',
                     font: {
                         size: 12,
