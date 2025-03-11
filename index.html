@@ -353,12 +353,10 @@ function preloadImage(url, callback) {
 
 
     updateRadar();
-    updateIRSatellite();
+updateIRSatellite();
 
-    
-    setInterval(updateRadar, 600000);
-    setInterval(updateIRSatellite, 600000);
-
+setInterval(updateRadar, 600000);
+setInterval(updateIRSatellite, 600000);
 
 function addTimeControls() {
     let controlContainer = document.createElement("div");
@@ -374,25 +372,20 @@ function addTimeControls() {
     controlContainer.style.borderRadius = "5px";
     controlContainer.style.display = "flex";
     controlContainer.style.alignItems = "center";
-    controlContainer.style.gap = "10px";
+    controlContainer.style.gap = "5px";
 
-    // Label kiri (akan berubah sesuai waktu)
     let timeLabel = document.createElement("span");
-    timeLabel.textContent = "Saat Ini";  // Default teks
+    timeLabel.textContent = "Saat Ini";
     timeLabel.style.fontSize = "12px";
 
-    // SLIDER TIME CONTROL
     let timeSlider = document.createElement("input");
     timeSlider.type = "range";
     timeSlider.min = "0";
     timeSlider.max = "12";
-    timeSlider.value = "12";  // Default: "Saat Ini"
-    timeSlider.style.width = "180px";
+    timeSlider.value = "12";
+    timeSlider.style.width = "150px";
     timeSlider.style.cursor = "pointer";
 
-    
-
-    // TOMBOL PLAY & PAUSE
     let playButton = document.createElement("button");
     playButton.textContent = "▶️";
     playButton.style.cursor = "pointer";
@@ -411,9 +404,8 @@ function addTimeControls() {
 
     let animationInterval = null;
 
-    // Fungsi untuk memperbarui label kiri sesuai slider
     function updateTimeLabel() {
-        let step = 12 - parseInt(timeSlider.value); // 0 = Saat Ini, 1 = 10 menit lalu, dst.
+        let step = 12 - parseInt(timeSlider.value);
         if (step === 0) {
             timeLabel.textContent = "Saat Ini";
         } else {
@@ -421,17 +413,21 @@ function addTimeControls() {
         }
     }
 
-    // FUNGSI PLAY (animasi mundur dari saat ini ke 120 menit lalu)
+    function updateLayers(timeOffset) {
+        updateRadar(timeOffset);
+        updateIRSatellite(timeOffset); // Menyelaraskan update satelit dengan radar
+        updateTimeLabel();
+    }
+
     playButton.onclick = function () {
-        if (animationInterval) return; // Cegah duplikasi interval
+        if (animationInterval) return;
 
         let step = parseInt(timeSlider.value);
         animationInterval = setInterval(() => {
             if (step > 0) {
                 step--;
                 timeSlider.value = step;
-                updateRadar(12 - step);
-                updateTimeLabel();
+                updateLayers(12 - step);
             } else {
                 clearInterval(animationInterval);
                 animationInterval = null;
@@ -439,17 +435,14 @@ function addTimeControls() {
         }, 3000);
     };
 
-    // FUNGSI PAUSE
     pauseButton.onclick = function () {
         clearInterval(animationInterval);
         animationInterval = null;
     };
 
-    // Event listener untuk slider manual
     timeSlider.oninput = function () {
         let timeOffset = 12 - parseInt(timeSlider.value);
-        updateRadar(timeOffset);
-        updateTimeLabel();
+        updateLayers(timeOffset);
     };
 
     controlContainer.appendChild(timeLabel);
@@ -460,7 +453,6 @@ function addTimeControls() {
     document.body.appendChild(controlContainer);
 }
 
-// Panggil fungsi untuk menambahkan kontrol waktu
 addTimeControls();
 
  	var marker;
