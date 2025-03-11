@@ -53,6 +53,7 @@
             max-width: 500px;
             max-height: 50vh;
             overflow-y: auto;
+		z-index: 3000;
         }
         #chart-popup canvas { width: 80%; height: 70%; }
         
@@ -632,19 +633,24 @@ addTimeControls();
 
 
 	function downloadCSVFile() {
-            let csvContent = "data:text/csv;charset=utf-8,Waktu Setempat,Curah Hujan (mm),Kecepatan Angin (knot),Arah Angin (°) \n";
-            currentData.times.forEach((time, index) => {
-                csvContent += `${time},${currentData.precipitation[index]},${currentData.windSpeed[index]},${currentData.windDirection[index]}\n`;
-            });
+    let csvContent = "data:text/csv;charset=utf-8,Tanggal,Waktu Setempat,Curah Hujan (mm),Kecepatan Angin (knot),Arah Angin (°) \n";
+    
+    currentData.times.forEach((time, index) => {
+        let dateTime = new Date(time); // Ubah string waktu menjadi objek Date
+        let date = dateTime.toISOString().split('T')[0]; // Ambil bagian tanggal (YYYY-MM-DD)
+        let timeOnly = dateTime.toTimeString().split(' ')[0]; // Ambil bagian waktu (HH:MM:SS)
+        
+        csvContent += `${date},${timeOnly},${currentData.precipitation[index]},${currentData.windSpeed[index]},${currentData.windDirection[index]}\n`;
+    });
 
-            let encodedUri = encodeURI(csvContent);
-            let link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "Prakiraan_Cuaca.csv");
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
+    let encodedUri = encodeURI(csvContent);
+    let link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "Prakiraan_Cuaca.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
 
         function downloadImage() {
             let link = document.createElement('a');
