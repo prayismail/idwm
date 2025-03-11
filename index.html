@@ -632,33 +632,28 @@ addTimeControls();
 }
 
 
-	function downloadCSVFile() {
-    let csvContent = "Tanggal,Waktu Setempat,Curah Hujan (mm),Kecepatan Angin (knot),Arah Angin (°)\n";
-
-    currentData.times.forEach((time, index) => {
-        let dateTime = new Date(time);
+	function downloadCSVFile() { 
+    let csvContent = "data:text/csv;charset=utf-8,Waktu Setempat,Curah Hujan (mm),Kecepatan Angin (knot),Arah Angin (°)\n"; 
+    
+    currentData.times.forEach((time, index) => { 
+        let dateTime = new Date(time); // Konversi ke objek Date
         if (isNaN(dateTime.getTime())) {
-            console.error(`Invalid date format: ${time}`);
-            return; // Skip jika format waktu tidak valid
+            console.error(`Format waktu tidak valid: ${time}`);
+            return;
         }
+
+        let formattedTime = dateTime.toISOString().replace('T', ' ').split('.')[0]; // Format YYYY-MM-DD HH:MM:SS
         
-        let date = dateTime.toISOString().split('T')[0]; // Format YYYY-MM-DD
-        let timeOnly = dateTime.toTimeString().split(' ')[0]; // Format HH:MM:SS
-        
-        csvContent += `${date},${timeOnly},${currentData.precipitation[index]},${currentData.windSpeed[index]},${currentData.windDirection[index]}\n`;
+        csvContent += `${formattedTime},${currentData.precipitation[index]},${currentData.windSpeed[index]},${currentData.windDirection[index]}\n`; 
     });
 
-    let blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    let link = document.createElement("a");
-    let url = URL.createObjectURL(blob);
-
-    link.setAttribute("href", url);
-    link.setAttribute("download", "Prakiraan_Cuaca.csv");
-    document.body.appendChild(link);
-    link.click();
-    
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    let encodedUri = encodeURI(csvContent);           
+    let link = document.createElement("a");           
+    link.setAttribute("href", encodedUri);           
+    link.setAttribute("download", "Prakiraan_Cuaca.csv");           
+    document.body.appendChild(link);           
+    link.click();           
+    document.body.removeChild(link);       
 }
 
         function downloadImage() {
