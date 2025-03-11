@@ -48,19 +48,30 @@
             padding: 20px;
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
             z-index: 1000;
-            width: 80%;
+            width: 100%;
             max-width: 500px;
             max-height: 50vh;
             overflow-y: auto;
         }
         #chart-popup canvas { width: 100%; height: 100%; }
-        #close-popup {
-            display: block;
+        .popup-buttons {
             margin-top: 10px;
-            text-align: center;
-            cursor: pointer;
-            color: red;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
         }
+        button {
+            padding: 8px 12px;
+            cursor: pointer;
+            border: none;
+            background: #007bff;
+            color: white;
+            border-radius: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+
 
        #legend {
     position: absolute;
@@ -88,7 +99,11 @@
     <div id="map"></div>
     <div id="chart-popup">
     <canvas id="weatherChart"></canvas>
-<span id="close-popup">Tutup</span>    
+	<div class="popup-buttons">
+            <button id="download-csv">Unduh CSV</button>
+            <button id="download-img">Unduh Meteogram</button>
+            <button id="close-popup" style="background: red;">Tutup</button>
+        </div>   
 </div>
 
     <div id="legend">
@@ -362,7 +377,7 @@ function addTimeControls() {
     // Label kiri (akan berubah sesuai waktu)
     let timeLabel = document.createElement("span");
     timeLabel.textContent = "Saat Ini";  // Default teks
-    timeLabel.style.fontSize = "10px";
+    timeLabel.style.fontSize = "12px";
 
     // SLIDER TIME CONTROL
     let timeSlider = document.createElement("input");
@@ -382,7 +397,7 @@ function addTimeControls() {
     playButton.style.border = "none";
     playButton.style.background = "transparent";
     playButton.style.color = "white";
-    playButton.style.fontSize = "12px";
+    playButton.style.fontSize = "15px";
 
     let pauseButton = document.createElement("button");
     pauseButton.textContent = "⏸️";
@@ -390,7 +405,7 @@ function addTimeControls() {
     pauseButton.style.border = "none";
     pauseButton.style.background = "transparent";
     pauseButton.style.color = "white";
-    pauseButton.style.fontSize = "12px";
+    pauseButton.style.fontSize = "15px";
 
     let animationInterval = null;
 
@@ -449,11 +464,17 @@ addTimeControls();
  	var marker;
         var userMarker;
         var weatherChart;
-        var chartPopup = document.getElementById('chart-popup');
+        
+	var chartPopup = document.getElementById('chart-popup');
         var closePopup = document.getElementById('close-popup');
+        var downloadCSV = document.getElementById('download-csv');
+        var downloadImg = document.getElementById('download-img');
+        var currentData = {}; // Simpan data cuaca untuk unduhan
+
         
         function fetchWeatherData(lat, lon) {
             fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation,wind_speed_10m,wind_direction_10m&wind_speed_unit=kn&forecast_days=1&models=ecmwf_ifs025&timezone=auto`)
+
             .then(response => response.json())
             .then(data => {
                 let hourly = data.hourly;
@@ -468,6 +489,9 @@ addTimeControls();
                     windSpeed.push(hourly.wind_speed_10m[i]);
                     windDirection.push(hourly.wind_direction_10m[i]);
                 }
+		// Simpan data untuk unduhan
+                currentData = { times, precipitation, windSpeed, windDirection };
+
 
                 // Hapus marker sebelumnya jika ada
                 if (marker) {
@@ -559,11 +583,11 @@ addTimeControls();
                 },
                 subtitle: {
                     display: true,
-                    text: 'Prakiraan cuaca oleh IFS, ECMWF.',
-                    align: 'right',
+                    text: 'Prakiraan cuaca oleh Open-Meteo. Sumber data: IFS 0.25, ECMWF',
+                    align: 'center',
                     font: {
-                        size: 10,
-                        weight: 'normal'
+                        size: 12,
+                        weight: 'bold'
                     },
                     padding: {
                         bottom: 5
@@ -575,8 +599,32 @@ addTimeControls();
 }
 
 
+	function downloadCSVFile() {
+            let csvContent = "data:text/csv;charset=utf-8,Waktu Setempat,Curah Hujan (mm),Kecepatan Angin (knot),Arah Angin (°) \n";
+            currentData.times.forEach((time, index) => {
+                csvContent += `${time},${currentData.precipitation[index]},${currentData.windSpeed[index]},${currentData.windDirection[index]}\n`;
+            });
 
-        closePopup.addEventListener('click', function() {
+            let encodedUri = encodeURI(csvContent);
+            let link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "Prakiraan_Cuaca.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function downloadImage() {
+            let link = document.createElement('a');
+            link.href = document.getElementById('weatherChart').toDataURL('image/png');
+            link.download = 'Prakiraan_Cuaca.png';
+            link.click();
+        }
+
+	downloadCSV.addEventListener('click', downloadCSVFile);
+        downloadImg.addEventListener('click', downloadImage);
+        
+	closePopup.addEventListener('click', function() {
             chartPopup.style.display = 'none';
         });
 
@@ -616,8 +664,6 @@ addTimeControls();
             let lon = e.latlng.lng;
             fetchWeatherData(lat, lon);
         });
-
-
 
 
 </script>
