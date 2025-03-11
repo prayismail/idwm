@@ -365,14 +365,14 @@ function addTimeControls() {
     controlContainer.style.left = "50%";
     controlContainer.style.transform = "translateX(-50%)";
     controlContainer.style.zIndex = "1000";
-    controlContainer.style.padding = "10px";
+    controlContainer.style.padding = "5px";
     controlContainer.style.background = "rgba(0, 0, 0, 0.6)";
     controlContainer.style.color = "white";
     controlContainer.style.border = "1px solid white";
     controlContainer.style.borderRadius = "5px";
     controlContainer.style.display = "flex";
     controlContainer.style.alignItems = "center";
-    controlContainer.style.gap = "5px";
+    controlContainer.style.gap = "3px";
 
     let timeLabel = document.createElement("span");
     timeLabel.textContent = "Saat Ini";
@@ -385,6 +385,14 @@ function addTimeControls() {
     timeSlider.value = "12";
     timeSlider.style.width = "150px";
     timeSlider.style.cursor = "pointer";
+
+    let prevButton = document.createElement("button");
+    prevButton.textContent = "⏮️";
+    prevButton.style.cursor = "pointer";
+    prevButton.style.border = "none";
+    prevButton.style.background = "transparent";
+    prevButton.style.color = "white";
+    prevButton.style.fontSize = "15px";
 
     let playButton = document.createElement("button");
     playButton.textContent = "▶️";
@@ -402,6 +410,14 @@ function addTimeControls() {
     pauseButton.style.color = "white";
     pauseButton.style.fontSize = "15px";
 
+    let nextButton = document.createElement("button");
+    nextButton.textContent = "⏭️";
+    nextButton.style.cursor = "pointer";
+    nextButton.style.border = "none";
+    nextButton.style.background = "transparent";
+    nextButton.style.color = "white";
+    nextButton.style.fontSize = "15px";
+
     let animationInterval = null;
 
     function updateTimeLabel() {
@@ -415,7 +431,7 @@ function addTimeControls() {
 
     function updateLayers(timeOffset) {
         updateRadar(timeOffset);
-        updateIRSatellite(timeOffset); // Menyelaraskan update satelit dengan radar
+        updateIRSatellite(timeOffset);
         updateTimeLabel();
     }
 
@@ -432,12 +448,30 @@ function addTimeControls() {
                 clearInterval(animationInterval);
                 animationInterval = null;
             }
-        }, 3000);
+        }, 2000);
     };
 
     pauseButton.onclick = function () {
         clearInterval(animationInterval);
         animationInterval = null;
+    };
+
+    prevButton.onclick = function () {
+        let step = parseInt(timeSlider.value);
+        if (step > 0) {
+            step--;
+            timeSlider.value = step;
+            updateLayers(12 - step);
+        }
+    };
+
+    nextButton.onclick = function () {
+        let step = parseInt(timeSlider.value);
+        if (step < 12) {
+            step++;
+            timeSlider.value = step;
+            updateLayers(12 - step);
+        }
     };
 
     timeSlider.oninput = function () {
@@ -446,7 +480,9 @@ function addTimeControls() {
     };
 
     controlContainer.appendChild(timeLabel);
-    controlContainer.appendChild(timeSlider);
+controlContainer.appendChild(timeSlider);    
+controlContainer.appendChild(prevButton);
+controlContainer.appendChild(nextButton);
     controlContainer.appendChild(playButton);
     controlContainer.appendChild(pauseButton);
 
@@ -454,6 +490,7 @@ function addTimeControls() {
 }
 
 addTimeControls();
+
 
  	var marker;
         var userMarker;
