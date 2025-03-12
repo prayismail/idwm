@@ -631,18 +631,12 @@ addTimeControls();
     });
 }
 
-
-	function downloadCSVFile() { 
+function downloadCSVFile() { 
     let csvContent = "data:text/csv;charset=utf-8,Waktu Setempat,Curah Hujan (mm),Kecepatan Angin (knot),Arah Angin (°)\n"; 
     
     currentData.times.forEach((time, index) => { 
-        let dateTime = new Date(time); // Konversi ke objek Date
-        if (isNaN(dateTime.getTime())) {
-            console.error(`Format waktu tidak valid: ${time}`);
-            return;
-        }
-
-        let formattedTime = dateTime.toISOString().replace('T', ' ').split('.')[0]; // Format YYYY-MM-DD HH:MM:SS
+        // Format dari Open Meteo sudah dalam bentuk YYYY-MM-DDTHH:MM
+        let formattedTime = time.replace("T", " ") + ":00"; // Ubah "T" menjadi spasi dan tambahkan ":00" di akhir
         
         csvContent += `${formattedTime},${currentData.precipitation[index]},${currentData.windSpeed[index]},${currentData.windDirection[index]}\n`; 
     });
@@ -655,7 +649,7 @@ addTimeControls();
     link.click();           
     document.body.removeChild(link);       
 }
-
+	
         function downloadImage() {
             let link = document.createElement('a');
             link.href = document.getElementById('weatherChart').toDataURL('image/png');
