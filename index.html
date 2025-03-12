@@ -506,7 +506,7 @@ addTimeControls();
 
         
         function fetchWeatherData(lat, lon) {
-            fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation,wind_speed_10m,wind_direction_10m&wind_speed_unit=kn&forecast_days=3&models=ecmwf_ifs025&timezone=auto`)
+            fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation,wind_speed_10m,wind_direction_10m&wind_speed_unit=kn&forecast_days=3&models=arpege_world&timezone=auto`)
 
             .then(response => response.json())
             .then(data => {
