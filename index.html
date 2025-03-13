@@ -133,10 +133,20 @@
     L.control.attribution({ position: 'bottomright' })
     .addAttribution('Proposed by <a href="https://mail.google.com/mail/?view=cm&fs=1&to=prayoga.ismail@bmkg.go.id" target="_blank">Prayoga Ismail</a>')
     .addTo(map);   
-        
+
+    // Event listener untuk menampilkan/menyembunyikan legenda Radar Cuaca
+   document.getElementById("legend").style.display = "none";
+
+map.on("overlayadd", function (eventLayer) {
+    if (eventLayer.name === "Radar Cuaca") {
+        document.getElementById("legend").style.display = "block"; }
+});
+map.on("overlayremove", function (eventLayer) {
+    if (eventLayer.name === "Radar Cuaca") {
+        document.getElementById("legend").style.display = "none";}
+});   
 // Buat elemen legenda LULC
 var lulcLegend = L.control({ position: "topright" });
-
 lulcLegend.onAdd = function (map) {
     var div = L.DomUtil.create("div", "info legend");
     
