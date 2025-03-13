@@ -806,12 +806,15 @@ var airports = [
                 });
                 
                 airports.forEach(airport => {
-                    if (metarData[airport.code]) {
-                        markers[airport.code].bindPopup(
-                            `<b>${airport.name} (${airport.code})</b><br>${metarData[airport.code].slice(-6).join('<br>')}`
-                        );
-                    }
-                });
+    if (metarData[airport.code]) {
+        markers[airport.code].bindPopup(
+            `<b>${airport.name} (${airport.code})</b><br>${metarData[airport.code]
+                .slice(-6)  // Ambil 6 data terakhir
+                .map(entry => "METAR " + entry) // Tambahkan "METAR " di awal setiap entry
+                .join('<br>')}`
+        );
+    }
+});
             })
             .catch(error => {
                 console.error("Gagal mengambil data METAR", error);
