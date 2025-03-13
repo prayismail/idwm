@@ -796,7 +796,7 @@ var airports = [
                     if (entry.trim() === "") return;
                     
                     var parts = entry.split(" ");
-                    var icaoCode = parts[0];
+                    var icaoCode = parts[1]; //ini menunjuk kode ICAO, ada di kata kedua (setelah metar)
                     
                     if (!metarData[icaoCode]) {
                         metarData[icaoCode] = [];
