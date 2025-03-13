@@ -130,7 +130,9 @@
         attributionControl: false // Menonaktifkan attribution bawaan
     });
 
-    L.control.attribution({ position: 'bottomright' }).addAttribution('&copy; Proposed by Prayoga Ismail').addTo(map);    
+    L.control.attribution({ position: 'bottomright' })
+    .addAttribution('Proposed by <a href="https://mail.google.com/mail/?view=cm&fs=1&to=prayoga.ismail@bmkg.go.id" target="_blank">Prayoga Ismail</a>')
+    .addTo(map);   
         
 // Buat elemen legenda LULC
 var lulcLegend = L.control({ position: "topright" });
