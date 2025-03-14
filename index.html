@@ -58,7 +58,7 @@
        
     }
 }
-      
+       
 	#chart-popup {
             display: none;
             position: fixed;
@@ -525,20 +525,22 @@ function addTimeControls() {
     }
 
     playButton.onclick = function () {
-        if (animationInterval) return;
+    if (animationInterval) return; // Cegah animasi ganda
 
-        let step = parseInt(timeSlider.value);
-        animationInterval = setInterval(() => {
-            if (step > 0) {
-                step--;
-                timeSlider.value = step;
-                updateLayers(12 - step);
-            } else {
-                clearInterval(animationInterval);
-                animationInterval = null;
-            }
-        }, 2000);
-    };
+    let step = parseInt(timeSlider.value);
+
+    animationInterval = setInterval(() => {
+        if (step > 0) {
+            step--;
+        } else {
+            step = 12; // Reset ke 12 setelah mencapai 0
+        }
+
+        timeSlider.value = step;
+        updateLayers(12 - step);
+    }, 2000);
+};
+
 
     pauseButton.onclick = function () {
         clearInterval(animationInterval);
