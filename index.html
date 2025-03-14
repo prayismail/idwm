@@ -9,9 +9,30 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-        #time-indicator {
+     @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil:wght@600&display=swap');
+       #webmap-title {
             position: absolute;
+            width: 280px;
             top: 10px;
+            left: 50%;
+            transform: translateX(-50%); /* Pusatkan secara horizontal */
+            background: rgba(255, 255, 255, 0.6); /* Background putih transparan */
+            color: black; /* Warna font hitam */
+            padding: 5px 5px;
+            border-radius: 8px;
+            font-family: 'Big Shoulders Stencil', sans-serif; /* Font lebih artistik */
+            font-size: 14px;
+            font-weight: bold;
+            text-align: center;
+            font-style: italic; /* Membuat teks miring */
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
+            z-index: 2000; /* Pastikan di atas elemen lain */
+        }
+    
+
+           #time-indicator {
+            position: absolute;
+            top: 40px;
             left: 50%;
             transform: translateX(-50%);
             background: rgba(0, 0, 0, 0.7);
@@ -33,7 +54,7 @@
 }
  @media screen and (max-width: 768px) {
     #map {
-        height: 90vh; /* Geser lebih naik di layar kecil */
+        height: 100vh; /* Geser lebih naik di layar kecil */
        
     }
 }
@@ -130,6 +151,7 @@
     </style>
 </head>
 <body>
+    <div id="webmap-title">IDWM | Integrated Display for Weather Monitoring</div>
     <div id="time-indicator">Waktu: Memuat...</div>
     <div id="map"></div>
     <div id="chart-popup">
@@ -428,7 +450,7 @@ setInterval(updateIRSatellite, 600000);
 function addTimeControls() {
     let controlContainer = document.createElement("div");
     controlContainer.style.position = "absolute";
-    controlContainer.style.top = "80px";
+    controlContainer.style.top = "85px";
     controlContainer.style.left = "50%";
     controlContainer.style.transform = "translateX(-50%)";
     controlContainer.style.zIndex = "1000";
