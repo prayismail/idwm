@@ -76,23 +76,55 @@
         }
 
 
-       #legend {
+/* LEGEND UMUM */
+        .legend {
+            position: absolute;
+            bottom: 80px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.6);
+            padding: 10px;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            display: none;
+	flex-direction: column;
+    	align-items: flex-start;
+    	max-height: fit-content;
+        }
+
+       
+	@media screen and (max-width: 768px) {
+    #legend {
+	bottom:80px; /* Geser lebih naik di layar kecil */
+        right: 10px;}}
+
+	/* POSISI LEGEND RADAR */
+        #legend { display: block; z-index: 2000}
+
+        /* POSISI LEGEND CURAH HUJAN owm*/
+        #precip-owm { display: none; z-index:1500}
+
+	/* POSISI LEGEND tekanan udara owm*/
+        #pressure-owm { display: none; }
+
+/* Tambahkan styling khusus untuk legend topografi dan LULC */
+#topo-legend, #lulc-legend {
+    display: none; 
     position: absolute;
-    bottom: 80px;  /* Tetap di kanan bawah */
+    top: 150px;
     right: 10px;
-    background: rgba(255, 255, 255, 0.6); /* Semi-transparan agar floating */
+    background: rgba(255, 255, 255, 0.8);
     padding: 10px;
     border-radius: 5px;
     font-family: Arial, sans-serif;
-    font-size: 12px;
+    font-size: 10px;
     box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
-    z-index: 1000; /* Pastikan tetap di atas layer peta */
-}
-@media screen and (max-width: 768px) {
-    #legend {
-        bottom:80px; /* Geser lebih naik di layar kecil */
-        right: 10px;
-    }
+    z-index: 1000;
+	flex-direction: column;
+    	align-items: flex-start;
+    	max-height: fit-content;
 }
 
     </style>
@@ -110,8 +142,9 @@
 	<canvas id="weatherChart"></canvas>
 </div>
 
-    <div id="legend">
-        <strong>Interpretasi Citra Radar</strong><br>
+<!-- Legend Radar -->
+    <div id="legend" class="legend">
+        <strong>Interpretasi Citra Radar</strong><br><br>
         
         <div style="background-color: #cec087; width: 20px; height: 10px; display: inline-block;"></div> Berawan<br>
         <div style="background-color: #17acdb; width: 20px; height: 10px; display: inline-block;"></div> Hujan Ringan<br>
@@ -120,6 +153,57 @@
         <div style="background-color: #FF0000; width: 20px; height: 10px; display: inline-block;"></div> Hujan Sangat Lebat<br>
         <div style="background-color: #eb83f4; width: 20px; height: 10px; display: inline-block;"></div> Hujan Ekstrem
      </div>
+
+<!-- Legend Curah Hujan OpenWeatherMap -->
+<div id="precip-owm" class="legend">
+    <strong>Curah Hujan (OWM)</strong><br><br>
+    <div style="background: rgba(225, 200, 100, 0.0); width: 15px; height: 15px; display: inline-block; border: 1px solid #ccc;"></div> 0 mm/jam<br>
+    <div style="background: rgba(200, 150, 150, 0.1); width: 15px; height: 15px; display: inline-block;"></div> 0.1 mm/jam<br>
+    <div style="background: rgba(150, 150, 170, 0.2); width: 15px; height: 15px; display: inline-block;"></div> 0.2 mm/jam<br>
+    <div style="background: rgba(120, 120, 190, 0.5); width: 15px; height: 15px; display: inline-block;"></div> 0.5 mm/jam<br>
+    <div style="background: rgba(110, 110, 205, 0.3); width: 15px; height: 15px; display: inline-block;"></div> 1 mm/jam<br>
+    <div style="background: rgba(80, 80, 225, 0.7); width: 15px; height: 15px; display: inline-block;"></div> 10 mm/jam<br>
+    <div style="background: rgba(20, 20, 255, 0.9); width: 15px; height: 15px; display: inline-block;"></div> 140 mm/jam<br>
+</div>
+
+<!-- Legend Tekanan Udara OpenWeatherMap -->
+ <div id="pressure-owm" class="legend">
+        <strong>Tekanan Udara (OWM)</strong><br><br>
+	<div style="background: rgba(0,115,255,1); width: 15px; height: 15px; display: inline-block; border: 1px solid #ccc;"></div> 940 hPa<br>
+    <div style="background: rgba(0,170,255,1); width: 15px; height: 15px; display: inline-block;"></div> 960 hPa<br>
+    <div style="background: rgba(75,208,214,1); width: 15px; height: 15px; display: inline-block;"></div> 980 hPa<br>
+    <div style="background: rgba(141,231,199,1); width: 15px; height: 15px; display: inline-block;"></div> 1000 hPa<br>
+    <div style="background: rgba(176,247,32,1); width: 15px; height: 15px; display: inline-block;"></div> 1010 hPa<br>
+    <div style="background: rgba(240,184,0,1); width: 15px; height: 15px; display: inline-block;"></div> 1020 hPa<br>
+    <div style="background: rgba(251,85,21,1); width: 15px; height: 15px; display: inline-block;"></div> 1040 hPa<br>
+    <div style="background: rgba(243,54,59,1); width: 15px; height: 15px; display: inline-block;"></div> 1060 hPa<br>
+   
+</div>
+
+<!-- Legend Topografi -->
+<div id="topo-legend" class="legend">
+    <strong>Legenda Topografi</strong><br><br>
+    <div style="background: #006400; width: 15px; height: 15px; display: inline-block; border: 1px solid #ccc;"></div> Dataran Rendah<br>
+    <div style="background: #32CD32; width: 15px; height: 15px; display: inline-block;"></div> Dataran Menengah<br>
+    <div style="background: #FFFFCC; width: 15px; height: 15px; display: inline-block;"></div> Perbukitan<br>
+    <div style="background: #8B4513; width: 15px; height: 15px; display: inline-block;"></div> Pegunungan<br>
+    <div style="background: #FFFFFF; width: 15px; height: 15px; display: inline-block;"></div> Puncak Bersalju
+</div>
+
+<!-- Legend LULC (Land Use Land Cover) -->
+<div id="lulc-legend" class="legend">
+    <strong>Kelas Tutupan Lahan</strong><br><br>
+    <div style="background: #006400; width: 15px; height: 15px; display: inline-block; border: 1px solid #ccc;"></div> Vegetasi<br>
+    <div style="background: #ffbb22; width: 15px; height: 15px; display: inline-block;"></div> Semak Belukar<br>
+    <div style="background: #ffff4c; width: 15px; height: 15px; display: inline-block;"></div> Padang Rumput<br>
+    <div style="background: #f096ff; width: 15px; height: 15px; display: inline-block;"></div> Lahan Pertanian<br>
+    <div style="background: #fa0000; width: 15px; height: 15px; display: inline-block;"></div> Bangunan<br>
+    <div style="background: #b4b4b4; width: 15px; height: 15px; display: inline-block;"></div> Tanah Terbuka<br>
+    <div style="background: #f0f0f0; width: 15px; height: 15px; display: inline-block;"></div> Salju/Es<br>
+    <div style="background: #0064c8; width: 15px; height: 15px; display: inline-block;"></div> Tubuh Air<br>
+    <div style="background: #0096a0; width: 15px; height: 15px; display: inline-block;"></div> Lahan Basah<br>
+    <div style="background: #00cf75; width: 15px; height: 15px; display: inline-block;"></div> Mangrove
+</div>
 
 
     <script>
@@ -131,115 +215,66 @@
     });
 
     L.control.attribution({ position: 'bottomright' })
-    .addAttribution('Proposed by <a href="https://mail.google.com/mail/?view=cm&fs=1&to=prayoga.ismail@bmkg.go.id" target="_blank">Prayoga Ismail</a>')
-    .addTo(map);   
+    .addAttribution('Proposed by <a href="https://mail.google.com/mail/?view=cm&fs=1&to=prayoga.ismail@bmkg.go.id" target="_blank">Prayoga Ismail</a>. Coding by OpenAI')
+    .addTo(map);
 
     // Event listener untuk menampilkan/menyembunyikan legenda Radar Cuaca
    document.getElementById("legend").style.display = "none";
 
 map.on("overlayadd", function (eventLayer) {
     if (eventLayer.name === "Radar Cuaca") {
-        document.getElementById("legend").style.display = "block"; }
+        document.getElementById("legend").style.display = "block";
+    }
 });
+
 map.on("overlayremove", function (eventLayer) {
     if (eventLayer.name === "Radar Cuaca") {
-        document.getElementById("legend").style.display = "none";}
-});   
-//Elemen legenda opentopomap
-var topoLegend = L.control({ position: "topright" });
-topoLegend.onAdd = function (map) {
-    var div = L.DomUtil.create("div", "info legend");
+        document.getElementById("legend").style.display = "none";
+    }
+});
 
-    // Styling legenda
-    div.style.position = "absolute";
-    div.style.right = "10px";
-    div.style.width = "150px";
-    div.style.top = "150px";
-    div.style.background = "rgba(255, 255, 255, 0.8)";
-    div.style.padding = "10px";
-    div.style.borderRadius = "5px";
-    div.style.fontFamily = "Arial, sans-serif";
-    div.style.fontSize = "10px";
-    div.style.boxShadow = "0px 0px 10px rgba(0, 0, 0, 0.3)";
-    div.style.zIndex = "1000";
+// Event untuk Menampilkan/Menyembunyikan Legenda Curah hujan owm
+        map.on("overlayadd", function (eventLayer) {
+            if (eventLayer.name === "Peta Hujan Terkini (OWM)") {
+                document.getElementById("precip-owm").style.display = "block";
+            }
+        });
 
-    // Tambahkan teks legenda
-    div.innerHTML += "<strong>Legenda Topografi</strong><br><br>";
-    var topoColors = {
-        "#006400": "Dataran Rendah",
-        "#32CD32": "Dataran Menengah",
-        "#C2B280": "Perbukitan",
-        "#8B4513": "Pegunungan",
-        "#FFFFFF": "Puncak Bersalju"
-    };
+        map.on("overlayremove", function (eventLayer) {
+            if (eventLayer.name === "Peta Hujan Terkini (OWM)") {
+                document.getElementById("precip-owm").style.display = "none";
+            }
+        });
 
-    for (var color in topoColors) {
-        div.innerHTML +=
-            '<i style="background:' + color + '; width: 15px; height: 15px; display: inline-block;"></i> ' +
-            topoColors[color] + "<br>"; }
-    return div;};
+// Event untuk Menampilkan/Menyembunyikan Legenda Tekanan udara owm
+        map.on("overlayadd", function (eventLayer) {
+            if (eventLayer.name === "Peta Tekanan Udara (OWM)") {
+                document.getElementById("pressure-owm").style.display = "block";
+            }
+        });
 
-// Event listener untuk menampilkan/menyembunyikan legenda OpenTopoMap
+        map.on("overlayremove", function (eventLayer) {
+            if (eventLayer.name === "Peta Tekanan Udara (OWM)") {
+                document.getElementById("pressure-owm").style.display = "none";
+            }
+        });
+
 map.on("baselayerchange", function (eventLayer) {
+    console.log("Base layer diubah:", eventLayer.name);
+
     if (eventLayer.name === "Peta Topografi (OpenTopoMap)") {
-        topoLegend.addTo(map);
+        document.getElementById("topo-legend").style.display = "block";
     } else {
-        map.removeControl(topoLegend);}
-});
-
-// Buat elemen legenda LULC
-var lulcLegend = L.control({ position: "topright" });
-lulcLegend.onAdd = function (map) {
-    var div = L.DomUtil.create("div", "info legend");
-    
-    // Tambahkan styling langsung di JavaScript
-    div.style.position = "absolute";
-    div.style.right = "10px";
-    div.style.width = "120px";
-    div.style.top = "150px";
-    div.style.background = "rgba(255, 255, 255, 0.8)";
-    div.style.padding = "10px";
-    div.style.borderRadius = "5px";
-    div.style.fontFamily = "Arial, sans-serif";
-    div.style.fontSize = "10px";
-    div.style.boxShadow = "0px 0px 10px rgba(0, 0, 0, 0.3)";
-    div.style.zIndex = "1000";
-
-    // Tambahkan teks legenda
-    div.innerHTML += "<strong>Kelas Tutupan Lahan</strong><br><br>";
-    var lulcColors = {
-        "#006400": "Vegetasi",
-        "#ffbb22": "Semak Belukar",
-        "#ffff4c": "Padang Rumput",
-        "#f096ff": "Lahan Pertanian",
-        "#fa0000": "Bangunan",
-        "#b4b4b4": "Tanah Terbuka",
-        "#f0f0f0": "Salju/Es",
-        "#0064c8": "Tubuh Air",
-        "#0096a0": "Lahan Basah",
-        "#00cf75": "Mangrove"
-        
-    };
-
-    for (var color in lulcColors) {
-        div.innerHTML +=
-            '<i style="background:' + color + '; width: 15px; height: 15px; display: inline-block;"></i> ' +
-            lulcColors[color] + "<br>";
+        document.getElementById("topo-legend").style.display = "none";
     }
 
-    return div;
-};
-
-// Event listener untuk menampilkan/menyembunyikan legenda LULC
-map.on("baselayerchange", function (eventLayer) {
     if (eventLayer.name === "Peta LULC (ESA WorldCover)") {
-        lulcLegend.addTo(map);
+        document.getElementById("lulc-legend").style.display = "block";
     } else {
-        map.removeControl(lulcLegend);
+        document.getElementById("lulc-legend").style.display = "none";
     }
 });
 
-        
         
 var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: 'Base map &copy; OpenStreetMap contributors'
@@ -269,7 +304,14 @@ var lulcMap = L.tileLayer.wms("https://services.terrascope.be/wms/v2", {
 var radarLayer = L.tileLayer('', { opacity: 0.8, attribution: 'Radar data &copy; RainViewer' });
 var IRsatelliteLayer = L.tileLayer('', { opacity: 0.6, attribution: 'Satellite data &copy; RainViewer' });
 
-        
+ // Tambahkan Layer Curah Hujan dari OpenWeatherMap
+        var precipitationLayer = L.tileLayer(
+            'https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=62ac6e2d12bbaaa3de6bf9f57fe1cc00',
+            {attribution: 'Precipitation data &copy; OpenWeatherMap',opacity: 1});
+ //Layer Tekanan udara OWM
+var pressureLayer = L.tileLayer('https://tile.openweathermap.org/map/pressure_new/{z}/{x}/{y}.png?appid=62ac6e2d12bbaaa3de6bf9f57fe1cc00', 
+	{attribution: 'Pressure data &copy; OpenWeatherMap</a>',opacity: 1});
+
 // Fungsi untuk mendapatkan lokasi pengguna
 function addUserLocation() {
     if ("geolocation" in navigator) {
@@ -796,7 +838,7 @@ var airports = [
                     if (entry.trim() === "") return;
                     
                     var parts = entry.split(" ");
-                    var icaoCode = parts[0]; //ini menunjuk kode ICAO, ada di kata kedua (setelah metar)
+                    var icaoCode = parts[0];
                     
                     if (!metarData[icaoCode]) {
                         metarData[icaoCode] = [];
@@ -806,15 +848,13 @@ var airports = [
                 });
                 
                 airports.forEach(airport => {
-    if (metarData[airport.code]) {
+                     if (metarData[airport.code]) {
         markers[airport.code].bindPopup(
             `<b>${airport.name} (${airport.code})</b><br>${metarData[airport.code]
                 .slice(-6)  // Ambil 6 data terakhir
                 .map(entry => "METAR " + entry) // Tambahkan "METAR " di awal setiap entry
-                .join('<br>')}`
-        );
-    }
-});
+                .join('<br>')}`);
+} });
             })
             .catch(error => {
                 console.error("Gagal mengambil data METAR", error);
@@ -830,11 +870,12 @@ var baseMaps = {
     };
 
     var overlayMaps = { 
-        "Satelit Inframerah": IRsatelliteLayer,
-        "Radar Cuaca": radarLayer,
-	"Cuaca Bandara": airportLayer
- 
-    };
+	"Peta Tekanan Udara (OWM)": pressureLayer,        
+	"Satelit Inframerah Awan": IRsatelliteLayer,
+	"Peta Hujan Terkini (OWM)": precipitationLayer,
+	"Radar Cuaca": radarLayer, 
+        "Cuaca Bandara": airportLayer
+     };
 
   
 setTimeout(() => {
@@ -852,8 +893,8 @@ setTimeout(() => {
 }, 100);
 
 L.control.layers(baseMaps, overlayMaps, { collapsed: true, position: 'bottomleft' }).addTo(map);
+radarLayer.addTo(map);
 
-    radarLayer.addTo(map);
 
 </script>
 
