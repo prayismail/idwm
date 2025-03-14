@@ -235,26 +235,26 @@ map.on("overlayremove", function (eventLayer) {
 
 // Event untuk Menampilkan/Menyembunyikan Legenda Curah hujan owm
         map.on("overlayadd", function (eventLayer) {
-            if (eventLayer.name === "Peta Hujan Terkini (OWM)") {
+            if (eventLayer.name === "Sebaran hujan (OWM)") {
                 document.getElementById("precip-owm").style.display = "block";
             }
         });
 
         map.on("overlayremove", function (eventLayer) {
-            if (eventLayer.name === "Peta Hujan Terkini (OWM)") {
+            if (eventLayer.name === "Sebaran hujan (OWM)") {
                 document.getElementById("precip-owm").style.display = "none";
             }
         });
 
 // Event untuk Menampilkan/Menyembunyikan Legenda Tekanan udara owm
         map.on("overlayadd", function (eventLayer) {
-            if (eventLayer.name === "Peta Tekanan Udara (OWM)") {
+            if (eventLayer.name === "Tekanan Udara (OWM)") {
                 document.getElementById("pressure-owm").style.display = "block";
             }
         });
 
         map.on("overlayremove", function (eventLayer) {
-            if (eventLayer.name === "Peta Tekanan Udara (OWM)") {
+            if (eventLayer.name === "Tekanan Udara (OWM)") {
                 document.getElementById("pressure-owm").style.display = "none";
             }
         });
@@ -262,13 +262,13 @@ map.on("overlayremove", function (eventLayer) {
 map.on("baselayerchange", function (eventLayer) {
     console.log("Base layer diubah:", eventLayer.name);
 
-    if (eventLayer.name === "Peta Topografi (OpenTopoMap)") {
+    if (eventLayer.name === "Peta Topografi") {
         document.getElementById("topo-legend").style.display = "block";
     } else {
         document.getElementById("topo-legend").style.display = "none";
     }
 
-    if (eventLayer.name === "Peta LULC (ESA WorldCover)") {
+    if (eventLayer.name === "Peta Tutupan Lahan") {
         document.getElementById("lulc-legend").style.display = "block";
     } else {
         document.getElementById("lulc-legend").style.display = "none";
@@ -865,14 +865,14 @@ var baseMaps = {
         "Peta OSM": osmLayer,
         "Peta Esri Imagery": esriImagery,
     	"Peta CartoDB": cartoPositron,
-    "Peta Topografi (OpenTopoMap)": topoMap,
-    "Peta LULC (ESA WorldCover)": lulcMap
+    "Peta Topografi": topoMap,
+    "Peta Tutupan Lahan": lulcMap
     };
 
     var overlayMaps = { 
-	"Peta Tekanan Udara (OWM)": pressureLayer,        
-	"Satelit Inframerah Awan": IRsatelliteLayer,
-	"Peta Hujan Terkini (OWM)": precipitationLayer,
+	"Tekanan Udara (OWM)": pressureLayer,        
+	"Satelit Inframerah": IRsatelliteLayer,
+	"Sebaran hujan (OWM)": precipitationLayer,
 	"Radar Cuaca": radarLayer, 
         "Cuaca Bandara": airportLayer
      };
