@@ -498,7 +498,7 @@ function addTimeControls() {
     controlContainer.style.padding = "5px";
     controlContainer.style.background = "rgba(0, 0, 0, 0.6)";
     controlContainer.style.color = "white";
-    controlContainer.style.border = "1px solid white";
+    controlContainer.style.border = "0px solid white";
     controlContainer.style.borderRadius = "5px";
     controlContainer.style.display = "flex";
     controlContainer.style.alignItems = "center";
@@ -781,11 +781,29 @@ function downloadCSVFile() {
 }
 	
         function downloadImage() {
-            let link = document.createElement('a');
-            link.href = document.getElementById('weatherChart').toDataURL('image/png');
-            link.download = 'Prakiraan_Cuaca.png';
-            link.click();
-        }
+    let canvas = document.getElementById('weatherChart');
+    let ctx = canvas.getContext('2d');
+
+    // Buat canvas baru dengan ukuran yang sama
+    let newCanvas = document.createElement('canvas');
+    newCanvas.width = canvas.width;
+    newCanvas.height = canvas.height;
+    let newCtx = newCanvas.getContext('2d');
+
+    // Tambahkan background putih
+    newCtx.fillStyle = 'white';
+    newCtx.fillRect(0, 0, newCanvas.width, newCanvas.height);
+
+    // Gambar grafik asli di atas background putih
+    newCtx.drawImage(canvas, 0, 0);
+
+    // Download gambar dari canvas baru
+    let link = document.createElement('a');
+    link.href = newCanvas.toDataURL('image/png');
+    link.download = 'Prakiraan_Cuaca.png';
+    link.click();
+}
+
 
 	downloadCSV.addEventListener('click', downloadCSVFile);
         downloadImg.addEventListener('click', downloadImage);
