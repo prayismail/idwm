@@ -121,22 +121,6 @@
     flex-direction: column;
 }
 
-.gradient-bar {
-    width: 20px;
-    height: 150px;
-    background: linear-gradient(to bottom, 
-        #cec087,  /* Berawan */
-        #0077B6, /* Hujan Ringan */
-	#004F73,
-        #FFFF00,  /* Hujan Sedang */
-        #FFA500,  /* Hujan Lebat */
-        #FF0000,  /* Hujan Sangat Lebat */
-        #eb83f4   /* Hujan Ekstrem */
-    );
-    border-radius: 2px;
-    border: 0px solid black;
-    position: relative;
-}
 
 .legend-labels {
     display: flex;
@@ -152,7 +136,23 @@
 .legend-labels span {
     position: relative;
 }
-       
+
+.gradient-bar {
+    width: 20px;
+    height: 150px;
+    background: linear-gradient(to bottom,  
+        #cec087 0%, #cec087 20%,   /* Berawan */
+        #003F5E 20%, #003F5E 40%,   /* Hujan Ringan */
+        #FFFF00 40%, #FFFF00 60%,   /* Hujan Sedang */
+        #FFA500 60%, #FFA500 80%,   /* Hujan Lebat */
+        #FF0000 80%, #FF0000 90%,   /* Hujan Sangat Lebat */
+        #eb83f4 90%, #eb83f4 100%   /* Hujan Ekstrem */
+    );
+    border-radius: 2px;
+    border: 0px solid black;
+    position: relative;
+}
+	    
 	@media screen and (max-width: 768px) {
     #legend {
 	bottom:80px; /* Geser lebih naik di layar kecil */
