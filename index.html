@@ -138,32 +138,21 @@
 }
 
 .gradient-bar {
-            width: 20px;
-            height: 300px;
-            background: linear-gradient(to bottom,
-                #cec087 0%, #cec087 10%,   /* 0 - 5 dBZ */
-                #88ddee 10%, #88ddee 20%,  /* 10 dBZ */
-                #0099cc 20%, #0099cc 30%,  /* 15 dBZ */
-                #0055a5 30%, #0055a5 40%,  /* 20 dBZ */
-                #002c6b 40%, #002c6b 50%,  /* 25 dBZ */
-                #001848 50%, #001848 60%,  /* 30 dBZ */
-                #ffcc00 60%, #ffcc00 70%,  /* 35 dBZ */
-                #ff8800 70%, #ff8800 80%,  /* 40 dBZ */
-                #ff0000 80%, #ff0000 90%,  /* 45 dBZ */
-                #990000 90%, #990000 100%  /* 50+ dBZ */
-            );
-            border: 1px solid #000;
-            position: relative;
-        }
+    width: 20px;
+    height: 150px;
+    background: linear-gradient(to bottom,  
+         	#cec087 0%, #cec087 10%,   /* 0 - 9 dBZ */
+                #0099cc 10%, #0099cc 30%,  /* 10-29 dBZ ringan  */
+                #ffee00 30%, #ffee00 50%,  /* 30-39 dBZ sedang  */
+                #ff8800 50%, #ff8800 70%,  /* 40-49 dBZ lebat*/
+                #990000 70%, #990000 90%  /* 50-59 dBZ sangat lebat */
+		#ff77ff 90%, #ff77ff 100%  /* 60+ dBZ ekstrem */
+    );
+    border-radius: 2px;
+    border: 0px solid black;
+    position: relative;
+}
 
-        .labels {
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            margin-left: 10px;
-            font-size: 12px;
-            color: #000;
-        }
 	    
 	@media screen and (max-width: 768px) {
     #legend {
@@ -214,22 +203,21 @@
 </div>
 
 <!-- Legend Radar -->    
- <div class="legend-container">
+ <div id="legend" class="legend">
+    <strong>Interpretasi Citra Radar</strong><br><br>
+    <div class="legend-container">
         <div class="gradient-bar"></div>
-        <div class="labels">
-            <div>50+ dBZ</div>
-            <div>45 dBZ</div>
-            <div>40 dBZ</div>
-            <div>35 dBZ</div>
-            <div>30 dBZ</div>
-            <div>25 dBZ</div>
-            <div>20 dBZ</div>
-            <div>15 dBZ</div>
-            <div>10 dBZ</div>
-            <div>5 dBZ</div>
-            <div>0 dBZ</div>
+        <div class="legend-labels">
+	    <span>0-9 dBZ</span>
+            <span>10-29 dBZ </span>
+            <span>30-39 dBZ</span>
+            <span>40-49 dBZ</span>
+            <span>50-59 dBZ</span>
+	    <span>60+ dBZ</span>
         </div>
     </div>
+</div>
+
 <!-- Legend Curah Hujan OpenWeatherMap -->
 <div id="precip-owm" class="legend">
     <strong>Curah Hujan (OWM)</strong><br><br>
