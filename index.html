@@ -137,18 +137,20 @@
     position: relative;
 }
 
-
 .gradient-bar {
     width: 20px;
     height: 300px;
     background: linear-gradient(to bottom,
-        #00A6FF 0%, #00A6FF 10%,
-        #0077B6 10%, #0077B6 20%,
-        #003F5E 20%, #003F5E 30%,
-        #FFFF00 30%, #FFFF00 40%,
-        #FFA500 40%, #FFA500 50%,
-        #FF0000 50%, #FF0000 60%,
-        #FF00FF 60%, #FF00FF 70%
+        #cec087 0%, #cec087 10%,   /* 0 - 5 dBZ */
+        #88ddee 10%, #88ddee 20%,  /* 10 dBZ */
+        #0099cc 20%, #0099cc 30%,  /* 15 dBZ */
+        #0055a5 30%, #0055a5 40%,  /* 20 dBZ */
+        #002c6b 40%, #002c6b 50%,  /* 25 dBZ */
+        #001848 50%, #001848 60%,  /* 30 dBZ */
+        #ffcc00 60%, #ffcc00 70%,  /* 35 dBZ */
+        #ff8800 70%, #ff8800 80%,  /* 40 dBZ */
+        #ff0000 80%, #ff0000 90%,  /* 45 dBZ */
+        #990000 90%, #990000 100%  /* 50+ dBZ */
     );
     border: 1px solid #000;
     position: relative;
@@ -167,7 +169,8 @@
 .label {
     font-size: 12px;
     color: #000;
-}	    
+}
+	    
 	@media screen and (max-width: 768px) {
     #legend {
 	bottom:80px; /* Geser lebih naik di layar kecil */
@@ -218,19 +221,23 @@
 
 <!-- Legend Radar -->    
 <div class="legend">
-	
     <div class="gradient-bar">
         <div class="labels">
-            <div class="label">> 60 dBZ</div>
-            <div class="label">50 - 60 dBZ</div>
-            <div class="label">40 - 50 dBZ</div>
-            <div class="label">30 - 40 dBZ</div>
-            <div class="label">20 - 30 dBZ</div>
-            <div class="label">10 - 20 dBZ</div>
-            <div class="label">< 10 dBZ</div>
+            <div class="label">50+ dBZ</div>
+            <div class="label">45 dBZ</div>
+            <div class="label">40 dBZ</div>
+            <div class="label">35 dBZ</div>
+            <div class="label">30 dBZ</div>
+            <div class="label">25 dBZ</div>
+            <div class="label">20 dBZ</div>
+            <div class="label">15 dBZ</div>
+            <div class="label">10 dBZ</div>
+            <div class="label">5 dBZ</div>
+            <div class="label">0 dBZ</div>
         </div>
     </div>
 </div>
+	
 <!-- Legend Curah Hujan OpenWeatherMap -->
 <div id="precip-owm" class="legend">
     <strong>Curah Hujan (OWM)</strong><br><br>
