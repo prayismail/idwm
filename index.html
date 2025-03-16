@@ -137,22 +137,37 @@
     position: relative;
 }
 
+
 .gradient-bar {
     width: 20px;
-    height: 150px;
-    background: linear-gradient(to bottom,  
-        #cec087 0%, #cec087 10%,   /* Berawan */
-        #0077B6 10%, #0077B6 30%,   /* Hujan Ringan */
-        #FFFF00 30%, #FFFF00 50%,   /* Hujan Sedang */
-        #FFA500 50%, #FFA500 70%,   /* Hujan Lebat */
-        #FF0000 70%, #FF0000 90%,   /* Hujan Sangat Lebat */
-        #eb83f4 90%, #eb83f4 100%   /* Hujan Ekstrem */
+    height: 300px;
+    background: linear-gradient(to bottom,
+        #00A6FF 0%, #00A6FF 10%,
+        #0077B6 10%, #0077B6 20%,
+        #003F5E 20%, #003F5E 30%,
+        #FFFF00 30%, #FFFF00 40%,
+        #FFA500 40%, #FFA500 50%,
+        #FF0000 50%, #FF0000 60%,
+        #FF00FF 60%, #FF00FF 70%
     );
-    border-radius: 2px;
-    border: 0px solid black;
+    border: 1px solid #000;
     position: relative;
 }
-	    
+
+.labels {
+    position: absolute;
+    left: 25px;
+    top: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.label {
+    font-size: 12px;
+    color: #000;
+}	    
 	@media screen and (max-width: 768px) {
     #legend {
 	bottom:80px; /* Geser lebih naik di layar kecil */
@@ -201,23 +216,22 @@
 	<canvas id="weatherChart"></canvas>
 </div>
 
-<!-- Legend Radar -->
-    <div id="legend" class="legend">
-    <strong>Interpretasi Citra Radar</strong><br><br>
-    <div class="legend-container">
-        <div class="gradient-bar"></div>
-        <div class="legend-labels">
-            <span>Berawan</span>
-            <span>Hujan Ringan</span>
-            <span>Hujan Sedang</span>
-            <span>Hujan Lebat</span>
-            <span>Hujan Sangat Lebat</span>
-            <span>Hujan Ekstrem</span>
+<!-- Legend Radar -->    
+<div class="legend">
+	
+    <div class="gradient-bar">
+        <div class="labels">
+	<strong>Interpretasi Citra Radar</strong><br><br>
+            <div class="label">> 60 dBZ</div>
+            <div class="label">50 - 60 dBZ</div>
+            <div class="label">40 - 50 dBZ</div>
+            <div class="label">30 - 40 dBZ</div>
+            <div class="label">20 - 30 dBZ</div>
+            <div class="label">10 - 20 dBZ</div>
+            <div class="label">< 10 dBZ</div>
         </div>
     </div>
 </div>
-
-
 <!-- Legend Curah Hujan OpenWeatherMap -->
 <div id="precip-owm" class="legend">
     <strong>Curah Hujan (OWM)</strong><br><br>
