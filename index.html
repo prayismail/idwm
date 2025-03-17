@@ -377,22 +377,23 @@
         updateIRSatellite();
         setInterval(updateRadar, 600000);
         setInterval(updateIRSatellite, 600000);
-
-	function addTimeControls() {
-    // Buat container untuk time slider
-    let timeControlContainer = document.createElement("div");
-    timeControlContainer.style.position = "absolute";
-    timeControlContainer.style.top = "90px";
-    timeControlContainer.style.left = "50%";
-    timeControlContainer.style.transform = "translateX(-50%)";
-    timeControlContainer.style.zIndex = "1000";
-    timeControlContainer.style.padding = "3px";
-    timeControlContainer.style.background = "rgba(0, 0, 0, 0.6)";
-    timeControlContainer.style.color = "white";
-    timeControlContainer.style.borderRadius = "5px";
-    timeControlContainer.style.display = "none"; // Awalnya disembunyikan
-    timeControlContainer.style.alignItems = "center";
-    timeControlContainer.style.gap = "5px";
+	    
+let controlContainer = null;
+function addTimeControls() {
+    controlContainer = document.createElement("div");
+    controlContainer.style.position = "absolute";
+    controlContainer.style.top = "90px";
+    controlContainer.style.left = "50%";
+    controlContainer.style.transform = "translateX(-50%)";
+    controlContainer.style.zIndex = "1000";
+    controlContainer.style.padding = "3px";
+    controlContainer.style.background = "rgba(0, 0, 0, 0.6)";
+    controlContainer.style.color = "white";
+    controlContainer.style.border = "0px solid white";
+    controlContainer.style.borderRadius = "5px";
+    controlContainer.style.display = "none"; // Awalnya disembunyikan
+    controlContainer.style.alignItems = "center";
+    controlContainer.style.gap = "3px";
 
     let timeLabel = document.createElement("span");
     timeLabel.textContent = "Saat Ini";
@@ -412,6 +413,7 @@
     prevButton.style.border = "none";
     prevButton.style.background = "transparent";
     prevButton.style.color = "white";
+    prevButton.style.fontSize = "15px";
 
     let playButton = document.createElement("button");
     playButton.textContent = "▶️";
@@ -419,6 +421,7 @@
     playButton.style.border = "none";
     playButton.style.background = "transparent";
     playButton.style.color = "white";
+    playButton.style.fontSize = "15px";
 
     let pauseButton = document.createElement("button");
     pauseButton.textContent = "⏸️";
@@ -426,6 +429,7 @@
     pauseButton.style.border = "none";
     pauseButton.style.background = "transparent";
     pauseButton.style.color = "white";
+    pauseButton.style.fontSize = "15px";
 
     let nextButton = document.createElement("button");
     nextButton.textContent = "⏭️";
@@ -433,56 +437,39 @@
     nextButton.style.border = "none";
     nextButton.style.background = "transparent";
     nextButton.style.color = "white";
+    nextButton.style.fontSize = "15px";
 
     let animationInterval = null;
 
     function updateTimeLabel() {
         let step = 12 - parseInt(timeSlider.value);
-        timeLabel.textContent = step === 0 ? "Saat Ini" : `${step * 10} menit lalu`;
-    }
+        if (step === 0) timeLabel.textContent = "Saat Ini";
+        else timeLabel.textContent = `${step * 10} menit lalu`;}
 
     function updateLayers(timeOffset) {
-        if (typeof updateRadar === "function") updateRadar(timeOffset);
-        if (typeof updateIRSatellite === "function") updateIRSatellite(timeOffset);
-        updateTimeLabel();
-    }
-
-    function toggleTimeControls() {
-        let radarVisible = radarLayer.getVisible && radarLayer.getVisible();
-        let irVisible = IRsatelliteLayer.getVisible && IRsatelliteLayer.getVisible();
-
-        timeControlContainer.style.display = (radarVisible || irVisible) ? "flex" : "none";
-    }
-
-    if (radarLayer && typeof radarLayer.on === "function") {
-        radarLayer.on('change:visible', toggleTimeControls);
-    }
-    if (IRsatelliteLayer && typeof IRsatelliteLayer.on === "function") {
-        IRsatelliteLayer.on('change:visible', toggleTimeControls);
-    }
+        updateRadar(timeOffset);
+        updateIRSatellite(timeOffset);
+        updateTimeLabel();}
 
     playButton.onclick = function () {
         if (animationInterval) return;
         let step = parseInt(timeSlider.value);
         animationInterval = setInterval(() => {
-            step = step > 0 ? step - 1 : 12;
+            if (step > 0) step--;
+            else step = 12;
             timeSlider.value = step;
-            updateLayers(12 - step);
-        }, 2000);
-    };
+            updateLayers(12 - step); }, 2000);};
 
     pauseButton.onclick = function () {
         clearInterval(animationInterval);
-        animationInterval = null;
-    };
+        animationInterval = null; };
 
     prevButton.onclick = function () {
         let step = parseInt(timeSlider.value);
         if (step > 0) {
             step--;
             timeSlider.value = step;
-            updateLayers(12 - step);
-        }
+            updateLayers(12 - step);}
     };
 
     nextButton.onclick = function () {
@@ -490,8 +477,7 @@
         if (step < 12) {
             step++;
             timeSlider.value = step;
-            updateLayers(12 - step);
-        }
+            updateLayers(12 - step);}
     };
 
     timeSlider.oninput = function () {
@@ -499,19 +485,31 @@
         updateLayers(timeOffset);
     };
 
-    timeControlContainer.appendChild(timeLabel);
-    timeControlContainer.appendChild(timeSlider);
-    timeControlContainer.appendChild(prevButton);
-    timeControlContainer.appendChild(nextButton);
-    timeControlContainer.appendChild(playButton);
-    timeControlContainer.appendChild(pauseButton);
+    controlContainer.appendChild(timeLabel);
+    controlContainer.appendChild(timeSlider);
+    controlContainer.appendChild(prevButton);
+    controlContainer.appendChild(nextButton);
+    controlContainer.appendChild(playButton);
+    controlContainer.appendChild(pauseButton);
 
-    document.body.appendChild(timeControlContainer);}
+    document.body.appendChild(controlContainer);}
+    function checkLayerStatus() {
+    // Cek apakah layer "Radar Cuaca" atau "Satelit Inframerah" aktif
+    return map.hasLayer(radarLayer) || map.hasLayer(IRsatelliteLayer);
+}
+function toggleTimeControls() {
+    if (checkLayerStatus()) {
+        controlContainer.style.display = "flex"; // Tampilkan control container
+    } else {
+        controlContainer.style.display = "none"; // Sembunyikan control container 
+    }
+}
 
-// Pastikan fungsi dipanggil setelah layer ada
-document.addEventListener("DOMContentLoaded", () => {
-    addTimeControls();
-});
+// Panggil fungsi addTimeControls untuk membuat control container
+addTimeControls();
+
+// Tambahkan event listener untuk memantau perubahan layer
+map.on('layeradd layerremove', toggleTimeControls);
         var marker;
         var userMarker;
         var weatherChart;
