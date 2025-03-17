@@ -25,7 +25,7 @@
             border-radius: 8px;
             font-family: 'Big Shoulders Stencil', sans-serif;
             font-size: 14px;
-            font-weight: bold;
+            font-weight: 900;
             text-align: center;
             font-style: italic;
             box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
@@ -33,12 +33,12 @@
         }
         #time-indicator {
             position: absolute;
-            top: 40px;
+            top: 35px;
             left: 50%;
             transform: translateX(-50%);
             background: rgba(0, 0, 0, 0.7);
             color: white;
-            padding: 8px 12px;
+            padding: 5px 5px;
             border-radius: 5px;
             font-family: Arial, sans-serif;
             font-size: 12px;
@@ -149,7 +149,7 @@
         #layerSelector {
             position: absolute;
             top: 25%;
-            left: 20px;
+            left: 10px;
             transform: translateY(-50%);
             z-index: 2000;
             background: rgba(255, 255, 255, 0.6); /* Ubah opacity menjadi 0.7 (lebih transparan) */
@@ -255,7 +255,7 @@
     </div>
     <script>
         var map = L.map('map', { center: [-2.5, 118], zoom: 5, attributionControl: false });
-        L.control.attribution({ position: 'bottomright' }).addAttribution('Proposed by <a href="https://mail.google.com/mail/?view=cm&fs=1&to=prayoga.ismail@bmkg.go.id" target="_blank">Prayoga Ismail</a>, Coding by DeepSeek').addTo(map);
+        L.control.attribution({ position: 'bottomright' }).addAttribution('Proposed by <a href="https://mail.google.com/mail/?view=cm&fs=1&to=prayoga.ismail@bmkg.go.id" target="_blank">Prayoga Ismail</a>, Coding by OpenAI').addTo(map);
         document.getElementById("legend").style.display = "none";
         map.on("overlayadd", function (eventLayer) {
             if (eventLayer.name === "Radar Cuaca") document.getElementById("legend").style.display = "block";
@@ -323,24 +323,40 @@
             img.src = url;
         }
         function updateRadar(timeOffset = 0) {
-            fetch('https://api.rainviewer.com/public/weather-maps.json')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.radar && data.radar.past.length > 0) {
-                        let index = Math.max(0, data.radar.past.length - 1 - timeOffset);
-                        let timestamp = data.radar.past[index].time;
-                        let radarUrl = `https://tilecache.rainviewer.com/v2/radar/${timestamp}/256/{z}/{x}/{y}/2/1_1.png`;
-                        radarLayer.setUrl(radarUrl);
-                        let utcTime = new Date(timestamp * 1000);
-                        let bulanIndonesia = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-                        let bulan = bulanIndonesia[utcTime.getUTCMonth()];
-                        document.getElementById('time-indicator').innerHTML = `<strong>${utcTime.getUTCDate()} ${bulan} ${utcTime.getUTCFullYear()}</strong><br><span style="color: #FFD700;">${utcTime.getUTCHours().toString().padStart(2, '0')}:${utcTime.getUTCMinutes().toString().padStart(2, '0')} UTC</span>`;
-                    } else {
-                        console.error("Data radar tidak tersedia.");
-                    }
-                })
-                .catch(error => console.error("Gagal mengambil data radar:", error));
-        }
+    fetch('https://api.rainviewer.com/public/weather-maps.json')
+        .then(response => response.json())
+        .then(data => {
+            if (data.radar && data.radar.past.length > 0) {
+                let index = Math.max(0, data.radar.past.length - 1 - timeOffset);
+                let timestamp = data.radar.past[index].time;
+                let radarUrl = `https://tilecache.rainviewer.com/v2/radar/${timestamp}/256/{z}/{x}/{y}/2/1_1.png`;
+                radarLayer.setUrl(radarUrl);
+
+                // Buat objek Date dari timestamp
+                let utcTime = new Date(timestamp * 1000);
+
+                // Konversi ke waktu lokal
+                let localTime = new Date(utcTime);
+                let localTimeString = localTime.toLocaleTimeString('id-ID', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    });
+
+                // Format bulan dalam bahasa Indonesia
+                let bulanIndonesia = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+                let bulan = bulanIndonesia[utcTime.getUTCMonth()];
+
+                // Tampilkan waktu UTC dan waktu lokal
+                document.getElementById('time-indicator').innerHTML = `
+                    <strong>${utcTime.getUTCDate()} ${bulan} ${utcTime.getUTCFullYear()}</strong><br>
+                    <span style="color: #FFD700;">${utcTime.getUTCHours().toString().padStart(2, '0')}:${utcTime.getUTCMinutes().toString().padStart(2, '0')} UTC</span><br>
+                    <span style="color: #00FF00;">${localTimeString} Waktu Setempat</span>
+                `;
+            } else {
+                console.error("Data radar tidak tersedia.");
+            }
+        })
+        .catch(error => console.error("Gagal mengambil data radar:", error));}
         function updateIRSatellite(timeOffset = 0) {
             fetch('https://api.rainviewer.com/public/weather-maps.json')
                 .then(response => response.json())
@@ -364,11 +380,11 @@
         function addTimeControls() {
             let controlContainer = document.createElement("div");
             controlContainer.style.position = "absolute";
-            controlContainer.style.top = "85px";
+            controlContainer.style.top = "90px";
             controlContainer.style.left = "50%";
             controlContainer.style.transform = "translateX(-50%)";
             controlContainer.style.zIndex = "1000";
-            controlContainer.style.padding = "5px";
+            controlContainer.style.padding = "3px";
             controlContainer.style.background = "rgba(0, 0, 0, 0.6)";
             controlContainer.style.color = "white";
             controlContainer.style.border = "0px solid white";
