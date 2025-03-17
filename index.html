@@ -3,34 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> IDWM (Integrated Display for Weather Monitoring)</title>
+    <title>IDWM (Integrated Display for Weather Monitoring)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+    <script src="https://cdn.maptiler.com/maptiler-sdk-js/v2.5.1/maptiler-sdk.umd.min.js"></script>
+    <link href="https://cdn.maptiler.com/maptiler-sdk-js/v2.5.1/maptiler-sdk.css" rel="stylesheet" />
+    <script src="https://cdn.maptiler.com/maptiler-weather/v2.2.0/maptiler-weather.umd.min.js"></script>
     <style>
-     @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil:wght@600&display=swap');
-       #webmap-title {
+        @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil:wght@600&display=swap');
+        #webmap-title {
             position: absolute;
             width: 280px;
             top: 10px;
             left: 50%;
-            transform: translateX(-50%); /* Pusatkan secara horizontal */
-            background: rgba(255, 255, 255, 0.6); /* Background putih transparan */
-            color: black; /* Warna font hitam */
-            padding: 5px 5px;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.6);
+            color: black;
+            padding: 5px;
             border-radius: 8px;
-            font-family: 'Big Shoulders Stencil', sans-serif; /* Font lebih artistik */
+            font-family: 'Big Shoulders Stencil', sans-serif;
             font-size: 14px;
             font-weight: bold;
             text-align: center;
-            font-style: italic; /* Membuat teks miring */
+            font-style: italic;
             box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
-            z-index: 2000; /* Pastikan di atas elemen lain */
+            z-index: 2000;
         }
-    
-
-           #time-indicator {
+        #time-indicator {
             position: absolute;
             top: 40px;
             left: 50%;
@@ -41,25 +41,21 @@
             border-radius: 5px;
             font-family: Arial, sans-serif;
             font-size: 12px;
-	    text-align: center; 
+            text-align: center;
             z-index: 1000;
         }
         #map {
-    width: 100vw;  /* Lebar penuh sesuai viewport */
-    height: 100vh; /* Tinggi penuh sesuai viewport */
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 0; /* Pastikan map ada di layer bawah */
-}
- @media screen and (max-width: 768px) {
-    #map {
-        height: 90vh; /* Geser lebih naik di layar kecil */
-       
-    }
-}
-       
-	#chart-popup {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+        @media screen and (max-width: 768px) {
+            #map { height: 90vh; }
+        }
+        #chart-popup {
             display: none;
             position: fixed;
             top: 50%;
@@ -68,17 +64,16 @@
             background: white;
             padding: 20px;
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            z-index: 1000;
+            z-index: 5000;
             width: 90%;
-	height: 90%;
+            height: 90%;
             max-width: 500px;
             max-height: 50vh;
             overflow-y: auto;
-		z-index: 3000;
+            z-index: 5000;
         }
         #chart-popup canvas { width: 80%; height: 70%; }
-        
-	.popup-buttons {
+        .popup-buttons {
             margin-bottom: 10px;
             display: flex;
             justify-content: center;
@@ -92,12 +87,7 @@
             color: white;
             border-radius: 5px;
         }
-        button:hover {
-            background: #0056b3;
-        }
-
-
-/* LEGEND UMUM */
+        button:hover { background: #0056b3; }
         .legend {
             position: absolute;
             bottom: 70px;
@@ -110,782 +100,555 @@
             box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
             z-index: 1000;
             display: none;
-	flex-direction: column;
-    	align-items: flex-start;
-    	max-height: fit-content;
+            flex-direction: column;
+            align-items: flex-start;
+            max-height: fit-content;
         }
-
-.legend-container {
-    display: flex;
-    align-items: left;
-    flex-direction: column;
-}
-
-
-.legend-labels {
-    display: flex;
-    flex-direction: column;
-    height: 150px;
-    justify-content: space-between;
-    position: absolute;
-    left: 40px;  /* Geser label ke kanan agar sejajar */
-    text-align: left;
-    font-size: 10px;
-}
-
-.legend-labels span {
-    position: relative;
-}
-
-.gradient-bar {
-    width: 20px;
-    height: 150px;
-    background: linear-gradient(to bottom,  
-         	#cec087 0%, #cec087 10%,   /* 0 - 9 dBZ */
-                #0077b6 10%, #0077b6 30%,  /* 10-29 dBZ ringan  */
-                #ffee00 30%, #ffee00 50%,  /* 30-39 dBZ sedang  */
-                #ff8800 50%, #ff8800 70%,  /* 40-49 dBZ lebat*/
-                #990000 70%, #990000 90%,  /* 50-59 dBZ sangat lebat */
-		#ff77ff 90%, #ff77ff 100%  /* 60+ dBZ ekstrem */
-    );
-    border-radius: 2px;
-    border: 0px solid black;
-    position: relative;
-}
-
-	    
-	@media screen and (max-width: 768px) {
-    #legend {
-	bottom:80px; /* Geser lebih naik di layar kecil */
-        right: 10px;}}
-
-	/* POSISI LEGEND RADAR */
-        #legend { display: block; z-index: 2000}
-
-        /* POSISI LEGEND CURAH HUJAN owm*/
-        #precip-owm { display: none; z-index:1500}
-
-	/* POSISI LEGEND tekanan udara owm*/
+        .legend-container { display: flex; align-items: left; flex-direction: column; }
+        .legend-labels {
+            display: flex;
+            flex-direction: column;
+            height: 150px;
+            justify-content: space-between;
+            position: absolute;
+            left: 40px;
+            text-align: left;
+            font-size: 10px;
+        }
+        .legend-labels span { position: relative; }
+        .gradient-bar {
+            width: 20px;
+            height: 150px;
+            background: linear-gradient(to bottom, #cec087 0%, #cec087 10%, #0077B6 10%, #0077B6 30%, #FFFF00 30%, #FFFF00 50%, #FFA500 50%, #FFA500 70%, #FF0000 70%, #FF0000 90%, #eb83f4 90%, #eb83f4 100%);
+            border-radius: 2px;
+            border: 0px solid black;
+            position: relative;
+        }
+        @media screen and (max-width: 768px) { #legend { bottom:80px; right: 10px; } }
+        #legend { display: block; z-index: 2000; }
+        #precip-owm { display: none; z-index:1500; }
         #pressure-owm { display: none; }
-
-/* Tambahkan styling khusus untuk legend topografi dan LULC */
-#topo-legend, #lulc-legend {
-    display: none; 
-    position: absolute;
-    top: 150px;
-    right: 10px;
-    background: rgba(255, 255, 255, 0.8);
-    padding: 10px;
-    border-radius: 5px;
-    font-family: Arial, sans-serif;
-    font-size: 10px;
-    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
-    z-index: 1000;
-	flex-direction: column;
-    	align-items: flex-start;
-    	max-height: fit-content;
-}
-
+        #topo-legend, #lulc-legend {
+            display: none;
+            position: absolute;
+            top: 150px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+            font-size: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
+            z-index: 3000;
+            flex-direction: column;
+            align-items: flex-start;
+            max-height: fit-content;
+        }
+        #maptiler { position: absolute; top: 0; bottom: 0; width: 100%; }
+        #layerSelector {
+            position: absolute;
+            top: 30%;
+            right: 10px;
+            transform: translateY(-50%);
+            z-index: 2000;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 5px;
+            border-radius: 5px;
+            font-size: 10px;
+	    font-weight: bold;
+            gap: 1px;
+            font-family: Arial, sans-serif;
+            box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.3);
+        }
+        #time-info { position: fixed; width: 60vw; bottom: 0; z-index: 1; margin: 10px; text-shadow: 0px 0px 5px black; color: white; font-size: 18px; font-weight: 500; text-align: center; left: 0; right: 0; margin: auto; padding: 20px; }
+        #time-slider { width: 100%; height: fit-content; left: 0; right: 0; z-index: 1; filter: drop-shadow(0 0 7px #000a); margin-top: 10px; }
+        #time-text { font-size: 12px; font-weight: 600; }
+        #pointer-data { z-index: 1; position: fixed; font-size: 20px; font-weight: 900; margin: 27px 0px 0px 10px; color: #fff; text-shadow: 0px 0px 10px #0007; }
+        #variable-name { z-index: 1; position: fixed; font-size: 20px; font-weight: 500; margin: 5px 0px 0px 10px; color: #fff; text-shadow: 0px 0px 10px #0007; }
+        .button { cursor: pointer; width: auto; padding: 8px; border-radius: 3px; font-size: 10px; text-align: center; color: #fff; background: #3174ff; font-family: sans-serif; font-weight: bold; }
+        #layerSelector label { display: block; cursor: pointer; }
     </style>
 </head>
 <body>
+    <div id="map"></div>
     <div id="webmap-title">IDWM | Integrated Display for Weather Monitoring</div>
     <div id="time-indicator">Waktu: Memuat...</div>
-    <div id="map"></div>
     <div id="chart-popup">
-    
-	<div class="popup-buttons">
+        <div class="popup-buttons">
             <button id="download-csv">Unduh CSV</button>
             <button id="download-img">Unduh Meteogram</button>
             <button id="close-popup" style="background: red;">Tutup</button>
-        </div>   
-	<canvas id="weatherChart"></canvas>
-</div>
-
-<!-- Legend Radar -->    
- <div id="legend" class="legend">
-    <strong>Interpretasi Citra Radar</strong><br><br>
-    <div class="legend-container">
-        <div class="gradient-bar"></div>
-        <div class="legend-labels">
-	     <span>Berawan</span>
-            <span>Hujan Ringan</span>
-            <span>Hujan Sedang</span>
-            <span>Hujan Lebat</span>
-            <span>Hujan Sangat Lebat</span>
-            <span>Hujan Ekstrem</span>
+        </div>
+        <canvas id="weatherChart"></canvas>
+    </div>
+    <div id="legend" class="legend">
+        <strong>Interpretasi Citra Radar</strong><br><br>
+        <div class="legend-container">
+            <div class="gradient-bar"></div>
+            <div class="legend-labels">
+                <span>Berawan</span>
+                <span>Hujan Ringan</span>
+                <span>Hujan Sedang</span>
+                <span>Hujan Lebat</span>
+                <span>Hujan Sangat Lebat</span>
+                <span>Hujan Ekstrem</span>
+            </div>
         </div>
     </div>
-</div>
-
-<!-- Legend Curah Hujan OpenWeatherMap -->
-<div id="precip-owm" class="legend">
-    <strong>Curah Hujan (OWM)</strong><br><br>
-    <div style="background: rgba(225, 200, 100, 0.0); width: 15px; height: 15px; display: inline-block; border: 1px solid #ccc;"></div> 0 mm/jam<br>
-    <div style="background: rgba(200, 150, 150, 0.1); width: 15px; height: 15px; display: inline-block;"></div> 0.1 mm/jam<br>
-    <div style="background: rgba(150, 150, 170, 0.2); width: 15px; height: 15px; display: inline-block;"></div> 0.2 mm/jam<br>
-    <div style="background: rgba(120, 120, 190, 0.5); width: 15px; height: 15px; display: inline-block;"></div> 0.5 mm/jam<br>
-    <div style="background: rgba(110, 110, 205, 0.3); width: 15px; height: 15px; display: inline-block;"></div> 1 mm/jam<br>
-    <div style="background: rgba(80, 80, 225, 0.7); width: 15px; height: 15px; display: inline-block;"></div> 10 mm/jam<br>
-    <div style="background: rgba(20, 20, 255, 0.9); width: 15px; height: 15px; display: inline-block;"></div> 140 mm/jam<br>
-</div>
-
-<!-- Legend Tekanan Udara OpenWeatherMap -->
- <div id="pressure-owm" class="legend">
+    <div id="precip-owm" class="legend">
+        <strong>Curah Hujan (OWM)</strong><br><br>
+        <div style="background: rgba(225, 200, 100, 0.0); width: 15px; height: 15px; display: inline-block; border: 1px solid #ccc;"></div> 0 mm/jam<br>
+        <div style="background: rgba(200, 150, 150, 0.1); width: 15px; height: 15px; display: inline-block;"></div> 0.1 mm/jam<br>
+        <div style="background: rgba(150, 150, 170, 0.2); width: 15px; height: 15px; display: inline-block;"></div> 0.2 mm/jam<br>
+        <div style="background: rgba(120, 120, 190, 0.5); width: 15px; height: 15px; display: inline-block;"></div> 0.5 mm/jam<br>
+        <div style="background: rgba(110, 110, 205, 0.3); width: 15px; height: 15px; display: inline-block;"></div> 1 mm/jam<br>
+        <div style="background: rgba(80, 80, 225, 0.7); width: 15px; height: 15px; display: inline-block;"></div> 10 mm/jam<br>
+        <div style="background: rgba(20, 20, 255, 0.9); width: 15px; height: 15px; display: inline-block;"></div> 140 mm/jam<br>
+    </div>
+    <div id="pressure-owm" class="legend">
         <strong>Tekanan Udara (OWM)</strong><br><br>
-	<div style="background: rgba(0,115,255,1); width: 15px; height: 15px; display: inline-block; border: 1px solid #ccc;"></div> 940 hPa<br>
-    <div style="background: rgba(0,170,255,1); width: 15px; height: 15px; display: inline-block;"></div> 960 hPa<br>
-    <div style="background: rgba(75,208,214,1); width: 15px; height: 15px; display: inline-block;"></div> 980 hPa<br>
-    <div style="background: rgba(141,231,199,1); width: 15px; height: 15px; display: inline-block;"></div> 1000 hPa<br>
-    <div style="background: rgba(176,247,32,1); width: 15px; height: 15px; display: inline-block;"></div> 1010 hPa<br>
-    <div style="background: rgba(240,184,0,1); width: 15px; height: 15px; display: inline-block;"></div> 1020 hPa<br>
-    <div style="background: rgba(251,85,21,1); width: 15px; height: 15px; display: inline-block;"></div> 1040 hPa<br>
-    <div style="background: rgba(243,54,59,1); width: 15px; height: 15px; display: inline-block;"></div> 1060 hPa<br>
-   
-</div>
-
-<!-- Legend Topografi -->
-<div id="topo-legend" class="legend">
-    <strong>Legenda Topografi</strong><br><br>
-    <div style="background: #006400; width: 15px; height: 15px; display: inline-block; border: 1px solid #ccc;"></div> Dataran Rendah<br>
-    <div style="background: #32CD32; width: 15px; height: 15px; display: inline-block;"></div> Dataran Menengah<br>
-    <div style="background: #FFFFCC; width: 15px; height: 15px; display: inline-block;"></div> Perbukitan<br>
-    <div style="background: #8B4513; width: 15px; height: 15px; display: inline-block;"></div> Pegunungan<br>
-    <div style="background: #FFFFFF; width: 15px; height: 15px; display: inline-block;"></div> Puncak Bersalju
-</div>
-
-<!-- Legend LULC (Land Use Land Cover) -->
-<div id="lulc-legend" class="legend">
-    <strong>Kelas Tutupan Lahan</strong><br><br>
-    <div style="background: #006400; width: 15px; height: 15px; display: inline-block; border: 1px solid #ccc;"></div> Vegetasi<br>
-    <div style="background: #ffbb22; width: 15px; height: 15px; display: inline-block;"></div> Semak Belukar<br>
-    <div style="background: #ffff4c; width: 15px; height: 15px; display: inline-block;"></div> Padang Rumput<br>
-    <div style="background: #f096ff; width: 15px; height: 15px; display: inline-block;"></div> Lahan Pertanian<br>
-    <div style="background: #fa0000; width: 15px; height: 15px; display: inline-block;"></div> Bangunan<br>
-    <div style="background: #b4b4b4; width: 15px; height: 15px; display: inline-block;"></div> Tanah Terbuka<br>
-    <div style="background: #f0f0f0; width: 15px; height: 15px; display: inline-block;"></div> Salju/Es<br>
-    <div style="background: #0064c8; width: 15px; height: 15px; display: inline-block;"></div> Tubuh Air<br>
-    <div style="background: #0096a0; width: 15px; height: 15px; display: inline-block;"></div> Lahan Basah<br>
-    <div style="background: #00cf75; width: 15px; height: 15px; display: inline-block;"></div> Mangrove
-</div>
-
-
+        <div style="background: rgba(0,115,255,1); width: 15px; height: 15px; display: inline-block; border: 1px solid #ccc;"></div> 940 hPa<br>
+        <div style="background: rgba(0,170,255,1); width: 15px; height: 15px; display: inline-block;"></div> 960 hPa<br>
+        <div style="background: rgba(75,208,214,1); width: 15px; height: 15px; display: inline-block;"></div> 980 hPa<br>
+        <div style="background: rgba(141,231,199,1); width: 15px; height: 15px; display: inline-block;"></div> 1000 hPa<br>
+        <div style="background: rgba(176,247,32,1); width: 15px; height: 15px; display: inline-block;"></div> 1010 hPa<br>
+        <div style="background: rgba(240,184,0,1); width: 15px; height: 15px; display: inline-block;"></div> 1020 hPa<br>
+        <div style="background: rgba(251,85,21,1); width: 15px; height: 15px; display: inline-block;"></div> 1040 hPa<br>
+        <div style="background: rgba(243,54,59,1); width: 15px; height: 15px; display: inline-block;"></div> 1060 hPa<br>
+    </div>
+    <div id="topo-legend" class="legend">
+        <strong>Legenda Topografi</strong><br><br>
+        <div style="background: #006400; width: 15px; height: 15px; display: inline-block; border: 1px solid #ccc;"></div> Dataran Rendah<br>
+        <div style="background: #32CD32; width: 15px; height: 15px; display: inline-block;"></div> Dataran Menengah<br>
+        <div style="background: #FFFFCC; width: 15px; height: 15px; display: inline-block;"></div> Perbukitan<br>
+        <div style="background: #8B4513; width: 15px; height: 15px; display: inline-block;"></div> Pegunungan<br>
+        <div style="background: #FFFFFF; width: 15px; height: 15px; display: inline-block;"></div> Puncak Bersalju
+    </div>
+    <div id="lulc-legend" class="legend">
+        <strong>Kelas Tutupan Lahan</strong><br><br>
+        <div style="background: #006400; width: 15px; height: 15px; display: inline-block; border: 1px solid #ccc;"></div> Vegetasi<br>
+        <div style="background: #ffbb22; width: 15px; height: 15px; display: inline-block;"></div> Semak Belukar<br>
+        <div style="background: #ffff4c; width: 15px; height: 15px; display: inline-block;"></div> Padang Rumput<br>
+        <div style="background: #f096ff; width: 15px; height: 15px; display: inline-block;"></div> Lahan Pertanian<br>
+        <div style="background: #fa0000; width: 15px; height: 15px; display: inline-block;"></div> Bangunan<br>
+        <div style="background: #b4b4b4; width: 15px; height: 15px; display: inline-block;"></div> Tanah Terbuka<br>
+        <div style="background: #f0f0f0; width: 15px; height: 15px; display: inline-block;"></div> Salju/Es<br>
+        <div style="background: #0064c8; width: 15px; height: 15px; display: inline-block;"></div> Tubuh Air<br>
+        <div style="background: #0096a0; width: 15px; height: 15px; display: inline-block;"></div> Lahan Basah<br>
+        <div style="background: #00cf75; width: 15px; height: 15px; display: inline-block;"></div> Mangrove
+    </div>
+    <div id="maptiler"></div>
+    <div id="layerSelector">
+        <label><input type="radio" name="baseLayer" value="map" checked> Layar Utama</label><br>
+        <label><input type="radio" name="baseLayer" value="maptiler"> Animasi Angin</label>
+    </div>
+    <div id="wind-controls" style="display: none;">
+        <div id="time-info">
+            <span id="time-text"></span>
+            <button id="play-pause-bt" class="button">Play 3600x</button>
+            <input type="range" id="time-slider" min="0" max="11" step="1">
+        </div>
+        <div id="variable-name">Wind</div>
+        <div id="pointer-data"></div>
+    </div>
     <script>
-
-    var map = L.map('map', {
-        center: [-2.5, 118],
-        zoom: 5,
-        attributionControl: false // Menonaktifkan attribution bawaan
-    });
-
-    L.control.attribution({ position: 'bottomright' })
-    .addAttribution('Proposed by <a href="https://mail.google.com/mail/?view=cm&fs=1&to=prayoga.ismail@bmkg.go.id" target="_blank">Prayoga Ismail</a>, Coding by OpenAI')
-    .addTo(map);
-
-    // Event listener untuk menampilkan/menyembunyikan legenda Radar Cuaca
-   document.getElementById("legend").style.display = "none";
-
-map.on("overlayadd", function (eventLayer) {
-    if (eventLayer.name === "Radar Cuaca") {
-        document.getElementById("legend").style.display = "block";
-    }
-});
-
-map.on("overlayremove", function (eventLayer) {
-    if (eventLayer.name === "Radar Cuaca") {
+        var map = L.map('map', { center: [-2.5, 118], zoom: 5, attributionControl: false });
+        L.control.attribution({ position: 'bottomright' }).addAttribution('Proposed by <a href="https://mail.google.com/mail/?view=cm&fs=1&to=prayoga.ismail@bmkg.go.id" target="_blank">Prayoga Ismail</a>, Coding by DeepSeek').addTo(map);
         document.getElementById("legend").style.display = "none";
-    }
-});
-
-// Event untuk Menampilkan/Menyembunyikan Legenda Curah hujan owm
         map.on("overlayadd", function (eventLayer) {
-            if (eventLayer.name === "Sebaran hujan (OWM)") {
-                document.getElementById("precip-owm").style.display = "block";
-            }
+            if (eventLayer.name === "Radar Cuaca") document.getElementById("legend").style.display = "block";
         });
-
         map.on("overlayremove", function (eventLayer) {
-            if (eventLayer.name === "Sebaran hujan (OWM)") {
-                document.getElementById("precip-owm").style.display = "none";
-            }
+            if (eventLayer.name === "Radar Cuaca") document.getElementById("legend").style.display = "none";
         });
-
-// Event untuk Menampilkan/Menyembunyikan Legenda Tekanan udara owm
         map.on("overlayadd", function (eventLayer) {
-            if (eventLayer.name === "Tekanan Udara (OWM)") {
-                document.getElementById("pressure-owm").style.display = "block";
-            }
+            if (eventLayer.name === "Sebaran hujan (OWM)") document.getElementById("precip-owm").style.display = "block";
         });
-
         map.on("overlayremove", function (eventLayer) {
-            if (eventLayer.name === "Tekanan Udara (OWM)") {
-                document.getElementById("pressure-owm").style.display = "none";
-            }
+            if (eventLayer.name === "Sebaran hujan (OWM)") document.getElementById("precip-owm").style.display = "none";
         });
-
-map.on("baselayerchange", function (eventLayer) {
-    console.log("Base layer diubah:", eventLayer.name);
-
-    if (eventLayer.name === "Peta Topografi") {
-        document.getElementById("topo-legend").style.display = "block";
-    } else {
-        document.getElementById("topo-legend").style.display = "none";
-    }
-
-    if (eventLayer.name === "Peta Tutupan Lahan") {
-        document.getElementById("lulc-legend").style.display = "block";
-    } else {
-        document.getElementById("lulc-legend").style.display = "none";
-    }
-});
-
-        
-var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: 'Base map &copy; OpenStreetMap contributors'
-}).addTo(map);
-
-
-var esriImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    attribution: '&copy; Esri, DigitalGlobe, GeoEye, Earthstar Geographics'
-});
-
-var cartoPositron = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; CartoDB'
-});
-var topoMap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://opentopomap.org/">OpenTopoMap</a> contributors'
-});
-        
-
-// Peta LULC (Gunakan ESA WorldCover sebagai contoh)
-var lulcMap = L.tileLayer.wms("https://services.terrascope.be/wms/v2", {
-    layers: 'WORLDCOVER_2020_MAP',
-    format: 'image/png',
-    transparent: true,
-    attribution: '&copy; ESA WorldCover 2020'
-});
-        
-var radarLayer = L.tileLayer('', { opacity: 0.8, attribution: 'Radar data &copy; RainViewer' });
-var IRsatelliteLayer = L.tileLayer('', { opacity: 0.6, attribution: 'Satellite data &copy; RainViewer' });
-
- // Tambahkan Layer Curah Hujan dari OpenWeatherMap
-        var precipitationLayer = L.tileLayer(
-            'https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=62ac6e2d12bbaaa3de6bf9f57fe1cc00',
-            {attribution: 'Precipitation data &copy; OpenWeatherMap',opacity: 1});
- //Layer Tekanan udara OWM
-var pressureLayer = L.tileLayer('https://tile.openweathermap.org/map/pressure_new/{z}/{x}/{y}.png?appid=62ac6e2d12bbaaa3de6bf9f57fe1cc00', 
-	{attribution: 'Pressure data &copy; OpenWeatherMap</a>',opacity: 1});
-
-// Fungsi untuk mendapatkan lokasi pengguna
-function addUserLocation() {
-    if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition(
-            function (position) {
-                let userLat = position.coords.latitude;
-                let userLng = position.coords.longitude;
-
-                
-
-                // Pusatkan peta ke lokasi pengguna
-                map.setView([userLat, userLng], 8);
-            },
-            function (error) {
-                console.error("Gagal mendapatkan lokasi:", error.message);
-                alert("Gagal mendapatkan lokasi. Pastikan izin lokasi diaktifkan.");
-            }
-        );
-    } else {
-        alert("Geolocation tidak didukung di browser ini.");
-    }
-}
-
-// Panggil fungsi untuk menambahkan lokasi pengguna
-addUserLocation();
-
-
-// Tambahkan CSS untuk mengatur font size pada nama layer
-var style = document.createElement('style');
-style.innerHTML = `
-    .leaflet-control-layers label {
-        font-size: 10px; /* Atur ukuran font sesuai keinginan */
-        //font-weight: bold; /* Opsional: Membuat teks lebih tegas */
-        color: #333; /* Opsional: Warna teks lebih kontras */
-    }
-`;
-document.head.appendChild(style);
-
-// Pastikan perubahan diterapkan setelah kontrol layer dibuat
-setTimeout(() => {
-    document.querySelectorAll('.leaflet-control-layers label').forEach(label => {
-        label.style.fontSize = "10px"; // Atur ukuran font sesuai keinginan
-        //label.style.fontWeight = "bold"; // Opsional: Buat lebih tegas
-        label.style.color = "#333"; // Opsional: Atur warna
-    });
-}, 500);
-
-       
-
-    
-
-function preloadImage(url, callback) {
-    let img = new Image();
-    img.onload = callback;
-    img.src = url;
-}
-        
-    function updateRadar(timeOffset = 0) {
-    fetch('https://api.rainviewer.com/public/weather-maps.json')
-        .then(response => response.json())
-        .then(data => {
-            if (data.radar && data.radar.past.length > 0) {
-                let index = Math.max(0, data.radar.past.length - 1 - timeOffset);
-                let timestamp = data.radar.past[index].time;
-                let radarUrl = `https://tilecache.rainviewer.com/v2/radar/${timestamp}/256/{z}/{x}/{y}/2/1_1.png`;
-                radarLayer.setUrl(radarUrl);
-
-                let utcTime = new Date(timestamp * 1000);
-
-                // Array nama bulan dalam bahasa Indonesia
-                let bulanIndonesia = [
-                    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-                    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
-                ];
-
-                let bulan = bulanIndonesia[utcTime.getUTCMonth()]; // Ambil nama bulan dari array
-
-                document.getElementById('time-indicator').innerHTML = 
-                    `<strong>${utcTime.getUTCDate()} ${bulan} ${utcTime.getUTCFullYear()}</strong><br> 
-                     <span style="color: #FFD700;">${utcTime.getUTCHours().toString().padStart(2, '0')}:${utcTime.getUTCMinutes().toString().padStart(2, '0')} UTC</span>`;
+        map.on("overlayadd", function (eventLayer) {
+            if (eventLayer.name === "Tekanan Udara (OWM)") document.getElementById("pressure-owm").style.display = "block";
+        });
+        map.on("overlayremove", function (eventLayer) {
+            if (eventLayer.name === "Tekanan Udara (OWM)") document.getElementById("pressure-owm").style.display = "none";
+        });
+        map.on("baselayerchange", function (eventLayer) {
+            if (eventLayer.name === "Peta Topografi") document.getElementById("topo-legend").style.display = "block";
+            else document.getElementById("topo-legend").style.display = "none";
+            if (eventLayer.name === "Peta Tutupan Lahan") document.getElementById("lulc-legend").style.display = "block";
+            else document.getElementById("lulc-legend").style.display = "none";
+        });
+        var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'Base map &copy; OpenStreetMap contributors' }).addTo(map);
+        var esriImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution:  'Base map &copy; Esri, DigitalGlobe, GeoEye, Earthstar Geographics' });
+        var cartoPositron = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: 'Base map &copy; CartoDB' });
+        var topoMap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: 'Base map &copy; <a href="https://opentopomap.org/">OpenTopoMap</a> contributors' });
+        var lulcMap = L.tileLayer.wms("https://services.terrascope.be/wms/v2", { layers: 'WORLDCOVER_2020_MAP', format: 'image/png', transparent: true, attribution: 'Base map &copy; ESA WorldCover 2020' });
+        var radarLayer = L.tileLayer('', { opacity: 0.8, attribution: 'Radar data &copy; RainViewer' });
+        var IRsatelliteLayer = L.tileLayer('', { opacity: 0.6, attribution: 'Satellite data &copy; RainViewer' });
+        var precipitationLayer = L.tileLayer('https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=62ac6e2d12bbaaa3de6bf9f57fe1cc00', { attribution: 'Precipitation data &copy; OpenWeatherMap', opacity: 1 });
+        var pressureLayer = L.tileLayer('https://tile.openweathermap.org/map/pressure_new/{z}/{x}/{y}.png?appid=62ac6e2d12bbaaa3de6bf9f57fe1cc00', { attribution: 'Pressure data &copy; OpenWeatherMap', opacity: 1 });
+        function addUserLocation() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    function (position) {
+                        let userLat = position.coords.latitude;
+                        let userLng = position.coords.longitude;
+                        map.setView([userLat, userLng], 8);
+                    },
+                    function (error) {
+                        console.error("Gagal mendapatkan lokasi:", error.message);
+                        alert("Gagal mendapatkan lokasi. Pastikan izin lokasi diaktifkan.");
+                    }
+                );
             } else {
-                console.error("Data radar tidak tersedia.");
+                alert("Geolocation tidak didukung di browser ini.");
             }
-        })
-        .catch(error => console.error("Gagal mengambil data radar:", error));
-}
-
-
-    function updateIRSatellite(timeOffset = 0) { 
-        fetch('https://api.rainviewer.com/public/weather-maps.json') 
-            .then(response => response.json()) 
-            .then(data => { 
-                if (data.satellite && data.satellite.infrared.length > 0) { 
-                    let index = Math.max(0, data.satellite.infrared.length - 1 - timeOffset); 
-                    let timestamp = data.satellite.infrared[index].time; 
-                    let path = data.satellite.infrared[index].path; 
-                    let satelliteUrl = `https://tilecache.rainviewer.com${path}/256/{z}/{x}/{y}/0/0_0.png`; 
-                    IRsatelliteLayer.setUrl(satelliteUrl); 
-                } else { 
-                    console.error("Data satelit tidak tersedia."); 
-                } 
-            }) 
-            .catch(error => console.error("Gagal mengambil data satelit:", error)); 
-    }
-
-
-
-    updateRadar();
-updateIRSatellite();
-
-setInterval(updateRadar, 600000);
-setInterval(updateIRSatellite, 600000);
-
-function addTimeControls() {
-    let controlContainer = document.createElement("div");
-    controlContainer.style.position = "absolute";
-    controlContainer.style.top = "85px";
-    controlContainer.style.left = "50%";
-    controlContainer.style.transform = "translateX(-50%)";
-    controlContainer.style.zIndex = "1000";
-    controlContainer.style.padding = "5px";
-    controlContainer.style.background = "rgba(0, 0, 0, 0.6)";
-    controlContainer.style.color = "white";
-    controlContainer.style.border = "0px solid white";
-    controlContainer.style.borderRadius = "5px";
-    controlContainer.style.display = "flex";
-    controlContainer.style.alignItems = "center";
-    controlContainer.style.gap = "3px";
-
-    let timeLabel = document.createElement("span");
-    timeLabel.textContent = "Saat Ini";
-    timeLabel.style.fontSize = "12px";
-
-    let timeSlider = document.createElement("input");
-    timeSlider.type = "range";
-    timeSlider.min = "0";
-    timeSlider.max = "12";
-    timeSlider.value = "12";
-    timeSlider.style.width = "100px";
-    timeSlider.style.cursor = "pointer";
-
-    let prevButton = document.createElement("button");
-    prevButton.textContent = "⏮️";
-    prevButton.style.cursor = "pointer";
-    prevButton.style.border = "none";
-    prevButton.style.background = "transparent";
-    prevButton.style.color = "white";
-    prevButton.style.fontSize = "15px";
-
-    let playButton = document.createElement("button");
-    playButton.textContent = "▶️";
-    playButton.style.cursor = "pointer";
-    playButton.style.border = "none";
-    playButton.style.background = "transparent";
-    playButton.style.color = "white";
-    playButton.style.fontSize = "15px";
-
-    let pauseButton = document.createElement("button");
-    pauseButton.textContent = "⏸️";
-    pauseButton.style.cursor = "pointer";
-    pauseButton.style.border = "none";
-    pauseButton.style.background = "transparent";
-    pauseButton.style.color = "white";
-    pauseButton.style.fontSize = "15px";
-
-    let nextButton = document.createElement("button");
-    nextButton.textContent = "⏭️";
-    nextButton.style.cursor = "pointer";
-    nextButton.style.border = "none";
-    nextButton.style.background = "transparent";
-    nextButton.style.color = "white";
-    nextButton.style.fontSize = "15px";
-
-    let animationInterval = null;
-
-    function updateTimeLabel() {
-        let step = 12 - parseInt(timeSlider.value);
-        if (step === 0) {
+        }
+        addUserLocation();
+        var style = document.createElement('style');
+        style.innerHTML = `.leaflet-control-layers label { font-size: 10px; color: #333; }`;
+        document.head.appendChild(style);
+        setTimeout(() => {
+            document.querySelectorAll('.leaflet-control-layers label').forEach(label => {
+                label.style.fontSize = "10px";
+                label.style.color = "#333";
+            });
+        }, 500);
+        function preloadImage(url, callback) {
+            let img = new Image();
+            img.onload = callback;
+            img.src = url;
+        }
+        function updateRadar(timeOffset = 0) {
+            fetch('https://api.rainviewer.com/public/weather-maps.json')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.radar && data.radar.past.length > 0) {
+                        let index = Math.max(0, data.radar.past.length - 1 - timeOffset);
+                        let timestamp = data.radar.past[index].time;
+                        let radarUrl = `https://tilecache.rainviewer.com/v2/radar/${timestamp}/256/{z}/{x}/{y}/2/1_1.png`;
+                        radarLayer.setUrl(radarUrl);
+                        let utcTime = new Date(timestamp * 1000);
+                        let bulanIndonesia = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+                        let bulan = bulanIndonesia[utcTime.getUTCMonth()];
+                        document.getElementById('time-indicator').innerHTML = `<strong>${utcTime.getUTCDate()} ${bulan} ${utcTime.getUTCFullYear()}</strong><br><span style="color: #FFD700;">${utcTime.getUTCHours().toString().padStart(2, '0')}:${utcTime.getUTCMinutes().toString().padStart(2, '0')} UTC</span>`;
+                    } else {
+                        console.error("Data radar tidak tersedia.");
+                    }
+                })
+                .catch(error => console.error("Gagal mengambil data radar:", error));
+        }
+        function updateIRSatellite(timeOffset = 0) {
+            fetch('https://api.rainviewer.com/public/weather-maps.json')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.satellite && data.satellite.infrared.length > 0) {
+                        let index = Math.max(0, data.satellite.infrared.length - 1 - timeOffset);
+                        let timestamp = data.satellite.infrared[index].time;
+                        let path = data.satellite.infrared[index].path;
+                        let satelliteUrl = `https://tilecache.rainviewer.com${path}/256/{z}/{x}/{y}/0/0_0.png`;
+                        IRsatelliteLayer.setUrl(satelliteUrl);
+                    } else {
+                        console.error("Data satelit tidak tersedia.");
+                    }
+                })
+                .catch(error => console.error("Gagal mengambil data satelit:", error));
+        }
+        updateRadar();
+        updateIRSatellite();
+        setInterval(updateRadar, 600000);
+        setInterval(updateIRSatellite, 600000);
+        function addTimeControls() {
+            let controlContainer = document.createElement("div");
+            controlContainer.style.position = "absolute";
+            controlContainer.style.top = "85px";
+            controlContainer.style.left = "50%";
+            controlContainer.style.transform = "translateX(-50%)";
+            controlContainer.style.zIndex = "1000";
+            controlContainer.style.padding = "5px";
+            controlContainer.style.background = "rgba(0, 0, 0, 0.6)";
+            controlContainer.style.color = "white";
+            controlContainer.style.border = "0px solid white";
+            controlContainer.style.borderRadius = "5px";
+            controlContainer.style.display = "flex";
+            controlContainer.style.alignItems = "center";
+            controlContainer.style.gap = "3px";
+            let timeLabel = document.createElement("span");
             timeLabel.textContent = "Saat Ini";
-        } else {
-            timeLabel.textContent = `${step * 10} menit lalu`;
+            timeLabel.style.fontSize = "12px";
+            let timeSlider = document.createElement("input");
+            timeSlider.type = "range";
+            timeSlider.min = "0";
+            timeSlider.max = "12";
+            timeSlider.value = "12";
+            timeSlider.style.width = "100px";
+            timeSlider.style.cursor = "pointer";
+            let prevButton = document.createElement("button");
+            prevButton.textContent = "⏮️";
+            prevButton.style.cursor = "pointer";
+            prevButton.style.border = "none";
+            prevButton.style.background = "transparent";
+            prevButton.style.color = "white";
+            prevButton.style.fontSize = "15px";
+            let playButton = document.createElement("button");
+            playButton.textContent = "▶️";
+            playButton.style.cursor = "pointer";
+            playButton.style.border = "none";
+            playButton.style.background = "transparent";
+            playButton.style.color = "white";
+            playButton.style.fontSize = "15px";
+            let pauseButton = document.createElement("button");
+            pauseButton.textContent = "⏸️";
+            pauseButton.style.cursor = "pointer";
+            pauseButton.style.border = "none";
+            pauseButton.style.background = "transparent";
+            pauseButton.style.color = "white";
+            pauseButton.style.fontSize = "15px";
+            let nextButton = document.createElement("button");
+            nextButton.textContent = "⏭️";
+            nextButton.style.cursor = "pointer";
+            nextButton.style.border = "none";
+            nextButton.style.background = "transparent";
+            nextButton.style.color = "white";
+            nextButton.style.fontSize = "15px";
+            let animationInterval = null;
+            function updateTimeLabel() {
+                let step = 12 - parseInt(timeSlider.value);
+                if (step === 0) timeLabel.textContent = "Saat Ini";
+                else timeLabel.textContent = `${step * 10} menit lalu`;
+            }
+            function updateLayers(timeOffset) {
+                updateRadar(timeOffset);
+                updateIRSatellite(timeOffset);
+                updateTimeLabel();
+            }
+            playButton.onclick = function () {
+                if (animationInterval) return;
+                let step = parseInt(timeSlider.value);
+                animationInterval = setInterval(() => {
+                    if (step > 0) step--;
+                    else step = 12;
+                    timeSlider.value = step;
+                    updateLayers(12 - step);
+                }, 2000);
+            };
+            pauseButton.onclick = function () {
+                clearInterval(animationInterval);
+                animationInterval = null;
+            };
+            prevButton.onclick = function () {
+                let step = parseInt(timeSlider.value);
+                if (step > 0) {
+                    step--;
+                    timeSlider.value = step;
+                    updateLayers(12 - step);
+                }
+            };
+            nextButton.onclick = function () {
+                let step = parseInt(timeSlider.value);
+                if (step < 12) {
+                    step++;
+                    timeSlider.value = step;
+                    updateLayers(12 - step);
+                }
+            };
+            timeSlider.oninput = function () {
+                let timeOffset = 12 - parseInt(timeSlider.value);
+                updateLayers(timeOffset);
+            };
+            controlContainer.appendChild(timeLabel);
+            controlContainer.appendChild(timeSlider);
+            controlContainer.appendChild(prevButton);
+            controlContainer.appendChild(nextButton);
+            controlContainer.appendChild(playButton);
+            controlContainer.appendChild(pauseButton);
+            document.body.appendChild(controlContainer);
         }
-    }
-
-    function updateLayers(timeOffset) {
-        updateRadar(timeOffset);
-        updateIRSatellite(timeOffset);
-        updateTimeLabel();
-    }
-
-    playButton.onclick = function () {
-    if (animationInterval) return; // Cegah animasi ganda
-
-    let step = parseInt(timeSlider.value);
-
-    animationInterval = setInterval(() => {
-        if (step > 0) {
-            step--;
-        } else {
-            step = 12; // Reset ke 12 setelah mencapai 0
-        }
-
-        timeSlider.value = step;
-        updateLayers(12 - step);
-    }, 2000);
-};
-
-
-    pauseButton.onclick = function () {
-        clearInterval(animationInterval);
-        animationInterval = null;
-    };
-
-    prevButton.onclick = function () {
-        let step = parseInt(timeSlider.value);
-        if (step > 0) {
-            step--;
-            timeSlider.value = step;
-            updateLayers(12 - step);
-        }
-    };
-
-    nextButton.onclick = function () {
-        let step = parseInt(timeSlider.value);
-        if (step < 12) {
-            step++;
-            timeSlider.value = step;
-            updateLayers(12 - step);
-        }
-    };
-
-    timeSlider.oninput = function () {
-        let timeOffset = 12 - parseInt(timeSlider.value);
-        updateLayers(timeOffset);
-    };
-
-    controlContainer.appendChild(timeLabel);
-controlContainer.appendChild(timeSlider);    
-controlContainer.appendChild(prevButton);
-controlContainer.appendChild(nextButton);
-    controlContainer.appendChild(playButton);
-    controlContainer.appendChild(pauseButton);
-
-    document.body.appendChild(controlContainer);
-}
-
-addTimeControls();
-
-
- 	var marker;
+        addTimeControls();
+        var marker;
         var userMarker;
         var weatherChart;
-        
-	var chartPopup = document.getElementById('chart-popup');
+        var chartPopup = document.getElementById('chart-popup');
         var closePopup = document.getElementById('close-popup');
         var downloadCSV = document.getElementById('download-csv');
         var downloadImg = document.getElementById('download-img');
-        var currentData = {}; // Simpan data cuaca untuk unduhan
-
-        
+        var currentData = {};
         function fetchWeatherData(lat, lon) {
             fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation,wind_speed_10m,wind_direction_10m&wind_speed_unit=kn&forecast_days=3&models=ecmwf_ifs025&timezone=auto`)
-
-            .then(response => response.json())
-            .then(data => {
-                let hourly = data.hourly;
-                let times = [];
-                let precipitation = [];
-                let windSpeed = [];
-                let windDirection = [];
-
-                for (let i = 0; i < hourly.time.length; i += 1) {
-                    times.push(hourly.time[i].substring(11, 16));
-                    precipitation.push(hourly.precipitation[i]);
-                    windSpeed.push(hourly.wind_speed_10m[i]);
-                    windDirection.push(hourly.wind_direction_10m[i]);
-                }
-		// Simpan data untuk unduhan
-                currentData = { times, precipitation, windSpeed, windDirection };
-
-
-                // Hapus marker sebelumnya jika ada
-                if (marker) {
-                    map.removeLayer(marker);
-                }
-                if (userMarker) {
-                    map.removeLayer(userMarker);
-                    userMarker = null; // Reset userMarker agar tidak muncul kembali
-                }
-
-                marker = L.marker([lat, lon]).addTo(map)
-                    .bindPopup("Klik untuk lihat prakiraan cuaca.")
-                    .openPopup()
-                    .on('click', function() {
-                        showChart(times, precipitation, windSpeed, windDirection);
-                    });
-            })
-            .catch(error => console.error('Gagal mengambil data:', error));
+                .then(response => response.json())
+                .then(data => {
+                    let hourly = data.hourly;
+                    let times = [];
+                    let precipitation = [];
+                    let windSpeed = [];
+                    let windDirection = [];
+                    for (let i = 0; i < hourly.time.length; i += 1) {
+                        times.push(hourly.time[i].substring(11, 16));
+                        precipitation.push(hourly.precipitation[i]);
+                        windSpeed.push(hourly.wind_speed_10m[i]);
+                        windDirection.push(hourly.wind_direction_10m[i]);
+                    }
+                    currentData = { times, precipitation, windSpeed, windDirection };
+                    if (marker) map.removeLayer(marker);
+                    if (userMarker) {
+                        map.removeLayer(userMarker);
+                        userMarker = null;
+                    }
+                    marker = L.marker([lat, lon]).addTo(map)
+                        .bindPopup("Klik untuk lihat prakiraan cuaca.")
+                        .openPopup()
+                        .on('click', function() { showChart(times, precipitation, windSpeed, windDirection); });
+                })
+                .catch(error => console.error('Gagal mengambil data:', error));
         }
-
         function showChart(times, precipitation, windSpeed, windDirection) {
-    chartPopup.style.display = 'block';
-    let ctx = document.getElementById('weatherChart').getContext('2d');
-    if (weatherChart) {
-        weatherChart.destroy();
-    }
-    weatherChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: times,
-            datasets: [
-                {
-                    label: 'Curah Hujan (mm)',
-                    data: precipitation,
-                    backgroundColor: 'rgba(0, 0, 255, 0.6)',
-                    borderColor: 'blue',
-                    borderWidth: 1,
-                    type: 'bar',
-                    yAxisID: 'y1'
+            chartPopup.style.display = 'block';
+            let ctx = document.getElementById('weatherChart').getContext('2d');
+            if (weatherChart) weatherChart.destroy();
+            weatherChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: times,
+                    datasets: [
+                        {
+                            label: 'Curah Hujan (mm)',
+                            data: precipitation,
+                            backgroundColor: 'rgba(0, 0, 255, 0.6)',
+                            borderColor: 'blue',
+                            borderWidth: 1,
+                            type: 'bar',
+                            yAxisID: 'y1'
+                        },
+                        {
+                            label: 'Kecepatan Angin (knot)',
+                            data: windSpeed,
+                            borderColor: 'red',
+                            backgroundColor: 'rgba(255, 0, 0, 0.2)',
+                            fill: false,
+                            type: 'line',
+                            yAxisID: 'y2'
+                        },
+                        {
+                            label: 'Arah Angin (°)',
+                            data: windDirection,
+                            borderColor: 'green',
+                            backgroundColor: 'rgba(0, 255, 0, 0.2)',
+                            fill: false,
+                            type: 'line',
+                            yAxisID: 'y2'
+                        }
+                    ]
                 },
-                {
-                    label: 'Kecepatan Angin (knot)',
-                    data: windSpeed,
-                    borderColor: 'red',
-                    backgroundColor: 'rgba(255, 0, 0, 0.2)',
-                    fill: false,
-                    type: 'line',
-                    yAxisID: 'y2'
-                },
-                {
-                    label: 'Arah Angin (°)',
-                    data: windDirection,
-                    borderColor: 'green',
-                    backgroundColor: 'rgba(0, 255, 0, 0.2)',
-                    fill: false,
-                    type: 'line',
-                    yAxisID: 'y2'
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Waktu Setempat' // Tambahkan judul X-axis
-                    }
-                },
-                y1: {
-                    type: 'linear',
-                    position: 'left',
-                    beginAtZero: true
-                },
-                y2: {
-                    type: 'linear',
-                    position: 'right',
-                    beginAtZero: true
-                }
-            },
-            plugins: {
-                legend: {
-                    position: 'top'
-                },
-                title: {
-                    display: false,
-                    text: ' ', // Kosongkan title agar tidak bentrok
-                },
-                subtitle: {
-                    display: true,
-                    text: 'Prakiraan cuaca oleh Open-Meteo. Sumber data: IFS 0.25, ECMWF.',
-                    align: 'center',
-                    font: {
-                        size: 12,
-                        weight: 'bold'
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { title: { display: true, text: 'Waktu Setempat' } },
+                        y1: { type: 'linear', position: 'left', beginAtZero: true },
+                        y2: { type: 'linear', position: 'right', beginAtZero: true }
                     },
-                    padding: {
-                        bottom: 5
+                    plugins: {
+                        legend: { position: 'top' },
+                        title: { display: false, text: ' ' },
+                        subtitle: {
+                            display: true,
+                            text: 'Prakiraan cuaca oleh Open-Meteo. Sumber data: IFS 0.25, ECMWF.',
+                            align: 'center',
+                            font: { size: 12, weight: 'bold' },
+                            padding: { bottom: 5 }
+                        }
                     }
                 }
-            }
+            });
         }
-    });
-}
-
-function downloadCSVFile() { 
-    let csvContent = "data:text/csv;charset=utf-8,Waktu Setempat,Curah Hujan (mm),Kecepatan Angin (knot),Arah Angin (°)\n"; 
-    
-    currentData.times.forEach((time, index) => { 
-        // Format dari Open Meteo sudah dalam bentuk YYYY-MM-DDTHH:MM
-        let formattedTime = time.replace("T", " ") + ":00"; // Ubah "T" menjadi spasi dan tambahkan ":00" di akhir
-        
-        csvContent += `${formattedTime},${currentData.precipitation[index]},${currentData.windSpeed[index]},${currentData.windDirection[index]}\n`; 
-    });
-
-    let encodedUri = encodeURI(csvContent);           
-    let link = document.createElement("a");           
-    link.setAttribute("href", encodedUri);           
-    link.setAttribute("download", "Prakiraan_Cuaca.csv");           
-    document.body.appendChild(link);           
-    link.click();           
-    document.body.removeChild(link);       
-}
-	
+        function downloadCSVFile() {
+            let csvContent = "data:text/csv;charset=utf-8,Waktu Setempat,Curah Hujan (mm),Kecepatan Angin (knot),Arah Angin (°)\n";
+            currentData.times.forEach((time, index) => {
+                let formattedTime = time.replace("T", " ") + ":00";
+                csvContent += `${formattedTime},${currentData.precipitation[index]},${currentData.windSpeed[index]},${currentData.windDirection[index]}\n`;
+            });
+            let encodedUri = encodeURI(csvContent);
+            let link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "Prakiraan_Cuaca.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
         function downloadImage() {
-    let canvas = document.getElementById('weatherChart');
-    let ctx = canvas.getContext('2d');
-
-    // Buat canvas baru dengan ukuran yang sama
-    let newCanvas = document.createElement('canvas');
-    newCanvas.width = canvas.width;
-    newCanvas.height = canvas.height;
-    let newCtx = newCanvas.getContext('2d');
-
-    // Tambahkan background putih
-    newCtx.fillStyle = 'white';
-    newCtx.fillRect(0, 0, newCanvas.width, newCanvas.height);
-
-    // Gambar grafik asli di atas background putih
-    newCtx.drawImage(canvas, 0, 0);
-
-    // Download gambar dari canvas baru
-    let link = document.createElement('a');
-    link.href = newCanvas.toDataURL('image/png');
-    link.download = 'Prakiraan_Cuaca.png';
-    link.click();
-}
-
-
-	downloadCSV.addEventListener('click', downloadCSVFile);
+            let canvas = document.getElementById('weatherChart');
+            let ctx = canvas.getContext('2d');
+            let newCanvas = document.createElement('canvas');
+            newCanvas.width = canvas.width;
+            newCanvas.height = canvas.height;
+            let newCtx = newCanvas.getContext('2d');
+            newCtx.fillStyle = 'white';
+            newCtx.fillRect(0, 0, newCanvas.width, newCanvas.height);
+            newCtx.drawImage(canvas, 0, 0);
+            let link = document.createElement('a');
+            link.href = newCanvas.toDataURL('image/png');
+            link.download = 'Prakiraan_Cuaca.png';
+            link.click();
+        }
+        downloadCSV.addEventListener('click', downloadCSVFile);
         downloadImg.addEventListener('click', downloadImage);
-        
-	closePopup.addEventListener('click', function() {
-            chartPopup.style.display = 'none';
-        });
-
+        closePopup.addEventListener('click', function() { chartPopup.style.display = 'none'; });
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 function(position) {
                     let userLat = position.coords.latitude;
                     let userLon = position.coords.longitude;
                     map.setView([userLat, userLon], 12);
-
-                    // Hapus marker lokasi pengguna sebelumnya
-                    if (userMarker) {
-                        map.removeLayer(userMarker);
-                    }
-
+                    if (userMarker) map.removeLayer(userMarker);
                     userMarker = L.marker([userLat, userLon]).addTo(map)
                         .bindPopup("Lokasi Anda").openPopup();
                     fetchWeatherData(userLat, userLon);
                 },
-                function() {
-                    console.log("Tidak dapat mengambil lokasi pengguna.");
-                }
+                function() { console.log("Tidak dapat mengambil lokasi pengguna."); }
             );
         }
-        
         map.on('click', function(e) {
-            // Hapus marker sebelumnya jika ada
-            if (marker) {
-                map.removeLayer(marker);
-            }
+            if (marker) map.removeLayer(marker);
             if (userMarker) {
                 map.removeLayer(userMarker);
-                userMarker = null; // Pastikan userMarker direset agar tidak muncul kembali
+                userMarker = null;
             }
-
             let lat = e.latlng.lat;
             let lon = e.latlng.lng;
             fetchWeatherData(lat, lon);
         });
-
-var airports = [
-    { code: "WAAA", name: "Sultan Hasanuddin", lat: -5.07629, lon: 119.54639 },
-    { code: "WABB", name: "Frans Kaisiepo", lat: -1.19208, lon: 136.10663 },
-    { code: "WADD", name: "I Gusti Ngurah Rai", lat: -8.7489, lon: 115.15381 },
-    { code: "WADL", name: "Lombok Praya // Zainuddin Abdul Madjid", lat: -8.74943, lon: 116.2656 },
-    { code: "WAEE", name: "Sultan Babullah", lat: 0.83624, lon: 127.37781 },
-    { code: "WAHI", name: "Yogyakarta International Airport", lat: -7.900296, lon: 110.058606 },
-    { code: "WAJJ", name: "Sentani", lat: -2.56989, lon: 140.513 },
-    { code: "WAKK", name: "Mopah", lat: -8.51709, lon: 140.41724 },
-    { code: "WALL", name: "Sultan Aji Muhammad Sulaiman Sepinggan", lat: -1.26007, lon: 116.89703 },
-    { code: "WAMG", name: "Djalaluddin", lat: 0.6394, lon: 122.85101 },
-    { code: "WAFF", name: "Mutiara SIS-Al Jufri", lat: -0.91669, lon: 119.9104 },
-    { code: "WAMM", name: "Sam Ratulangi", lat: 1.54559, lon: 124.92499 },
-    { code: "WAOO", name: "Syamsudin Noor", lat: -3.44031, lon: 114.75281 },
-    { code: "WAPP", name: "Pattimura", lat: -3.70917, lon: 128.09082 },
-    { code: "WAQQ", name: "Juwata", lat: 3.32043, lon: 117.55359 },
-    { code: "WARR", name: "Juanda", lat: -7.3819, lon: 112.80042 },
-    { code: "WAHS", name: "Jenderal Ahmad Yani", lat: -6.97729, lon: 110.38104 },
-    { code: "WATT", name: "El Tari", lat: -10.16888, lon: 123.68219 },
-    { code: "WAUU", name: "Rendani", lat: -0.89349, lon: 134.0506 },
-    { code: "WAWW", name: "Halu Oleo", lat: -4.07721, lon: 122.41742 },
-    { code: "WIBB", name: "Sultan Syarif Kasim II", lat: 0.46344, lon: 101.44684 },
-    { code: "WIII", name: "Soekarno Hatta", lat: -6.1286, lon: 106.65063 },
-    { code: "WIHH", name: "Halim Perdanakusuma", lat: -6.27228, lon: 106.87878 },
-    { code: "WILL", name: "Radin Inten II", lat: -5.2428, lon: 105.17584 },
-    { code: "WIMM", name: "Kualanamu", lat: 3.6366, lon: 98.88483 },
-    { code: "WIOO", name: "Supadio", lat: -0.14648, lon: 109.40582 },
-    { code: "WIPP", name: "Sultan Mahmud Badaruddin II", lat: -2.8949, lon: 104.70679 }
-    
-    
-];
-
-        
+        var airports = [
+            { code: "WAAA", name: "Sultan Hasanuddin", lat: -5.07629, lon: 119.54639 },
+            { code: "WABB", name: "Frans Kaisiepo", lat: -1.19208, lon: 136.10663 },
+            { code: "WADD", name: "I Gusti Ngurah Rai", lat: -8.7489, lon: 115.15381 },
+            { code: "WADL", name: "Lombok Praya // Zainuddin Abdul Madjid", lat: -8.74943, lon: 116.2656 },
+            { code: "WAEE", name: "Sultan Babullah", lat: 0.83624, lon: 127.37781 },
+            { code: "WAHI", name: "Yogyakarta International Airport", lat: -7.900296, lon: 110.058606 },
+            { code: "WAJJ", name: "Sentani", lat: -2.56989, lon: 140.513 },
+            { code: "WAKK", name: "Mopah", lat: -8.51709, lon: 140.41724 },
+            { code: "WALL", name: "Sultan Aji Muhammad Sulaiman Sepinggan", lat: -1.26007, lon: 116.89703 },
+            { code: "WAMG", name: "Djalaluddin", lat: 0.6394, lon: 122.85101 },
+            { code: "WAFF", name: "Mutiara SIS-Al Jufri", lat: -0.91669, lon: 119.9104 },
+            { code: "WAMM", name: "Sam Ratulangi", lat: 1.54559, lon: 124.92499 },
+            { code: "WAOO", name: "Syamsudin Noor", lat: -3.44031, lon: 114.75281 },
+            { code: "WAPP", name: "Pattimura", lat: -3.70917, lon: 128.09082 },
+            { code: "WAQQ", name: "Juwata", lat: 3.32043, lon: 117.55359 },
+            { code: "WARR", name: "Juanda", lat: -7.3819, lon: 112.80042 },
+            { code: "WAHS", name: "Jenderal Ahmad Yani", lat: -6.97729, lon: 110.38104 },
+            { code: "WATT", name: "El Tari", lat: -10.16888, lon: 123.68219 },
+            { code: "WAUU", name: "Rendani", lat: -0.89349, lon: 134.0506 },
+            { code: "WAWW", name: "Halu Oleo", lat: -4.07721, lon: 122.41742 },
+            { code: "WIBB", name: "Sultan Syarif Kasim II", lat: 0.46344, lon: 101.44684 },
+            { code: "WIII", name: "Soekarno Hatta", lat: -6.1286, lon: 106.65063 },
+            { code: "WIHH", name: "Halim Perdanakusuma", lat: -6.27228, lon: 106.87878 },
+            { code: "WILL", name: "Radin Inten II", lat: -5.2428, lon: 105.17584 },
+            { code: "WIMM", name: "Kualanamu", lat: 3.6366, lon: 98.88483 },
+            { code: "WIOO", name: "Supadio", lat: -0.14648, lon: 109.40582 },
+            { code: "WIPP", name: "Sultan Mahmud Badaruddin II", lat: -2.8949, lon: 104.70679 }
+        ];
         var airportLayer = L.layerGroup();
         var markers = {};
-        
         airports.forEach(airport => {
             var marker = L.circleMarker([airport.lat, airport.lon], {
                 radius: 7,
@@ -893,95 +656,182 @@ var airports = [
                 fillColor: "white",
                 fillOpacity: 0.1
             }).bindPopup(`<b>${airport.name} (${airport.code})</b><br>Memuat data METAR...`);
-            
             markers[airport.code] = marker;
             airportLayer.addLayer(marker);
         });
-        
         var icaoCodes = airports.map(a => a.code).join("%2C");
         var apiUrl = `https://api.met.no/weatherapi/tafmetar/1.0/metar.txt?icao=${icaoCodes}`;
-
-        
-        fetch(apiUrl, {
-            headers: {
-                'User-Agent': 'Prayoga Ismail/yogamailforalvin@gmail.com'
-            }
-        })
+        fetch(apiUrl, { headers: { 'User-Agent': 'Prayoga Ismail/yogamailforalvin@gmail.com' } })
             .then(response => {
-                if (!response.ok) {
-                    throw new Error("Gagal mengambil data METAR");
-                }
+                if (!response.ok) throw new Error("Gagal mengambil data METAR");
                 return response.text();
             })
             .then(text => {
-                console.log("Data METAR Mentah:", text);
-                
                 var metarEntries = text.split("\n");
                 var metarData = {};
-                
                 metarEntries.forEach(entry => {
                     if (entry.trim() === "") return;
-                    
                     var parts = entry.split(" ");
                     var icaoCode = parts[0];
-                    
-                    if (!metarData[icaoCode]) {
-                        metarData[icaoCode] = [];
-                    }
-                    
+                    if (!metarData[icaoCode]) metarData[icaoCode] = [];
                     metarData[icaoCode].push(entry);
                 });
-                
                 airports.forEach(airport => {
-                     if (metarData[airport.code]) {
-        markers[airport.code].bindPopup(
-            `<b>${airport.name} (${airport.code})</b><br>${metarData[airport.code]
-                .slice(-6)  // Ambil 6 data terakhir
-                .map(entry => "METAR " + entry) // Tambahkan "METAR " di awal setiap entry
-                .join('<br>')}`);
-} });
+                    if (metarData[airport.code]) {
+                        markers[airport.code].bindPopup(
+                            `<b>${airport.name} (${airport.code})</b><br>${metarData[airport.code]
+                                .slice(-6)
+                                .map(entry => "METAR " + entry)
+                                .join('<br>')}`);
+                    }
+                });
             })
             .catch(error => {
                 console.error("Gagal mengambil data METAR", error);
                 alert("Terjadi kesalahan dalam mengambil data METAR");
             });
+        var baseMaps = {
+            "Peta OSM": osmLayer,
+            "Peta Esri Imagery": esriImagery,
+            "Peta CartoDB": cartoPositron,
+            "Peta Topografi": topoMap,
+            "Peta Tutupan Lahan": lulcMap
+        };
+        var overlayMaps = {
+            "Tekanan Udara (OWM)": pressureLayer,
+            "Satelit Inframerah": IRsatelliteLayer,
+            "Sebaran hujan (OWM)": precipitationLayer,
+            "Radar Cuaca": radarLayer,
+            "Cuaca Bandara": airportLayer
+        };
+        setTimeout(() => {
+            let layerControl = document.querySelector('.leaflet-control-layers');
+            if (layerControl) {
+                layerControl.style.marginBottom = "60px";
+                layerControl.style.bottom = "auto";
+                layerControl.style.top = "unset";
+                layerControl.style.maxHeight = "50vh";
+                layerControl.style.overflowY = "auto";
+                layerControl.style.background = "rgba(255, 255, 255, 0.8)";
+                layerControl.style.padding = "10px";
+                layerControl.style.borderRadius = "8px";
+            }
+        }, 100);
+        L.control.layers(baseMaps, overlayMaps, { collapsed: true, position: 'bottomleft' }).addTo(map);
+        radarLayer.addTo(map);
         
-var baseMaps = {
-        "Peta OSM": osmLayer,
-        "Peta Esri Imagery": esriImagery,
-    	"Peta CartoDB": cartoPositron,
-    "Peta Topografi": topoMap,
-    "Peta Tutupan Lahan": lulcMap
-    };
+	function loadmaptiler() {
+    if (window.maptilerInstance) {
+        window.maptilerInstance.remove();
+        window.maptilerInstance = null;}
 
-    var overlayMaps = { 
-	"Tekanan Udara (OWM)": pressureLayer,        
-	"Satelit Inframerah": IRsatelliteLayer,
-	"Sebaran hujan (OWM)": precipitationLayer,
-	"Radar Cuaca": radarLayer, 
-        "Cuaca Bandara": airportLayer
-     };
+    maptilersdk.config.apiKey = 'SJePaY44QYTchyjBmpQm'; // Ganti dengan API Key Anda
+    const maptiler = (window.maptilerInstance = new maptilersdk.Map({
+        container: 'maptiler',
+        style: maptilersdk.MapStyle.STREETS, // Style default
+        zoom: 4,
+        center: [118, -2.5]
+    }));
+    maptiler.on('load', function () {
+        maptiler.setPaintProperty("Water", 'fill-color', "rgba(0, 0, 0, 0.4)");
+        maptiler.addLayer(weatherLayer, 'Water');
+    });
+    maptiler.on('webglcontextlost', function (event) {
+        event.preventDefault();
+        console.log("WebGL context lost, attempting to restore...");
+        setTimeout(() => {
+            maptiler.triggerRepaint();}, 1000);
+    });
 
-  
-setTimeout(() => {
-    let layerControl = document.querySelector('.leaflet-control-layers');
-    if (layerControl) {
-        layerControl.style.marginBottom = "60px"; // Jarak lebih besar agar tidak tertutup UI HP
-        layerControl.style.bottom = "auto"; // Hindari posisi terlalu bawah
-        layerControl.style.top = "unset"; // Pastikan tidak ada konflik dengan top positioning
-        layerControl.style.maxHeight = "50vh"; // Maksimal 50% tinggi layar agar terlihat di HP
-        layerControl.style.overflowY = "auto"; // Bisa di-scroll jika banyak layer
-        layerControl.style.background = "rgba(255, 255, 255, 0.8)"; // Semi transparan agar tidak menutupi peta
-        layerControl.style.padding = "10px"; // Tambahkan padding agar mudah dibaca
-        layerControl.style.borderRadius = "8px"; // Agar terlihat lebih bagus
-    }
-}, 100);
-
-L.control.layers(baseMaps, overlayMaps, { collapsed: true, position: 'bottomleft' }).addTo(map);
-radarLayer.addTo(map);
-
-
-</script>
-
+            const timeSlider = document.getElementById("time-slider");
+            const playPauseButton = document.getElementById("play-pause-bt");
+            const pointerDataDiv = document.getElementById("pointer-data");
+            let pointerLngLat = null;
+            const weatherLayer = new maptilerweather.WindLayer();
+            maptiler.on('load', function () {
+                maptiler.setPaintProperty("Water", 'fill-color', "rgba(0, 0, 0, 0.4)");
+                maptiler.addLayer(weatherLayer, 'Water');
+            });
+            timeSlider.addEventListener("input", (evt) => {
+                weatherLayer.setAnimationTime(parseInt(timeSlider.value / 1000));
+            });
+            weatherLayer.on("sourceReady", event => {
+                const startDate = weatherLayer.getAnimationStartDate();
+                const endDate = weatherLayer.getAnimationEndDate();
+                const currentDate = weatherLayer.getAnimationTimeDate();
+                refreshTime();
+                timeSlider.min = +startDate;
+                timeSlider.max = +endDate;
+                timeSlider.value = +currentDate;
+            });
+            weatherLayer.on("tick", event => {
+                refreshTime();
+                updatePointerValue(pointerLngLat);
+            });
+            weatherLayer.on("animationTimeSet", event => {
+                refreshTime();
+            });
+            let isPlaying = false;
+            playPauseButton.addEventListener("click", () => {
+                if (isPlaying) {
+                    weatherLayer.animateByFactor(0);
+                    playPauseButton.innerText = "Play 3600x";
+                } else {
+                    weatherLayer.animateByFactor(3600);
+                    playPauseButton.innerText = "Pause";
+                }
+                isPlaying = !isPlaying;
+            });
+            function refreshTime() {
+                const d = weatherLayer.getAnimationTimeDate();
+                document.getElementById("time-text").innerText = d.toString();
+                timeSlider.value = +d;
+            }
+            function updatePointerValue(lngLat) {
+                if (!lngLat) return;
+                pointerLngLat = lngLat;
+                const value = weatherLayer.pickAt(lngLat.lng, lngLat.lat);
+                if (!value) {
+                    pointerDataDiv.innerText = "";
+                    return;
+                }
+                pointerDataDiv.innerText = `${value.speedMetersPerSecond.toFixed(1)} m/s`;
+            }
+            maptiler.on('mousemove', (e) => {
+                updatePointerValue(e.lngLat);
+            });
+            maptiler.on('mouseout', function(evt) {
+                if (!evt.originalEvent.relatedTarget) {
+                    pointerDataDiv.innerText = "";
+                    pointerLngLat = null;
+                }
+            });
+        }
+        document.addEventListener("DOMContentLoaded", function () {
+            const layerRadios = document.querySelectorAll("input[name='baseLayer']");
+            const mapElement = document.getElementById("map");
+            const maptilerElement = document.getElementById("maptiler");
+            const windControls = document.getElementById("wind-controls");
+            function updateLayers(selectedLayer) {
+                if (selectedLayer === "maptiler") {
+                    mapElement.style.display = "none";
+                    maptilerElement.style.display = "block";
+                    windControls.style.display = "block";
+                    if (typeof loadmaptiler === "function") loadmaptiler();
+                    else console.error("Fungsi loadmaptiler tidak ditemukan!");
+                } else {
+                    mapElement.style.display = "block";
+                    maptilerElement.style.display = "none";
+                    windControls.style.display = "none";
+                }
+            }
+            updateLayers(document.querySelector("input[name='baseLayer']:checked").value);
+            layerRadios.forEach(radio => {
+                radio.addEventListener("change", function () {
+                    updateLayers(this.value);
+                });
+            });
+        });
+    </script>
 </body>
 </html>
