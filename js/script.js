@@ -119,8 +119,8 @@ var map = L.map('map', { center: [-2.5, 118], zoom: 5, attributionControl: false
         }
         updateRadar();
         updateIRSatellite();
-        setInterval(updateRadar, 600000);
-        setInterval(updateIRSatellite, 600000);
+        setInterval(updateRadar, 300000);
+        setInterval(updateIRSatellite, 300000);
 	    
 let controlContainer = null;
 function addTimeControls() {
