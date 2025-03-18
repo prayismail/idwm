@@ -119,8 +119,8 @@ var map = L.map('map', { center: [-2.5, 118], zoom: 5, attributionControl: false
         }
         updateRadar();
         updateIRSatellite();
-        setInterval(updateRadar, 300000);
-        setInterval(updateIRSatellite, 300000);
+        setInterval(updateRadar, 600000);
+        setInterval(updateIRSatellite, 600000);
 	    
 let controlContainer = null;
 function addTimeControls() {
@@ -186,47 +186,48 @@ function addTimeControls() {
     let animationInterval = null;
 
     function updateTimeLabel() {
-    let step = 24 - parseInt(timeSlider.value);
-    if (step === 0) timeLabel.textContent = "Saat Ini";
-    else timeLabel.textContent = `${step * 5} menit lalu`; // Ubah dari 10 ke 5 menit
-}
+        let step = 12 - parseInt(timeSlider.value);
+        if (step === 0) timeLabel.textContent = "Saat Ini";
+        else timeLabel.textContent = `${step * 10} menit lalu`;}
 
-function updateLayers(timeOffset) {
-    updateRadar(timeOffset);
-    updateIRSatellite(timeOffset);
-    updateTimeLabel();}
+    function updateLayers(timeOffset) {
+        updateRadar(timeOffset);
+        updateIRSatellite(timeOffset);
+        updateTimeLabel();}
 
-playButton.onclick = function () {
-    if (animationInterval) return;
-    let step = parseInt(timeSlider.value);
-    animationInterval = setInterval(() => {
-        if (step > 0) step--;
-        else step = 24; // Ubah dari 12 ke 24
-        timeSlider.value = step;
-        updateLayers(24 - step); // Sesuaikan dengan jumlah langkah baru
-    }, 2000);};
+    playButton.onclick = function () {
+        if (animationInterval) return;
+        let step = parseInt(timeSlider.value);
+        animationInterval = setInterval(() => {
+            if (step > 0) step--;
+            else step = 12;
+            timeSlider.value = step;
+            updateLayers(12 - step); }, 2000);};
 
-pauseButton.onclick = function () {
-    clearInterval(animationInterval);
-    animationInterval = null;};
+    pauseButton.onclick = function () {
+        clearInterval(animationInterval);
+        animationInterval = null; };
 
-prevButton.onclick = function () {
-    let step = parseInt(timeSlider.value);
-    if (step > 0) {
-        step--;
-        timeSlider.value = step;
-        updateLayers(24 - step); } };
+    prevButton.onclick = function () {
+        let step = parseInt(timeSlider.value);
+        if (step > 0) {
+            step--;
+            timeSlider.value = step;
+            updateLayers(12 - step);}
+    };
 
-nextButton.onclick = function () {
-    let step = parseInt(timeSlider.value);
-    if (step < 24) { // Ubah dari 12 ke 24
-        step++;
-        timeSlider.value = step;
-        updateLayers(24 - step); } };
+    nextButton.onclick = function () {
+        let step = parseInt(timeSlider.value);
+        if (step < 12) {
+            step++;
+            timeSlider.value = step;
+            updateLayers(12 - step);}
+    };
 
-timeSlider.oninput = function () {
-    let timeOffset = 24 - parseInt(timeSlider.value); // Sesuaikan dengan langkah baru
-    updateLayers(timeOffset); };
+    timeSlider.oninput = function () {
+        let timeOffset = 12 - parseInt(timeSlider.value);
+        updateLayers(timeOffset);
+    };
 
     controlContainer.appendChild(timeLabel);
     controlContainer.appendChild(timeSlider);
