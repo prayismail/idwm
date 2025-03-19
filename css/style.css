@@ -107,7 +107,7 @@
         .gradient-bar {
             width: 20px;
             height: 150px;
-            background: linear-gradient(to bottom, #cec087 0%, #cec087 15%, #32ceed 15%, #32ceed 26%, #005588 26%, #005588 38%, #FFFF00 38%, #FFFF00 53%, #FFA500 53%, #FFA500 65%, #FF0000 65%, #FF0000 80%, #ffaaff 80%, #ffaaff 90%, #ff00ff 90%, #ff00ff 100%);
+            background: linear-gradient(to bottom, #cec087 0%, #cec087 15%, #32ceed 15%, #32ceed 28%, #005588 26%, #005588 40%, #FFFF00 40%, #FFFF00 53%, #FFA500 53%, #FFA500 66%, #FF0000 66%, #FF0000 80%, #ffaaff 80%, #ffaaff 90%, #ff00ff 90%, #ff00ff 100%);
             border-radius: 2px;
             border: 0px solid black;
             position: relative;
