@@ -32,10 +32,10 @@ var map = L.map('map', { center: [-2.5, 118], zoom: 5, attributionControl: false
         var lulcMap = L.tileLayer.wms("https://services.terrascope.be/wms/v2", { layers: 'WORLDCOVER_2020_MAP', format: 'image/png', transparent: true, attribution: 'Base map &copy; ESA WorldCover 2020' });
         var radarLayer = L.tileLayer('', { opacity: 1, attribution: 'Radar data &copy; RainViewer' });
         var IRsatelliteLayer = L.tileLayer('', { opacity: 0.6, attribution: 'Satellite data &copy; RainViewer' });
-        var imageUrl = 'https://inderaja.bmkg.go.id/IMAGE/HIMA/H08_NC_Indonesia.png';
+        var imageUrl = 'https://inderaja.bmkg.go.id/IMAGE/HIMA/H08_VS_Indonesia.png';
         // Batas wilayah gambar satelit yang telah disesuaikan
         var imageBounds = [[-20, 90], [20, 150]];
-        var NCsatelliteLayer = L.imageOverlay(imageUrl, imageBounds, { opacity: 0.4, attribution: 'Satellite data &copy; BMKG'});
+        var VSsatelliteLayer = L.imageOverlay(imageUrl, imageBounds, { opacity: 0.5, attribution: 'Satellite data &copy; BMKG'});
         var precipitationLayer = L.tileLayer('https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=62ac6e2d12bbaaa3de6bf9f57fe1cc00', { attribution: 'Precipitation data &copy; OpenWeatherMap', opacity: 1 });
         var pressureLayer = L.tileLayer('https://tile.openweathermap.org/map/pressure_new/{z}/{x}/{y}.png?appid=62ac6e2d12bbaaa3de6bf9f57fe1cc00', { attribution: 'Pressure data &copy; OpenWeatherMap', opacity: 1 });
         function addUserLocation() {
@@ -490,7 +490,7 @@ map.on('layeradd layerremove', toggleTimeControls);
             "Peta Tutupan Lahan": lulcMap
         };
         var overlayMaps = {
-	    "Satelit Natural Color": NCsatelliteLayer,
+	    "Satelit Visible": VSsatelliteLayer,
             "Tekanan Udara (OWM)": pressureLayer,
             "Satelit Inframerah": IRsatelliteLayer,
             "Sebaran hujan (OWM)": precipitationLayer,
