@@ -36,6 +36,29 @@ var map = L.map('map', { center: [-2.5, 118], zoom: 5, attributionControl: false
         // Batas wilayah gambar satelit yang telah disesuaikan
         var imageBounds = [[-20, 90], [20, 150]];
         var VSsatelliteLayer = L.imageOverlay(imageUrl, imageBounds, { opacity: 0.7, attribution: 'Satellite data &copy; BMKG'});
+	var TropicalUrl = "https://ncics.org/pub/mjo/v2/map/uwnd850.cfs.all.indonesia.1.png";
+	var TropicalLayer = L.layerGroup();
+// Popup dengan gambar zoomable
+var popup = L.popup({ className: 'popup-tropical', maxWidth: 400 });
+function showPopup() {
+    console.log("Layer dicentang, menampilkan popup...");
+    popup
+        .setLatLng([-5, 120]) // Posisi popup di tengah Indonesia
+        .setContent(`
+            <b>NCICS Tropical Waves Monitoring</b><br>
+            <a href="${TropicalUrl}" target="_blank">
+                <img src="${TropicalUrl}" alt="NCICS Tropical Waves" style="width:100%; cursor:pointer;">
+            </a>`)
+        .openOn(map);}
+// Event ketika layer diaktifkan/dimatikan
+map.on('overlayadd', function(eventLayer) {
+    if (eventLayer.layer === TropicalLayer) {
+        showPopup(); // Tampilkan popup jika layer dicentang
+        map.attributionControl.addAttribution('Tropical waves data &copy; NCICS.org');} });
+map.on('overlayremove', function(eventLayer) {
+    if (eventLayer.layer === TropicalLayer) {
+        map.closePopup(); // Tutup popup jika layer dihapus
+        map.attributionControl.removeAttribution('Tropical waves data &copy; NCICS.org');} });
         var precipitationLayer = L.tileLayer('https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=62ac6e2d12bbaaa3de6bf9f57fe1cc00', { attribution: 'Precipitation data &copy; OpenWeatherMap', opacity: 1 });
         var pressureLayer = L.tileLayer('https://tile.openweathermap.org/map/pressure_new/{z}/{x}/{y}.png?appid=62ac6e2d12bbaaa3de6bf9f57fe1cc00', { attribution: 'Pressure data &copy; OpenWeatherMap', opacity: 1 });
         function addUserLocation() {
@@ -495,7 +518,8 @@ map.on('layeradd layerremove', toggleTimeControls);
             "Satelit Inframerah": IRsatelliteLayer,
             "Sebaran hujan (OWM)": precipitationLayer,
             "Radar Cuaca": radarLayer,
-            "Cuaca Bandara": airportLayer
+            "Cuaca Bandara": airportLayer,
+	    "Tropical Waves": TropicalLayer
         };
         setTimeout(() => {
             let layerControl = document.querySelector('.leaflet-control-layers');
