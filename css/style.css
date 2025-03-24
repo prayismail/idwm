@@ -157,9 +157,10 @@
         #pointer-data { z-index: 1; position: fixed; font-size: 15px; font-weight: 900; margin: 35px 0px 0px 10px; color: #fff; text-shadow: 0px 0px 10px #0007; }
         #variable-name { z-index: 1; position: fixed; font-size: 15px; font-weight: 600; margin: 20px 0px 0px 10px; color: #fff; text-shadow: 0px 0px 10px #0007; }
 	.popup-tropical img {
-            width: 400px;
+            width: 300px;
             height: auto;
             display: block;
+	    z-index: 4000;
             margin: 5px auto;
             cursor: pointer;}
         .popup-buttons {
@@ -189,13 +190,14 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1000;}
+            z-index: 4000;}
         .fullscreen-img img {
             max-width: 90%;
-            max-height: 90%;}
+            max-height: 90%;
+	    z-index: 4000;}
         .fullscreen-img .close-btn {
             position: absolute;
-            top: 20px;
+            top: 40px;
             right: 20px;
             background: red;
             color: white;
@@ -203,6 +205,7 @@
             cursor: pointer;
             border: none;
             font-size: 16px;
+	    z-index: 4000;
             border-radius: 5px;}
 
 
