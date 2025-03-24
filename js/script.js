@@ -36,29 +36,30 @@ var map = L.map('map', { center: [-2.5, 118], zoom: 5, attributionControl: false
         // Batas wilayah gambar satelit yang telah disesuaikan
         var imageBounds = [[-20, 90], [20, 150]];
         var VSsatelliteLayer = L.imageOverlay(imageUrl, imageBounds, { opacity: 0.7, attribution: 'Satellite data &copy; BMKG'});
-	var TropicalUrl = "https://ncics.org/pub/mjo/v2/map/uwnd850.cfs.all.indonesia.1.png";
-	var TropicalLayer = L.layerGroup();
-// Popup dengan gambar zoomable
-var popup = L.popup({ className: 'popup-tropical', maxWidth: 400 });
-function showPopup() {
-    console.log("Layer dicentang, menampilkan popup...");
-    popup
-        .setLatLng([-5, 120]) // Posisi popup di tengah Indonesia
-        .setContent(`
-            <b>NCICS Tropical Waves Monitoring</b><br>
-            <a href="${TropicalUrl}" target="_blank">
-                <img src="${TropicalUrl}" alt="NCICS Tropical Waves" style="width:100%; cursor:pointer;">
-            </a>`)
-        .openOn(map);}
-// Event ketika layer diaktifkan/dimatikan
+	var olrUrl = "https://ncics.org/pub/mjo/v2/map/olr.cfs.all.indonesia.1.png";
+	var zonalWindUrl = "https://ncics.org/pub/mjo/v2/map/uwnd850.cfs.all.indonesia.1.png";
+	var TropicalLayer= L.layerGroup().addLayer(L.tileLayer("",{attribution:"Tropical waves data &copy NCICS</a>"}) );
+var popup = L.popup({className: 'popup-tropical', maxWidth: 420});
+function showPopup(imageUrl) {
+    popup.setLatLng([-5, 120]).setContent('<b>NCICS Tropical Waves</b><br><img id="popup-img" src="' + imageUrl + '" alt="NCICS Image" onclick="openFullscreen(this.src)"><div class="popup-buttons"><button onclick="switchImage(\'olr\')">OLR</button><button onclick="switchImage(\'wind\')">Angin Zonal</button></div>').openOn(map);}
+function switchImage(type) {
+    var imgElement = document.getElementById("popup-img");
+    if (type === 'olr') {
+        imgElement.src = olrUrl;} 
+    else {imgElement.src = zonalWindUrl;} }
+function openFullscreen(src) {
+    var fullscreenDiv = document.createElement("div");
+    fullscreenDiv.classList.add("fullscreen-img");
+    fullscreenDiv.innerHTML = '<button class="close-btn" onclick="closeFullscreen()">TUTUP</button><img src="' + src + '" alt="Fullscreen Image">';
+    document.body.appendChild(fullscreenDiv);}
+function closeFullscreen() {
+    document.querySelector(".fullscreen-img").remove();}
 map.on('overlayadd', function(eventLayer) {
     if (eventLayer.layer === TropicalLayer) {
-        showPopup(); // Tampilkan popup jika layer dicentang
-        map.attributionControl.addAttribution('Tropical waves data &copy; NCICS.org');} });
+        showPopup(zonalWindUrl);} });
 map.on('overlayremove', function(eventLayer) {
     if (eventLayer.layer === TropicalLayer) {
-        map.closePopup(); // Tutup popup jika layer dihapus
-        map.attributionControl.removeAttribution('Tropical waves data &copy; NCICS.org');} });
+        map.closePopup();} });
         var precipitationLayer = L.tileLayer('https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=62ac6e2d12bbaaa3de6bf9f57fe1cc00', { attribution: 'Precipitation data &copy; OpenWeatherMap', opacity: 1 });
         var pressureLayer = L.tileLayer('https://tile.openweathermap.org/map/pressure_new/{z}/{x}/{y}.png?appid=62ac6e2d12bbaaa3de6bf9f57fe1cc00', { attribution: 'Pressure data &copy; OpenWeatherMap', opacity: 1 });
         function addUserLocation() {
