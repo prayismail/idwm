@@ -29,7 +29,7 @@ var map = L.map('map', { center: [-2.5, 118], zoom: 5, attributionControl: false
         var esriImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution:  'Base map &copy; Esri, DigitalGlobe, GeoEye, Earthstar Geographics' });
         var cartoPositron = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: 'Base map &copy; CartoDB' });
         var topoMap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: 'Base map &copy; <a href="https://opentopomap.org/">OpenTopoMap</a> contributors' });
-        var lulcMap = L.tileLayer.wms("https://services.terrascope.be/wms/v2", { layers: 'WORLDCOVER_2020_MAP', format: 'image/png', transparent: true, attribution: 'Base map &copy; ESA WorldCover 2020' });
+        var lulcMap = L.tileLayer.wms("https://services.terrascope.be/wms/v2", {layers: 'WORLDCOVER_2021_MAP', format: 'image/png', transparent: true, attribution: 'Base map &copy; ESA WorldCover 2021' });
         var radarLayer = L.tileLayer('', { opacity: 0.8, attribution: 'Radar data &copy; RainViewer' });
         var IRsatelliteLayer = L.tileLayer('', { opacity: 0.6, attribution: 'Satellite data &copy; RainViewer' });
         var imageUrl = 'https://inderaja.bmkg.go.id/IMAGE/HIMA/H08_NC_Indonesia.png';
