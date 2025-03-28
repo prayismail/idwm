@@ -461,11 +461,13 @@ map.on('layeradd layerremove', toggleTimeControls);
             { code: "WILL", name: "Radin Inten II", lat: -5.2428, lon: 105.17584 },
             { code: "WIMM", name: "Kualanamu", lat: 3.6366, lon: 98.88483 },
             { code: "WIOO", name: "Supadio", lat: -0.14648, lon: 109.40582 },
-            { code: "WIPP", name: "Sultan Mahmud Badaruddin II", lat: -2.8949, lon: 104.70679 }
+            { code: "WIPP", name: "Sultan Mahmud Badaruddin II", lat: -2.8949, lon: 104.70679 },
+	    { code: "WIDD", name: "Hang Nadim", lat: 1.11902, lon: 104.1142 },
         ];
         
         var markers = {};
         var airportLayer = L.layerGroup();
+
         // Tambahkan Marker untuk Setiap Bandara
         airports.forEach(airport => {
             var marker = L.circleMarker([airport.lat, airport.lon], {
@@ -477,33 +479,45 @@ map.on('layeradd layerremove', toggleTimeControls);
                 <b>${airport.name} (${airport.code})</b><br>
                 Memuat data METAR...<br>
                 <a href='#' class="awos-link" onclick='showAWOS("${airport.code}")'>AWOS REALTIME</a>
-            `);        
+            `);
+            
             markers[airport.code] = marker;
             airportLayer.addLayer(marker);
+            
             marker.on('click', function () {
                 fetchMETAR();
-                fetchSIGMET(airport.code); }); });
-        map.addLayer(airportLayer);
-       // Fungsi Menampilkan Popup AWOS
+                fetchSIGMET(airport.code);
+            });
+        });
+
+        // Fungsi Menampilkan Popup AWOS
 function showAWOS(code) {
     var url = `http://${code.toLowerCase()}.awosnet.com`;
 
     // Coba cek apakah halaman AWOS bisa dimuat
     fetch(url, { mode: 'no-cors' })
         .then(() => {
-            document.getElementById("awosIframe").src = url; })
+            document.getElementById("awosIframe").src = url;
+        })
         .catch(() => {
-            document.getElementById("awosIframe").srcdoc = "<html><head><style>body{font-family:Arial, sans-serif; display:flex; align-items:center; justify-content:center; height:100%; text-align:center;}</style></head><body><h3>Tampilan AWOS tidak tersedia.</h3></body></html>"; })
+            document.getElementById("awosIframe").srcdoc = "<html><head><style>body{font-family:Arial, sans-serif; display:flex; align-items:center; justify-content:center; height:100%; text-align:center;}</style></head><body><h3>Tampilan AWOS tidak tersedia.</h3></body></html>";
+        })
         .finally(() => {
-            toggleAWOS(true); }); }
+            toggleAWOS(true);
+        });
+}
+
         // Fungsi Menampilkan atau Menutup Popup
         function toggleAWOS(show) {
-            document.getElementById("popupAWOS").style.display = show ? "flex" : "none"; }
+            document.getElementById("popupAWOS").style.display = show ? "flex" : "none";
+        }
+
         // Ambil Data METAR
         function fetchMETAR() {
             var icaoCodes = airports.map(a => a.code).join("%2C");
             var apiUrl = `https://api.met.no/weatherapi/tafmetar/1.0/metar.txt?icao=${icaoCodes}`;
-            fetch(apiUrl, { headers: { 'User-Agent': 'YourAppName/YourEmail' } })
+
+            fetch(apiUrl, { headers: { 'User-Agent': 'IDWM/prayoga.ismail@bmkg.go.id' } })
                 .then(response => response.text())
                 .then(text => {
                     var metarData = {};
@@ -512,12 +526,20 @@ function showAWOS(code) {
                         var parts = entry.split(" ");
                         var icaoCode = parts[0];
                         if (!metarData[icaoCode]) metarData[icaoCode] = [];
-                        metarData[icaoCode].push(entry); });
+                        metarData[icaoCode].push(entry);
+                    });
+
                     airports.forEach(airport => {
                         if (metarData[airport.code]) {
                             markers[airport.code].bindPopup(
-                                `<b>${airport.name} (${airport.code})</b><br>${metarData[airport.code].slice(-6).map(entry => "METAR " + entry).join('<br>')}<br><a href='#' class="awos-link" onclick='showAWOS("${airport.code}")'>AWOS REALTIME</a>` ); } }); })
-                .catch(error => console.error("Gagal mengambil data METAR", error)); }
+                                `<b>${airport.name} (${airport.code})</b><br>${metarData[airport.code].slice(-6).map(entry => "METAR " + entry).join('<br>')}<br><a href='#' class="awos-link" onclick='showAWOS("${airport.code}")'>AWOS REALTIME</a>`
+                            );
+                        }
+                    });
+                })
+                .catch(error => console.error("Gagal mengambil data METAR", error));
+        }
+
         // Ambil Data SIGMET
         function fetchSIGMET(icao) {
             let url = "https://aviationweather.gov/api/data/isigmet?format=json&level=3000";
@@ -527,14 +549,21 @@ function showAWOS(code) {
                     // Hapus SIGMET lama
                     map.eachLayer(layer => {
                         if (layer instanceof L.Polygon) {
-                            map.removeLayer(layer); } });
+                            map.removeLayer(layer);
+                        }
+                    });
+
                     let sigmets = data.filter(sigmet => sigmet.icaoId === icao);
                     sigmets.forEach(sigmet => {
                         let coords = sigmet.coords.map(coord => [coord.lat, coord.lon]);
                         let color = getSigmetColor(sigmet.hazard);
                         L.polygon(coords, { color: color }).addTo(map)
-                            .bindPopup(`<b>SIGMET:</b> ${sigmet.rawSigmet}`); }); })
-                .catch(error => console.error("Error mengambil data SIGMET:", error)); }
+                            .bindPopup(`<b>SIGMET:</b> ${sigmet.rawSigmet}`);
+                    });
+                })
+                .catch(error => console.error("Error mengambil data SIGMET:", error));
+        }
+
         // Warna SIGMET Berdasarkan Bahaya
         function getSigmetColor(hazard) {
             switch (hazard) {
@@ -542,7 +571,8 @@ function showAWOS(code) {
                 case "TB": return "blue";
                 case "IC": return "green";
                 case "TS": return "yellow";
-                default: return "purple";}
+                default: return "purple";
+            }
         }
 
         var baseMaps = {
