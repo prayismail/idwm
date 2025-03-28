@@ -493,16 +493,7 @@ map.on('layeradd layerremove', toggleTimeControls);
         // Fungsi Menampilkan Popup AWOS
 function showAWOS(code) {
     var url = `http://${code.toLowerCase()}.awosnet.com`;
-    
-    fetch(url, { mode: "no-cors" })
-        .then(() => {
-            document.getElementById("awosIframe").src = url;
-            toggleAWOS(true);
-        })
-        .catch(() => {
-            document.getElementById("awosIframe").outerHTML = "<p style='text-align: center; color: red;'>Tampilan AWOS tidak tersedia.</p>";
-            toggleAWOS(true);
-        });
+    window.open(url, "_blank"); // Buka di tab baru
 }
         // Fungsi Menampilkan atau Menutup Popup
         function toggleAWOS(show) {
