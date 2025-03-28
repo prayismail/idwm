@@ -493,25 +493,21 @@ map.on('layeradd layerremove', toggleTimeControls);
         // Fungsi Menampilkan Popup AWOS
 function showAWOS(code) {
     var url = `http://${code.toLowerCase()}.awosnet.com`;
-
-    // Coba cek apakah halaman AWOS bisa dimuat
-    fetch(url, { mode: 'no-cors' })
+    
+    fetch(url, { mode: "no-cors" })
         .then(() => {
             document.getElementById("awosIframe").src = url;
+            toggleAWOS(true);
         })
         .catch(() => {
-            document.getElementById("awosIframe").srcdoc = "<html><head><style>body{font-family:Arial, sans-serif; display:flex; align-items:center; justify-content:center; height:100%; text-align:center;}</style></head><body><h3>Tampilan AWOS tidak tersedia.</h3></body></html>";
-        })
-        .finally(() => {
+            document.getElementById("awosIframe").outerHTML = "<p style='text-align: center; color: red;'>Tampilan AWOS tidak tersedia.</p>";
             toggleAWOS(true);
         });
 }
-
         // Fungsi Menampilkan atau Menutup Popup
         function toggleAWOS(show) {
             document.getElementById("popupAWOS").style.display = show ? "flex" : "none";
         }
-
         // Ambil Data METAR
         function fetchMETAR() {
             var icaoCodes = airports.map(a => a.code).join("%2C");
