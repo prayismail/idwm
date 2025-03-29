@@ -731,7 +731,7 @@ let searchMarker;
         fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${query}&count=10&language=id`)
             .then(response => response.json())
             .then(data => {
-                let locations = data.results.filter(loc => loc.country_code === "ID").slice(0, 5);
+                let locations = data.results.filter(loc => loc).slice(0, 5);
                 locations.forEach(location => {
                     let resultDiv = document.createElement("div");
                     let flagImg = document.createElement("img");
