@@ -43,6 +43,71 @@
         @media screen and (max-width: 768px) {
             #map { height: 90vh; }
         }
+/* Tombol Toggle Pencarian */
+        .search-toggle {
+            position: fixed;
+            right: 20px;
+            top: 30%;
+            transform: translateY(-50%);
+            background: transparent;
+            color: black;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 3000;
+            box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.5);
+        }
+        /* Kotak Pencarian */
+        .search-box {
+            position: fixed;
+            right: 20px;
+            top: 30%;
+            transform: translateY(-50%);
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.2);
+            width: 250px;
+            display: none;
+            z-index: 4000 !important;
+        }
+
+        /* Input Pencarian */
+        .search-box input {
+            width: 90%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        /* Hasil Pencarian */
+        #searchResults {
+            margin-top: 5px;
+            background: #f9f9f9;
+            border-radius: 5px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        #searchResults div {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            cursor: pointer;
+            border-bottom: 1px solid #ddd;
+        }
+
+        #searchResults div img {
+            width: 20px;
+            height: 15px;
+            margin-right: 10px;
+        }
+
+        #searchResults div:hover {
+            background: #007bff;
+            color: white;
+        } 
         #chart-popup {
             display: none;
             position: fixed;
@@ -253,66 +318,4 @@
     margin-top: 10px;
     width: 100%;
     font-size: 10px; 
-        /* Tombol Toggle Pencarian */
-        .search-toggle {
-            position: fixed;
-            right: 20px;
-            top: 30%;
-            transform: translateY(-50%);
-            background: transparent;
-            color: black;
-            padding: 10px 15px;
-            border-radius: 50%;
-            cursor: pointer;
-            z-index: 2000;
-            box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.5);
-        }
-        /* Kotak Pencarian */
-        .search-box {
-            position: fixed;
-            right: 20px;
-            top: 30%;
-            transform: translateY(-50%);
-            background: white;
-            padding: 10px;
-            border-radius: 8px;
-            box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.2);
-            width: 250px;
-            display: none;
-            z-index: 2000;
-        }/* Input Pencarian */
-    .search-box input {
-        width: 100%;
-        padding: 8px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        outline: none;
-    }
-
-    /* Hasil Pencarian */
-    #searchResults {
-        margin-top: 5px;
-        background: #f9f9f9;
-        border-radius: 5px;
-        max-height: 150px;
-        overflow-y: auto;
-    }
-
-    #searchResults div {
-        display: flex;
-        align-items: center;
-        padding: 8px;
-        cursor: pointer;
-        border-bottom: 1px solid #ddd;
-    }
-
-    #searchResults div img {
-        width: 20px;
-        height: 15px;
-        margin-right: 10px;
-    }
-
-    #searchResults div:hover {
-        background: #007bff;
-        color: white;
-    }
+  }
