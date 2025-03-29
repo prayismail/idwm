@@ -16,6 +16,12 @@
     <div id="map"></div>
     <div id="webmap-title">IDWM | Integrated Display for Weather Monitoring</div>
     <div id="time-indicator">Waktu: Memuat...</div>
+<div class="search-toggle" onclick="toggleSearch()">🔍</div>
+    <div class="search-box" id="searchBox">
+        <input type="text" id="searchInput" placeholder="Cari lokasi..." oninput="searchLocation()" onkeydown="if(event.key==='Enter'){searchLocation()}" >
+        <div id="searchResults"></div>
+    </div>
+
     <div id="chart-popup">
         <div class="popup-buttons">
             <button id="download-csv">Unduh CSV</button>
@@ -100,12 +106,7 @@
         <div class="awos-content">
             <button class="awos-close" onclick="toggleAWOS(false)">✖</button>
             <iframe id="awosIframe"></iframe>
-        </div>
-
-            <div class="search-toggle" onclick="toggleSearch()">🔍</div>
-    <div class="search-box" id="searchBox">
-        <input type="text" id="searchInput" placeholder="Cari lokasi..." oninput="searchLocation()" onkeydown="if(event.key==='Enter'){searchLocation()}" >
-        <div id="searchResults"></div>                
+        </div>              
       <script src="js/script.js"></script> <!-- Panggil JavaScript -->                           
     
 </body>
