@@ -102,7 +102,10 @@
             <iframe id="awosIframe"></iframe>
         </div>
 
-                        
+            <div class="search-toggle" onclick="toggleSearch()">🔍</div>
+    <div class="search-box" id="searchBox">
+        <input type="text" id="searchInput" placeholder="Cari lokasi..." oninput="searchLocation()" onkeydown="if(event.key==='Enter'){searchLocation()}" >
+        <div id="searchResults"></div>                
       <script src="js/script.js"></script> <!-- Panggil JavaScript -->                           
     
 </body>
