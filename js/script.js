@@ -706,3 +706,61 @@ function showAWOS(code) {
                 });
             });
         });
+let searchMarker;
+
+    function toggleSearch() {
+        let searchBox = document.getElementById("searchBox");
+        searchBox.style.display = searchBox.style.display === "block" ? "none" : "block";
+    }
+
+    document.addEventListener("click", function(event) {
+        let searchBox = document.getElementById("searchBox");
+        let searchToggle = document.querySelector(".search-toggle");
+        if (!searchBox.contains(event.target) && !searchToggle.contains(event.target)) {
+            searchBox.style.display = "none";
+        }
+    });
+
+    function searchLocation() {
+        let query = document.getElementById("searchInput").value.trim();
+        let resultsBox = document.getElementById("searchResults");
+        resultsBox.innerHTML = "";
+
+        if (query.length < 3) return;
+
+        fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${query}&count=10&language=id`)
+            .then(response => response.json())
+            .then(data => {
+                let locations = data.results.filter(loc => loc.country_code === "ID").slice(0, 5);
+                locations.forEach(location => {
+                    let resultDiv = document.createElement("div");
+                    let flagImg = document.createElement("img");
+                    flagImg.src = `https://flagcdn.com/w40/${location.country_code.toLowerCase()}.png`;
+                    resultDiv.appendChild(flagImg);
+                    resultDiv.appendChild(document.createTextNode(`${location.name}, ${location.admin1}, ${location.country}`));
+                    resultDiv.onclick = () => selectLocation(location);
+                    resultsBox.appendChild(resultDiv);
+                });
+            });
+    }
+
+    function selectLocation(location) {
+        let { latitude, longitude } = location;
+        if (searchMarker) map.removeLayer(searchMarker);
+
+        searchMarker = L.circleMarker([latitude, longitude], {
+            color: "green",
+            fillColor: "lime",
+            fillOpacity: 1,
+            radius: 8
+        }).addTo(map);
+
+        let blink = true;
+        setInterval(() => {
+            searchMarker.setStyle({ fillOpacity: blink ? 0 : 1 });
+            blink = !blink;
+        }, 1000);
+
+        map.setView([latitude, longitude], 13);
+        document.getElementById("searchBox").style.display = "none";
+    }
