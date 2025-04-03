@@ -172,8 +172,15 @@
         .gradient-bar {
             width: 20px;
             height: 150px;
-            background: linear-gradient(to bottom, #cec087 0%, #cec087 15%, #32ceed 15%, #32ceed 28%, #005588 26%, #005588 40%, #FFFF00 40%, #FFFF00 53%, #FFA500 53%, #FFA500 66%, #FF0000 66%, #FF0000 80%, #ffaaff 80%, #ffaaff 90%, #ff00ff 90%, #ff00ff 100%);
-            border-radius: 2px;
+            background: linear-gradient(to bottom, 
+  #0099FF 0%,   /* Biru muda (Hujan sangat ringan) */
+  #0033CC 15%,  /* Biru terang (Hujan ringan) */
+  #6350a3 35%,  /* Biru tua (Hujan sedang) */
+  #FF0000 55%,  /* Merah (Hujan sangat lebat) */
+  #FF4500 60%,  /* Oranye kemerahan */
+  #ffc559 75%,  /* Oranye */
+  #fffd05 100%  /* Kuning (Hujan ekstrem) */
+);            border-radius: 2px;
             border: 0px solid black;
             position: relative;
         }
