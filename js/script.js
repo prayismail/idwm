@@ -292,35 +292,36 @@ map.on('layeradd layerremove', toggleTimeControls);
         var downloadCSV = document.getElementById('download-csv');
         var downloadImg = document.getElementById('download-img');
         var currentData = {};
-        function fetchWeatherData(lat, lon) {
-            fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation,wind_speed_10m,wind_direction_10m&wind_speed_unit=kn&forecast_days=3&models=ecmwf_ifs025&timezone=auto`)
-                .then(response => response.json())
-                .then(data => {
-                    let hourly = data.hourly;
-                    let times = [];
-                    let precipitation = [];
-                    let windSpeed = [];
-                    let windDirection = [];
-                    for (let i = 0; i < hourly.time.length; i += 1) {
-                        times.push(hourly.time[i].substring(11, 16));
-                        precipitation.push(hourly.precipitation[i]);
-                        windSpeed.push(hourly.wind_speed_10m[i]);
-                        windDirection.push(hourly.wind_direction_10m[i]);
-                    }
-                    currentData = { times, precipitation, windSpeed, windDirection };
-                    if (marker) map.removeLayer(marker);
-                    if (userMarker) {
-                        map.removeLayer(userMarker);
-                        userMarker = null;
-                    }
-                    marker = L.marker([lat, lon]).addTo(map)
-                        .bindPopup("Klik untuk lihat prakiraan cuaca.")
-                        .openPopup()
-                        .on('click', function() { showChart(times, precipitation, windSpeed, windDirection); });
-                })
-                .catch(error => console.error('Gagal mengambil data:', error));
-        }
-        function showChart(times, precipitation, windSpeed, windDirection) {
+        
+    function fetchWeatherData(lat, lon) {
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation,wind_speed_10m,wind_direction_10m&models=kma_seamless&current=precipitation,wind_speed_10m,wind_direction_10m&timezone=auto&past_days=1&forecast_days=3&wind_speed_unit=kn`)
+        .then(response => response.json())
+        .then(data => {
+            let hourly = data.hourly;
+            let times = [];
+            let precipitation = [];
+            let windSpeed = [];
+            let windDirection = [];
+            for (let i = 0; i < hourly.time.length; i += 1) {
+                times.push(hourly.time[i].substring(11, 16));
+                precipitation.push(hourly.precipitation[i]);
+                windSpeed.push(hourly.wind_speed_10m[i]);
+                windDirection.push(hourly.wind_direction_10m[i]);
+            }
+            currentData = { times, precipitation, windSpeed, windDirection };
+            if (marker) map.removeLayer(marker);
+            if (userMarker) {
+                map.removeLayer(userMarker);
+                userMarker = null;
+            }
+            marker = L.marker([lat, lon]).addTo(map)
+                .bindPopup("Klik untuk lihat prakiraan cuaca.")
+                .openPopup()
+                .on('click', function() { showChart(times, precipitation, windSpeed, windDirection); });
+        })
+        .catch(error => console.error('Gagal mengambil data:', error));
+}
+    function showChart(times, precipitation, windSpeed, windDirection) {
             chartPopup.style.display = 'block';
             let ctx = document.getElementById('weatherChart').getContext('2d');
             if (weatherChart) weatherChart.destroy();
@@ -371,7 +372,7 @@ map.on('layeradd layerremove', toggleTimeControls);
                         title: { display: false, text: ' ' },
                         subtitle: {
                             display: true,
-                            text: 'Prakiraan cuaca oleh Open-Meteo. Sumber data: IFS 0.25, ECMWF.',
+                            text: 'Prakiraan cuaca oleh Open-Meteo. Sumber data: GDPS 0.13, KMA.',
                             align: 'center',
                             font: { size: 12, weight: 'bold' },
                             padding: { bottom: 5 }
