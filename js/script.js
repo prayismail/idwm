@@ -292,8 +292,7 @@ map.on('layeradd layerremove', toggleTimeControls);
         var downloadCSV = document.getElementById('download-csv');
         var downloadImg = document.getElementById('download-img');
         var currentData = {};
-        
-    function fetchWeatherData(lat, lon) {
+        function fetchWeatherData(lat, lon) {
     fetch(`https://api.open-meteo.com/v1/forecast?latitude=-6.6632&longitude=111.0746&hourly=precipitation,wind_speed_10m,wind_direction_10m&models=kma_seamless&current=precipitation,wind_speed_10m,wind_direction_10m&timezone=auto&forecast_days=3&wind_speed_unit=kn`)
         .then(response => response.json())
         .then(data => {
@@ -303,7 +302,7 @@ map.on('layeradd layerremove', toggleTimeControls);
             let windSpeed = [];
             let windDirection = [];
             for (let i = 0; i < hourly.time.length; i += 1) {
-                times.push(hourly.time[i].substring(11, 16));
+                times.push(hourly.time[i]); // Menyimpan format tanggal dan waktu penuh
                 precipitation.push(hourly.precipitation[i]);
                 windSpeed.push(hourly.wind_speed_10m[i]);
                 windDirection.push(hourly.wind_direction_10m[i]);
@@ -321,99 +320,102 @@ map.on('layeradd layerremove', toggleTimeControls);
         })
         .catch(error => console.error('Gagal mengambil data:', error));
 }
-    function showChart(times, precipitation, windSpeed, windDirection) {
-            chartPopup.style.display = 'block';
-            let ctx = document.getElementById('weatherChart').getContext('2d');
-            if (weatherChart) weatherChart.destroy();
-            weatherChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: times,
-                    datasets: [
-                        {
-                            label: 'Curah Hujan (mm)',
-                            data: precipitation,
-                            backgroundColor: 'rgba(0, 0, 255, 0.6)',
-                            borderColor: 'blue',
-                            borderWidth: 1,
-                            type: 'bar',
-                            yAxisID: 'y1'
-                        },
-                        {
-                            label: 'Kecepatan Angin (knot)',
-                            data: windSpeed,
-                            borderColor: 'red',
-                            backgroundColor: 'rgba(255, 0, 0, 0.2)',
-                            fill: false,
-                            type: 'line',
-                            yAxisID: 'y2'
-                        },
-                        {
-                            label: 'Arah Angin (°)',
-                            data: windDirection,
-                            borderColor: 'green',
-                            backgroundColor: 'rgba(0, 255, 0, 0.2)',
-                            fill: false,
-                            type: 'line',
-                            yAxisID: 'y2'
-                        }
-                    ]
+
+function showChart(times, precipitation, windSpeed, windDirection) {
+    chartPopup.style.display = 'block';
+    let ctx = document.getElementById('weatherChart').getContext('2d');
+    if (weatherChart) weatherChart.destroy();
+    weatherChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: times,
+            datasets: [
+                {
+                    label: 'Curah Hujan (mm)',
+                    data: precipitation,
+                    backgroundColor: 'rgba(0, 0, 255, 0.6)',
+                    borderColor: 'blue',
+                    borderWidth: 1,
+                    type: 'bar',
+                    yAxisID: 'y1'
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: { title: { display: true, text: 'Waktu Setempat' } },
-                        y1: { type: 'linear', position: 'left', beginAtZero: true },
-                        y2: { type: 'linear', position: 'right', beginAtZero: true }
-                    },
-                    plugins: {
-                        legend: { position: 'top' },
-                        title: { display: false, text: ' ' },
-                        subtitle: {
-                            display: true,
-                            text: 'Prakiraan cuaca oleh Open-Meteo. Sumber data: GDPS 0.13, KMA.',
-                            align: 'center',
-                            font: { size: 12, weight: 'bold' },
-                            padding: { bottom: 5 }
-                        }
-                    }
+                {
+                    label: 'Kecepatan Angin (knot)',
+                    data: windSpeed,
+                    borderColor: 'red',
+                    backgroundColor: 'rgba(255, 0, 0, 0.2)',
+                    fill: false,
+                    type: 'line',
+                    yAxisID: 'y2'
+                },
+                {
+                    label: 'Arah Angin (°)',
+                    data: windDirection,
+                    borderColor: 'green',
+                    backgroundColor: 'rgba(0, 255, 0, 0.2)',
+                    fill: false,
+                    type: 'line',
+                    yAxisID: 'y2'
                 }
-            });
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { title: { display: true, text: 'Waktu Setempat' } },
+                y1: { type: 'linear', position: 'left', beginAtZero: true },
+                y2: { type: 'linear', position: 'right', beginAtZero: true }
+            },
+            plugins: {
+                legend: { position: 'top' },
+                title: { display: false, text: ' ' },
+                subtitle: {
+                    display: true,
+                    text: 'Prakiraan cuaca oleh Open-Meteo. Sumber data: GDPS 0.13, KMA.',
+                    align: 'center',
+                    font: { size: 12, weight: 'bold' },
+                    padding: { bottom: 5 }
+                }
+            }
         }
-        function downloadCSVFile() {
-            let csvContent = "data:text/csv;charset=utf-8,Waktu Setempat,Curah Hujan (mm),Kecepatan Angin (knot),Arah Angin (°)\n";
-            currentData.times.forEach((time, index) => {
-                let formattedTime = time.replace("T", " ") + ":00";
-                csvContent += `${formattedTime},${currentData.precipitation[index]},${currentData.windSpeed[index]},${currentData.windDirection[index]}\n`;
-            });
-            let encodedUri = encodeURI(csvContent);
-            let link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "Prakiraan_Cuaca.csv");
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-        function downloadImage() {
-            let canvas = document.getElementById('weatherChart');
-            let ctx = canvas.getContext('2d');
-            let newCanvas = document.createElement('canvas');
-            newCanvas.width = canvas.width;
-            newCanvas.height = canvas.height;
-            let newCtx = newCanvas.getContext('2d');
-            newCtx.fillStyle = 'white';
-            newCtx.fillRect(0, 0, newCanvas.width, newCanvas.height);
-            newCtx.drawImage(canvas, 0, 0);
-            let link = document.createElement('a');
-            link.href = newCanvas.toDataURL('image/png');
-            link.download = 'Prakiraan_Cuaca.png';
-            link.click();
-        }
-        downloadCSV.addEventListener('click', downloadCSVFile);
-        downloadImg.addEventListener('click', downloadImage);
-        closePopup.addEventListener('click', function() { chartPopup.style.display = 'none'; });
-        if (navigator.geolocation) {
+    });
+}
+
+function downloadCSVFile() {
+    let csvContent = "data:text/csv;charset=utf-8,Waktu Setempat,Curah Hujan (mm),Kecepatan Angin (knot),Arah Angin (°)\n";
+    currentData.times.forEach((time, index) => {
+        csvContent += `${time},${currentData.precipitation[index]},${currentData.windSpeed[index]},${currentData.windDirection[index]}\n`;
+    });
+    let encodedUri = encodeURI(csvContent);
+    let link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "Prakiraan_Cuaca.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function downloadImage() {
+    let canvas = document.getElementById('weatherChart');
+    let ctx = canvas.getContext('2d');
+    let newCanvas = document.createElement('canvas');
+    newCanvas.width = canvas.width;
+    newCanvas.height = canvas.height;
+    let newCtx = newCanvas.getContext('2d');
+    newCtx.fillStyle = 'white';
+    newCtx.fillRect(0, 0, newCanvas.width, newCanvas.height);
+    newCtx.drawImage(canvas, 0, 0);
+    let link = document.createElement('a');
+    link.href = newCanvas.toDataURL('image/png');
+    link.download = 'Prakiraan_Cuaca.png';
+    link.click();
+}
+
+downloadCSV.addEventListener('click', downloadCSVFile);
+downloadImg.addEventListener('click', downloadImage);
+closePopup.addEventListener('click', function() { chartPopup.style.display = 'none'; });   
+         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 function(position) {
                     let userLat = position.coords.latitude;
