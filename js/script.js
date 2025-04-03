@@ -103,7 +103,7 @@ map.on('overlayremove', function(eventLayer) {
             if (data.radar && data.radar.past.length > 0) {
                 let index = Math.max(0, data.radar.past.length - 1 - timeOffset);
                 let timestamp = data.radar.past[index].time;
-                let radarUrl = `https://tilecache.rainviewer.com/v2/radar/${timestamp}/256/{z}/{x}/{y}/2/1_1.png`;
+                let radarUrl = `https://tilecache.rainviewer.com/v2/radar/${timestamp}/256/{z}/{x}/{y}/8/1_1.png`;
                 radarLayer.setUrl(radarUrl);
 
                 // Buat objek Date dari timestamp
