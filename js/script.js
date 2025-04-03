@@ -293,7 +293,7 @@ map.on('layeradd layerremove', toggleTimeControls);
         var downloadImg = document.getElementById('download-img');
         var currentData = {};
         function fetchWeatherData(lat, lon) {
-    fetch(`https://api.open-meteo.com/v1/forecast?latitude=-6.6632&longitude=111.0746&hourly=precipitation,wind_speed_10m,wind_direction_10m&models=kma_seamless&current=precipitation,wind_speed_10m,wind_direction_10m&timezone=auto&forecast_days=3&wind_speed_unit=kn`)
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation,wind_speed_10m,wind_direction_10m&models=kma_seamless&current=precipitation,wind_speed_10m,wind_direction_10m&timezone=auto&forecast_days=3&wind_speed_unit=kn`)
         .then(response => response.json())
         .then(data => {
             let hourly = data.hourly;
@@ -383,7 +383,7 @@ function showChart(times, precipitation, windSpeed, windDirection) {
 }
 
 function downloadCSVFile() {
-    let csvContent = "data:text/csv;charset=utf-8,Waktu Setempat,Curah Hujan (mm),Kecepatan Angin (knot),Arah Angin (°)\n";
+    let csvContent = "data:text/csv;charset=utf-8,Waktu Setempat,Curah Hujan (mm),Kecepatan Angin (knot),Arah Angin (°) \n";
     currentData.times.forEach((time, index) => {
         csvContent += `${time},${currentData.precipitation[index]},${currentData.windSpeed[index]},${currentData.windDirection[index]}\n`;
     });
@@ -414,7 +414,7 @@ function downloadImage() {
 
 downloadCSV.addEventListener('click', downloadCSVFile);
 downloadImg.addEventListener('click', downloadImage);
-closePopup.addEventListener('click', function() { chartPopup.style.display = 'none'; });   
+closePopup.addEventListener('click', function() { chartPopup.style.display = 'none'; });  
          if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 function(position) {
