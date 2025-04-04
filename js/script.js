@@ -285,160 +285,178 @@ addTimeControls();
 // Tambahkan event listener untuk memantau perubahan layer
 map.on('layeradd layerremove', toggleTimeControls);
         var marker;
-        var userMarker;
         var weatherChart;
         var chartPopup = document.getElementById('chart-popup');
         var closePopup = document.getElementById('close-popup');
         var downloadCSV = document.getElementById('download-csv');
         var downloadImg = document.getElementById('download-img');
+	var locationInfo = document.getElementById('location-info');
+        var modelSelect = document.getElementById('model-select');
         var currentData = {};
+
         function fetchWeatherData(lat, lon) {
-    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation,wind_speed_10m,wind_direction_10m&models=kma_seamless&current=precipitation,wind_speed_10m,wind_direction_10m&timezone=auto&forecast_days=3&wind_speed_unit=kn`)
-        .then(response => response.json())
-        .then(data => {
-            let hourly = data.hourly;
-            let times = [];
-            let precipitation = [];
-            let windSpeed = [];
-            let windDirection = [];
-            for (let i = 0; i < hourly.time.length; i += 1) {
-                times.push(hourly.time[i]); // Menyimpan format tanggal dan waktu penuh
-                precipitation.push(hourly.precipitation[i]);
-                windSpeed.push(hourly.wind_speed_10m[i]);
-                windDirection.push(hourly.wind_direction_10m[i]);
-            }
-            currentData = { times, precipitation, windSpeed, windDirection };
-            if (marker) map.removeLayer(marker);
-            if (userMarker) {
-                map.removeLayer(userMarker);
-                userMarker = null;
-            }
-            marker = L.marker([lat, lon]).addTo(map)
-                .bindPopup("Klik untuk lihat prakiraan cuaca.")
-                .openPopup()
-                .on('click', function() { showChart(times, precipitation, windSpeed, windDirection); });
-        })
-        .catch(error => console.error('Gagal mengambil data:', error));
-}
+            let model = modelSelect.value;
+            fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation,wind_speed_10m,wind_direction_10m&models=${model}&current=precipitation,wind_speed_10m,wind_direction_10m&timezone=auto&forecast_days=3&wind_speed_unit=kn`)
+                .then(response => response.json())
+                .then(data => {
+                    let hourly = data.hourly;
+                    let times = hourly.time;
+                    let precipitation = hourly.precipitation;
+                    let windSpeed = hourly.wind_speed_10m;
+                    let windDirection = hourly.wind_direction_10m;
+                    currentData = { times, precipitation, windSpeed, windDirection };
+                    fetchElevation(lat, lon, times, precipitation, windSpeed, windDirection);
+                })
+                .catch(error => console.error('Gagal mengambil data:', error));
+        }        
+
+function fetchElevation(lat, lon, times, precipitation, windSpeed, windDirection) {
+            fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lon}`)
+                .then(response => response.json())
+                .then(data => {
+                    let elevation = data.elevation;
+                    
+                    if (marker) {
+                        marker.bindPopup(`Koordinat: ${lat.toFixed(2)}, ${lon.toFixed(2)}<br>Elevasi: ${elevation} m<br><b>Klik untuk lihat prakiraan cuaca.</b>`).openPopup();
+                    }
+                    
+                    currentLocation = { lat: lat.toFixed(2), lon: lon.toFixed(2), elevation: elevation };
+                    locationInfo.innerHTML = `Koordinat: ${currentLocation.lat}, ${currentLocation.lon} | Elevasi: ${currentLocation.elevation} m`;
+                    
+                    showChart(times, precipitation, windSpeed, windDirection);
+                })
+                .catch(error => console.error('Gagal mengambil data elevasi:', error));
+        }        
 
 function showChart(times, precipitation, windSpeed, windDirection) {
-    chartPopup.style.display = 'block';
-    let ctx = document.getElementById('weatherChart').getContext('2d');
-    if (weatherChart) weatherChart.destroy();
-    weatherChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: times,
-            datasets: [
-                {
-                    label: 'Curah Hujan (mm)',
-                    data: precipitation,
-                    backgroundColor: 'rgba(0, 0, 255, 0.6)',
-                    borderColor: 'blue',
-                    borderWidth: 1,
-                    type: 'bar',
-                    yAxisID: 'y1'
+            chartPopup.style.display = 'block';
+            let ctx = document.getElementById('weatherChart').getContext('2d');
+            if (weatherChart) weatherChart.destroy();
+            weatherChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: times,
+                    datasets: [
+                        {
+                            label: 'Curah Hujan (mm)',
+                            data: precipitation,
+                            backgroundColor: 'rgba(0, 0, 255, 0.6)',
+                            borderColor: 'blue',
+                            borderWidth: 1,
+                            type: 'bar',
+                            yAxisID: 'y1'
+                        },
+                        {
+                            label: 'Kecepatan Angin (knot)',
+                            data: windSpeed,
+                            borderColor: 'red',
+                            backgroundColor: 'rgba(255, 0, 0, 0.2)',
+                            fill: false,
+                            type: 'line',
+                            yAxisID: 'y2'
+                        },
+                        {
+                            label: 'Arah Angin (°)',
+                            data: windDirection,
+                            borderColor: 'green',
+                            backgroundColor: 'rgba(0, 255, 0, 0.2)',
+                            fill: false,
+                            type: 'line',
+                            yAxisID: 'y2'
+                        }
+                    ]
                 },
-                {
-                    label: 'Kecepatan Angin (knot)',
-                    data: windSpeed,
-                    borderColor: 'red',
-                    backgroundColor: 'rgba(255, 0, 0, 0.2)',
-                    fill: false,
-                    type: 'line',
-                    yAxisID: 'y2'
-                },
-                {
-                    label: 'Arah Angin (°)',
-                    data: windDirection,
-                    borderColor: 'green',
-                    backgroundColor: 'rgba(0, 255, 0, 0.2)',
-                    fill: false,
-                    type: 'line',
-                    yAxisID: 'y2'
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { title: { display: true, text: 'Waktu Setempat' } },
+                        y1: { type: 'linear', position: 'left', beginAtZero: true },
+                        y2: { type: 'linear', position: 'right', beginAtZero: true }
+                    },
+                    plugins: {
+                        legend: { position: 'top' },
+                        title: { display: false },
+                        subtitle: {
+                            display: true,
+                            text: `Prakiraan cuaca oleh Open-Meteo. Berdasarkan model: ${modelSelect.options[modelSelect.selectedIndex].text}`,
+                            align: 'center',
+                            font: { size: 12, weight: 'bold' }
+                        }
+                    }
                 }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: { title: { display: true, text: 'Waktu Setempat' } },
-                y1: { type: 'linear', position: 'left', beginAtZero: true },
-                y2: { type: 'linear', position: 'right', beginAtZero: true }
-            },
-            plugins: {
-                legend: { position: 'top' },
-                title: { display: false, text: ' ' },
-                subtitle: {
-                    display: true,
-                    text: 'Prakiraan cuaca oleh Open-Meteo. Sumber data: GDPS 0.13, KMA.',
-                    align: 'center',
-                    font: { size: 12, weight: 'bold' },
-                    padding: { bottom: 5 }
-                }
-            }
+            });
         }
-    });
-}
 
-function downloadCSVFile() {
-    let csvContent = "data:text/csv;charset=utf-8,Waktu Setempat,Curah Hujan (mm),Kecepatan Angin (knot),Arah Angin (°) \n";
-    currentData.times.forEach((time, index) => {
-        csvContent += `${time},${currentData.precipitation[index]},${currentData.windSpeed[index]},${currentData.windDirection[index]}\n`;
-    });
-    let encodedUri = encodeURI(csvContent);
-    let link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "Prakiraan_Cuaca.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-
-function downloadImage() {
-    let canvas = document.getElementById('weatherChart');
-    let ctx = canvas.getContext('2d');
-    let newCanvas = document.createElement('canvas');
-    newCanvas.width = canvas.width;
-    newCanvas.height = canvas.height;
-    let newCtx = newCanvas.getContext('2d');
-    newCtx.fillStyle = 'white';
-    newCtx.fillRect(0, 0, newCanvas.width, newCanvas.height);
-    newCtx.drawImage(canvas, 0, 0);
-    let link = document.createElement('a');
-    link.href = newCanvas.toDataURL('image/png');
-    link.download = 'Prakiraan_Cuaca.png';
-    link.click();
-}
-
-downloadCSV.addEventListener('click', downloadCSVFile);
-downloadImg.addEventListener('click', downloadImage);
-closePopup.addEventListener('click', function() { chartPopup.style.display = 'none'; });  
-         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    let userLat = position.coords.latitude;
-                    let userLon = position.coords.longitude;
-                    map.setView([userLat, userLon], 12);
-                    if (userMarker) map.removeLayer(userMarker);
-                    userMarker = L.marker([userLat, userLon]).addTo(map)
-                        .bindPopup("Lokasi Anda").openPopup();
-                    fetchWeatherData(userLat, userLon);
-                },
-                function() { console.log("Tidak dapat mengambil lokasi pengguna."); }
-            );
+        function downloadCSVFile() {
+            let csvContent = `data:text/csv;charset=utf-8,Koordinat:, ${currentLocation.lat}, ${currentLocation.lon}\nElevasi:, ${currentLocation.elevation} m\n\nWaktu Setempat,Curah Hujan (mm),Kecepatan Angin (knots),Arah Angin (o)\n`;
+            currentData.times.forEach((time, index) => {
+                csvContent += `${time},${currentData.precipitation[index]},${currentData.windSpeed[index]},${currentData.windDirection[index]}\n`;
+            });
+            let encodedUri = encodeURI(csvContent);
+            let link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "Prakiraan_Cuaca.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
-        map.on('click', function(e) {
-            if (marker) map.removeLayer(marker);
-            if (userMarker) {
-                map.removeLayer(userMarker);
-                userMarker = null;
+        function downloadMeteogram() {
+            let canvas = document.getElementById('weatherChart');
+            let ctx = canvas.getContext('2d');
+            
+            let newCanvas = document.createElement('canvas');
+            newCanvas.width = canvas.width;
+            newCanvas.height = canvas.height + 30;
+            let newCtx = newCanvas.getContext('2d');
+            newCtx.fillStyle = 'white';
+            newCtx.fillRect(0, 0, newCanvas.width, newCanvas.height);
+            newCtx.fillStyle = 'black';
+            newCtx.font = '12px Arial bold';
+            newCtx.textAlign = 'center';
+            newCtx.fillText(`Koordinat: ${currentLocation.lat}, ${currentLocation.lon} | Elevasi: ${currentLocation.elevation} m`, newCanvas.width / 2, 20);
+            newCtx.drawImage(canvas, 0, 30);
+            let link = document.createElement('a');
+            link.href = newCanvas.toDataURL('image/png');
+            link.download = 'Meteogram.png';
+            link.click();
+        }
+
+        downloadCSV.addEventListener('click', downloadCSVFile);
+        downloadImg.addEventListener('click', downloadMeteogram);
+        modelSelect.addEventListener('change', function() {
+            if (marker) {
+                let latlng = marker.getLatLng();
+                fetchWeatherData(latlng.lat, latlng.lng);
             }
-            let lat = e.latlng.lat;
-            let lon = e.latlng.lng;
-            fetchWeatherData(lat, lon);
         });
+        
+            let isChartClosed = false; // Flag untuk mengecek apakah chart ditutup user
+
+map.on('click', function(e) {
+    let lat = e.latlng.lat;
+    let lon = e.latlng.lng;
+
+    if (marker) marker.remove();
+    marker = L.marker([lat, lon]).addTo(map).bindPopup("Klik untuk lihat prakiraan cuaca.").openPopup();
+
+    // Reset flag agar chart bisa muncul lagi kalau klik marker
+    marker.on('click', function() {
+        isChartClosed = false;
+        fetchWeatherData(lat, lon); // Munculkan lagi kalau user klik markernya
+    });
+
+    // Hanya panggil fetchWeatherData saat klik peta, kalau chart belum ditutup
+    if (!isChartClosed) {
+        fetchWeatherData(lat, lon);
+    }
+});
+
+// Saat tombol close pada chart diklik
+closePopup.addEventListener('click', function() {
+    chartPopup.style.display = 'none';
+    isChartClosed = true; // Setelah user tutup chart, jangan munculkan lagi otomatis
+});
         var airports = [
             { code: "WAAA", name: "Sultan Hasanuddin", lat: -5.07629, lon: 119.54639 },
             { code: "WABB", name: "Frans Kaisiepo", lat: -1.19208, lon: 136.10663 },
