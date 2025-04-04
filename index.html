@@ -21,16 +21,26 @@
         <input type="text" id="searchInput" placeholder="Cari lokasi..." oninput="searchLocation()" onkeydown="if(event.key==='Enter'){searchLocation()}" >
         <div id="searchResults"></div>
     </div>
-
+<div id="controls">
+        <button id="downloadCsv">Unduh CSV</button>
+        <button id="downloadMeteogram">Unduh Meteogram</button>
+    </div>
+    
     <div id="chart-popup">
         <div class="popup-buttons">
+            <select id="model-select">
+                <option value="ecmwf_ifs025">IFS-ECMWF</option>
+                <option value="icon_seamless">ICON-DWD</option>
+                <option value="kma_seamless" selected>GDPS-KMA</option>
+            </select>
             <button id="download-csv">Unduh CSV</button>
             <button id="download-img">Unduh Meteogram</button>
             <button id="close-popup" style="background: red;">Tutup</button>
         </div>
+ 	<p id="location-info" style="text-align: center; font-weight: bold; font-size: 12px;"></p>
         <canvas id="weatherChart"></canvas>
     </div>
-    <div id="legend" class="legend">
+        <div id="legend" class="legend">
         <strong>Interpretasi Citra Radar</strong><br><br>
         <div class="legend-container">
             <div class="gradient-bar"></div>
