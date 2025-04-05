@@ -1,3 +1,4 @@
+
 var map = L.map('map', { center: [-2.5, 118], zoom: 5, attributionControl: false });
         L.control.attribution({ position: 'bottomright' }).addAttribution('Proposed by <a href="https://mail.google.com/mail/?view=cm&fs=1&to=prayoga.ismail@bmkg.go.id" target="_blank">Prayoga Ismail</a>, Coding by OpenAI').addTo(map);
         document.getElementById("legend").style.display = "none";
@@ -43,7 +44,7 @@ document.getElementById("webmap-title").addEventListener("click", function() {
 	var TropicalLayer= L.layerGroup().addLayer(L.tileLayer("",{attribution:"Tropical waves data &copy NCICS</a>"}) );
 var popup = L.popup({className: 'popup-tropical', maxWidth: 420});
 function showPopup(imageUrl) {
-    popup.setLatLng([-5, 120]).setContent('<b>NCICS Tropical Waves</b><br><img id="popup-img" src="' + imageUrl + '" alt="NCICS Image" onclick="openFullscreen(this.src)"><div class="popup-buttons"><button onclick="switchImage(\'olr\')">OLR</button><button onclick="switchImage(\'wind\')">Angin Zonal</button></div>').openOn(map);}
+    popup.setLatLng([-6.5, 120]).setContent('<b>NCICS Tropical Waves</b><br><img id="popup-img" src="' + imageUrl + '" alt="NCICS Image" onclick="openFullscreen(this.src)"><div class="popup-buttons"><button onclick="switchImage(\'olr\')">OLR</button><button onclick="switchImage(\'wind\')">Angin Zonal</button></div>').openOn(map);}
 function switchImage(type) {
     var imgElement = document.getElementById("popup-img");
     if (type === 'olr') {
