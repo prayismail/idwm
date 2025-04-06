@@ -75,11 +75,16 @@ map.on('overlayremove', function(eventLayer) {
                 // Atur tampilan peta ke lokasi pengguna
                 map.setView([userLat, userLng], 8);
 
-                // Tambahkan penanda lokasi pengguna
-                L.marker([userLat, userLng])
+                // Tambahkan penanda lokasi pengguna dan simpan ke variabel
+                let userMarker = L.marker([userLat, userLng])
                     .addTo(map)
                     .bindPopup("Lokasi Anda Saat Ini")
                     .openPopup();
+
+                // Hapus marker saat popup ditutup
+                userMarker.on("popupclose", function () {
+                    map.removeLayer(userMarker);
+                });
             },
             function (error) {
                 console.error("Gagal mendapatkan lokasi:", error.message);
