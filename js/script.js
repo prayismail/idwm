@@ -66,23 +66,31 @@ map.on('overlayremove', function(eventLayer) {
         var precipitationLayer = L.tileLayer('https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=62ac6e2d12bbaaa3de6bf9f57fe1cc00', { attribution: 'Precipitation data &copy; OpenWeatherMap', opacity: 1 });
         var pressureLayer = L.tileLayer('https://tile.openweathermap.org/map/pressure_new/{z}/{x}/{y}.png?appid=62ac6e2d12bbaaa3de6bf9f57fe1cc00', { attribution: 'Pressure data &copy; OpenWeatherMap', opacity: 1 });
         function addUserLocation() {
-            if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(
-                    function (position) {
-                        let userLat = position.coords.latitude;
-                        let userLng = position.coords.longitude;
-                        map.setView([userLat, userLng], 8);
-                    },
-                    function (error) {
-                        console.error("Gagal mendapatkan lokasi:", error.message);
-                        alert("Gagal mendapatkan lokasi. Pastikan izin lokasi diaktifkan.");
-                    }
-                );
-            } else {
-                alert("Geolocation tidak didukung di browser ini.");
+    if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+            function (position) {
+                let userLat = position.coords.latitude;
+                let userLng = position.coords.longitude;
+
+                // Atur tampilan peta ke lokasi pengguna
+                map.setView([userLat, userLng], 8);
+
+                // Tambahkan penanda lokasi pengguna
+                L.marker([userLat, userLng])
+                    .addTo(map)
+                    .bindPopup("Lokasi Anda Saat Ini")
+                    .openPopup();
+            },
+            function (error) {
+                console.error("Gagal mendapatkan lokasi:", error.message);
+                alert("Gagal mendapatkan lokasi. Pastikan izin lokasi diaktifkan.");
             }
-        }
-        addUserLocation();
+        );
+    } else {
+        alert("Geolocation tidak didukung di browser ini.");
+    }
+}
+addUserLocation();
         var style = document.createElement('style');
         style.innerHTML = `.leaflet-control-layers label { font-size: 10px; color: #333; }`;
         document.head.appendChild(style);
