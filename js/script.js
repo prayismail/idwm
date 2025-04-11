@@ -39,8 +39,8 @@ document.getElementById("webmap-title").addEventListener("click", function() {
         // Batas wilayah gambar satelit yang telah disesuaikan
         var imageBounds = [[-20, 90], [20, 150]];
         var VSsatelliteLayer = L.imageOverlay(imageUrl, imageBounds, { opacity: 0.7, attribution: 'Satellite data &copy; BMKG'});
-	var olrUrl = "https://ncics.org/pub/mjo/v2/map/olr.notc.all.indonesia.1.png";
-	var zonalWindUrl = "https://ncics.org/pub/mjo/v2/map/uwnd850.notc.all.indonesia.1.png";
+	var olrUrl = "https://ncics.org/pub/mjo/v2/map/olr.cfs.all.indonesia.1.png";
+	var zonalWindUrl = "https://ncics.org/pub/mjo/v2/map/uwnd850.cfs.all.indonesia.1.png";
 	var TropicalLayer= L.layerGroup().addLayer(L.tileLayer("",{attribution:"Tropical waves data &copy NCICS</a>"}) );
 var popup = L.popup({className: 'popup-tropical', maxWidth: 420});
 function showPopup(imageUrl) {
