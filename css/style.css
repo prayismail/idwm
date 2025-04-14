@@ -43,10 +43,7 @@
         @media screen and (max-width: 768px) {
             #map { height: 90vh; }
         }
-.leaflet-tile.no-smooth {
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-}
+
 /* Tombol Toggle Pencarian */
         .search-toggle {
             position: fixed;
