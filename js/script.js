@@ -34,7 +34,8 @@ document.getElementById("webmap-title").addEventListener("click", function() {
         var topoMap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: 'Base map &copy; <a href="https://opentopomap.org/">OpenTopoMap</a> contributors' });
         var lulcMap = L.tileLayer.wms("https://services.terrascope.be/wms/v2", {layers: 'WORLDCOVER_2021_MAP', format: 'image/png', transparent: true, attribution: 'Base map &copy; ESA WorldCover 2021' });
         var radarLayer = L.tileLayer('', { opacity: 0.8, attribution: 'Radar data &copy; RainViewer' });
-        var IRsatelliteLayer = L.tileLayer('', { opacity: 0.6, attribution: 'Satellite data &copy; RainViewer' });
+        var IRsatelliteLayer = L.tileLayer('', { opacity: 0.6, attribution: 'Satellite data &copy; RainViewer' crossOrigin: true,
+    className: 'no-smooth' }); // ini yang bikin tile tidak smoothing
         var imageUrl = 'https://inderaja.bmkg.go.id/IMAGE/HIMA/H08_NC_Indonesia.png';
         // Batas wilayah gambar satelit yang telah disesuaikan
         var imageBounds = [[-20, 90], [20, 150]];
