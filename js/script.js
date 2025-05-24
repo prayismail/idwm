@@ -35,7 +35,7 @@ document.getElementById("webmap-title").addEventListener("click", function() {
         var lulcMap = L.tileLayer.wms("https://services.terrascope.be/wms/v2", {layers: 'WORLDCOVER_2021_MAP', format: 'image/png', transparent: true, attribution: 'Base map &copy; ESA WorldCover 2021' });
         var radarLayer = L.tileLayer('', { opacity: 0.8, attribution: 'Radar data &copy; RainViewer' }); 
         var IRsatelliteLayer = L.tileLayer('', { opacity: 0.6, attribution: 'Satellite data &copy; RainViewer' }); 
-        var imageUrl = 'https://inderaja.bmkg.go.id/IMAGE/HIMA/H08_NC_Indonesia.png';
+        var imageUrl = 'https://satelit.bmkg.go.id/IMAGE/HIMA/H08_RD_Indonesia.png';
         // Batas wilayah gambar satelit yang telah disesuaikan
         var imageBounds = [[-20, 90], [20, 150]];
         var VSsatelliteLayer = L.imageOverlay(imageUrl, imageBounds, { opacity: 0.7, attribution: 'Satellite data &copy; BMKG'});
@@ -607,7 +607,7 @@ function showAWOS(code) {
             "Peta Tutupan Lahan": lulcMap
         };
         var overlayMaps = {
-	    "Satelit Natural Color": VSsatelliteLayer,
+	    "Satelit RDCA": VSsatelliteLayer,
             "Tekanan Udara (OWM)": pressureLayer,
             "Satelit Inframerah": IRsatelliteLayer,
             "Sebaran hujan (OWM)": precipitationLayer,
