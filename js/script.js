@@ -37,7 +37,7 @@ document.getElementById("webmap-title").addEventListener("click", function() {
         var IRsatelliteLayer = L.tileLayer('', { opacity: 0.6, attribution: 'Satellite data &copy; RainViewer' }); 
         var imageUrl = 'https://satelit.bmkg.go.id/IMAGE/HIMA/H08_RD_Indonesia.png';
         // Batas wilayah gambar satelit yang telah disesuaikan
-        var imageBounds = [[-10, 90], [10, 150]];
+        var imageBounds = [[-15, 90], [15, 150]];
         var VSsatelliteLayer = L.imageOverlay(imageUrl, imageBounds, { opacity: 0.7, attribution: 'Satellite data &copy; BMKG'});
 	var olrUrl = "https://ncics.org/pub/mjo/v2/map/olr.cfs.all.indonesia.1.png";
 	var zonalWindUrl = "https://ncics.org/pub/mjo/v2/map/uwnd850.cfs.all.indonesia.1.png";
