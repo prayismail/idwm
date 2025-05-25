@@ -16,6 +16,12 @@ document.getElementById("webmap-title").addEventListener("click", function() {
         map.on("overlayremove", function (eventLayer) {
             if (eventLayer.name === "Satelit Inframerah") document.getElementById("irSatelliteLegend").style.display = "none";
         });
+	map.on("overlayadd", function (eventLayer) {
+            if (eventLayer.name === "Satelit Uap Air") document.getElementById("wvSatelliteLegend").style.display = "block";
+        });
+        map.on("overlayremove", function (eventLayer) {
+            if (eventLayer.name === "Satelit Uap Air") document.getElementById("wvSatelliteLegend").style.display = "none";
+        });
         map.on("overlayadd", function (eventLayer) {
             if (eventLayer.name === "Sebaran hujan (OWM)") document.getElementById("precip-owm").style.display = "block";
         });
@@ -41,6 +47,7 @@ document.getElementById("webmap-title").addEventListener("click", function() {
         var lulcMap = L.tileLayer.wms("https://services.terrascope.be/wms/v2", {layers: 'WORLDCOVER_2021_MAP', format: 'image/png', transparent: true, attribution: 'Base map &copy; ESA WorldCover 2021' });
         var radarLayer = L.tileLayer('', { opacity: 0.8, attribution: 'Radar data &copy; RainViewer' }); 
         var IRsatelliteLayer = L.tileLayer('', { opacity: 0.9, attribution: 'Satellite data &copy; Accuweather' }); 
+	var WVsatelliteLayer = L.tileLayer('', { opacity: 0.6, attribution: 'Satellite data &copy; Accuweather' });
         var imageUrl = 'https://satelit.bmkg.go.id/IMAGE/HIMA/H08_RD_Indonesia.png';
         // Batas wilayah gambar satelit yang telah disesuaikan
         var imageBounds = [[-15, 90], [15, 150]];
@@ -151,65 +158,134 @@ addUserLocation();
             }
         })
         .catch(error => console.error("Gagal mengambil data radar:", error));}
-        // --- Konfigurasi Satellite IR AccuWeather ---
-    const ACCUWEATHER_API_KEY = 'de13920f574d420984d3080b1fa6132b'; // GANTI DENGAN API KEY ANDA YANG VALID!
-    const ACCUWEATHER_API_BASE_URL = 'https://api.accuweather.com/maps/v1/satellite/globalIR/zxy/'; // Menggunakan globalIR seperti tujuan awal
-    const TIME_INTERVAL_MINUTES = 10; // Asumsi update citra setiap 10 menit
+        // --- Konfigurasi Umum AccuWeather ---
+const ACCUWEATHER_API_KEY = 'de13920f574d420984d3080b1fa6132b'; // GANTI DENGAN API KEY ANDA YANG VALID!
+const TIME_INTERVAL_MINUTES = 10; // Asumsi update citra setiap 10 menit
 
-    var IRsatelliteLayer; // Deklarasi variabel layer satelit
+// --- Konfigurasi Satellite IR AccuWeather ---
+const ACCUWEATHER_IR_API_BASE_URL = 'https://api.accuweather.com/maps/v1/satellite/globalIR/zxy/';
+var IRsatelliteLayer; // Deklarasi variabel layer satelit IR
 
-       function getAccuweatherTimestamp(offsetIntervals = 0) {
-        const now = new Date();
-        const totalMinutesToSubtract = offsetIntervals * TIME_INTERVAL_MINUTES;
-        now.setUTCMinutes(now.getUTCMinutes() - totalMinutesToSubtract);
+// --- Konfigurasi Satellite WV AccuWeather ---
+const ACCUWEATHER_WV_API_BASE_URL = 'https://api.accuweather.com/maps/v1/satellite/globalWV/zxy/';
+var WVsatelliteLayer; // Deklarasi variabel layer satelit WV
 
-        // Bulatkan ke bawah ke kelipatan TIME_INTERVAL_MINUTES terdekat
-        const currentMinutes = now.getUTCMinutes();
-        const roundedMinutes = Math.floor(currentMinutes / TIME_INTERVAL_MINUTES) * TIME_INTERVAL_MINUTES;
-        now.setUTCMinutes(roundedMinutes, 0, 0); // Set detik dan milidetik ke 0
+// Fungsi untuk mendapatkan timestamp AccuWeather yang dibulatkan
+function getAccuweatherTimestamp(offsetIntervals = 0) {
+    const now = new Date();
+    const totalMinutesToSubtract = offsetIntervals * TIME_INTERVAL_MINUTES;
+    now.setUTCMinutes(now.getUTCMinutes() - totalMinutesToSubtract);
 
-        return now.toISOString().split('.')[0] + "Z"; // Format YYYY-MM-DDTHH:mm:ssZ
-    }
+    // Bulatkan ke bawah ke kelipatan TIME_INTERVAL_MINUTES terdekat
+    const currentMinutes = now.getUTCMinutes();
+    const roundedMinutes = Math.floor(currentMinutes / TIME_INTERVAL_MINUTES) * TIME_INTERVAL_MINUTES;
+    now.setUTCMinutes(roundedMinutes, 0, 0); // Set detik dan milidetik ke 0
 
-    function updateIRSatellite(timeOffsetIntervals = 0) {
-        try {
-            const timestamp = getAccuweatherTimestamp(timeOffsetIntervals);
-            const satelliteUrl = `${ACCUWEATHER_API_BASE_URL}${timestamp}/{z}/{x}/{y}.png?apikey=${ACCUWEATHER_API_KEY}`;
-            // Menggunakan .png sesuai spesifikasi format, bukan .jpeg seperti contoh URL
+    return now.toISOString().split('.')[0] + "Z"; // Format YYYY-MM-DDTHH:mm:ssZ
+}
 
-            if (!IRsatelliteLayer) {
-                // Inisialisasi layer jika belum ada
-                IRsatelliteLayer = L.tileLayer(satelliteUrl, {
-                    attribution: 'Satellite Imagery © <a href="https://www.accuweather.com/" target="_blank">AccuWeather</a>',
-                    opacity: 0.8, // Atur opasitas sesuai keinginan
-                    minZoom: 1,
-                    maxZoom: 8 // Sesuaikan dengan batasan API AccuWeather jika ada
-                });
-                IRsatelliteLayer.addTo(map);
-                console.log("Layer satelit IR AccuWeather diinisialisasi dengan URL:", satelliteUrl);
-            } else {
-                // Jika layer sudah ada, cukup perbarui URL-nya
-                IRsatelliteLayer.setUrl(satelliteUrl);
-                console.log("Layer satelit IR AccuWeather diperbarui ke URL:", satelliteUrl);
-            }
-             // Anda bisa menambahkan elemen di HTML untuk menampilkan timestamp ini
-            document.getElementById('timestampInfo').innerText = `Menampilkan citra satelit untuk: ${timestamp}`;
+// Fungsi untuk memperbarui layer satelit IR
+function updateIRSatellite(timeOffsetIntervals = 0) {
+    try {
+        const timestamp = getAccuweatherTimestamp(timeOffsetIntervals);
+        const satelliteUrl = `${ACCUWEATHER_IR_API_BASE_URL}${timestamp}/{z}/{x}/{y}.png?apikey=${ACCUWEATHER_API_KEY}`;
 
-        } catch (error) {
-            console.error("Gagal membuat atau memperbarui URL satelit AccuWeather:", error);
-            // Anda mungkin ingin menampilkan pesan error ke pengguna di sini
-             document.getElementById('timestampInfo').innerText = `Gagal memuat citra satelit.`;
+        if (!IRsatelliteLayer) {
+            IRsatelliteLayer = L.tileLayer(satelliteUrl, {
+                attribution: 'Satellite IR © <a href="https://www.accuweather.com/" target="_blank">AccuWeather</a>',
+                opacity: 0.8,
+                minZoom: 1,
+                maxZoom: 8
+            });
+            // IRsatelliteLayer.addTo(map); // Penambahan ke map akan diatur oleh Layer Control atau di bawah
+            console.log("Layer satelit IR AccuWeather diinisialisasi dengan URL:", satelliteUrl);
+        } else {
+            IRsatelliteLayer.setUrl(satelliteUrl);
+            console.log("Layer satelit IR AccuWeather diperbarui ke URL:", satelliteUrl);
+        }
+        // Update info timestamp IR
+        const timestampInfoIRElement = document.getElementById('timestampInfoIR');
+        if (timestampInfoIRElement) {
+            timestampInfoIRElement.innerText = `Citra Satelit IR (Infrared) untuk: ${timestamp}`;
+        }
+
+    } catch (error) {
+        console.error("Gagal membuat atau memperbarui URL satelit IR AccuWeather:", error);
+        const timestampInfoIRElement = document.getElementById('timestampInfoIR');
+        if (timestampInfoIRElement) {
+            timestampInfoIRElement.innerText = `Gagal memuat citra satelit IR.`;
         }
     }
+}
 
-    // Panggil untuk memuat citra saat pertama kali halaman dimuat
-    // Anda bisa menambahkan elemen untuk menampilkan info timestamp
-    document.body.insertAdjacentHTML('beforeend', '<p id="timestampInfo">Memuat citra satelit...</p>');
-    
+// Fungsi untuk memperbarui layer satelit WV
+function updateWVSatellite(timeOffsetIntervals = 0) {
+    try {
+        const timestamp = getAccuweatherTimestamp(timeOffsetIntervals);
+        const satelliteUrl = `${ACCUWEATHER_WV_API_BASE_URL}${timestamp}/{z}/{x}/{y}.png?apikey=${ACCUWEATHER_API_KEY}`;
+
+        if (!WVsatelliteLayer) {
+            WVsatelliteLayer = L.tileLayer(satelliteUrl, {
+                attribution: 'Satellite WV © <a href="https://www.accuweather.com/" target="_blank">AccuWeather</a>',
+                opacity: 0.8,
+                minZoom: 1,
+                maxZoom: 8
+            });
+            // WVsatelliteLayer.addTo(map); // Penambahan ke map akan diatur oleh Layer Control atau di bawah
+            console.log("Layer satelit WV AccuWeather diinisialisasi dengan URL:", satelliteUrl);
+        } else {
+            WVsatelliteLayer.setUrl(satelliteUrl);
+            console.log("Layer satelit WV AccuWeather diperbarui ke URL:", satelliteUrl);
+        }
+        // Update info timestamp WV
+        const timestampInfoWVElement = document.getElementById('timestampInfoWV');
+        if (timestampInfoWVElement) {
+            timestampInfoWVElement.innerText = `Citra Satelit WV (Water Vapor) untuk: ${timestamp}`;
+        }
+
+    } catch (error) {
+        console.error("Gagal membuat atau memperbarui URL satelit WV AccuWeather:", error);
+        const timestampInfoWVElement = document.getElementById('timestampInfoWV');
+        if (timestampInfoWVElement) {
+            timestampInfoWVElement.innerText = `Gagal memuat citra satelit WV.`;
+        }
+    }
+}
+
+// --- Inisialisasi dan Pembaruan ---
+
+// Tambahkan elemen untuk menampilkan info timestamp (jika belum ada di HTML Anda)
+// Pastikan elemen ini ada di body HTML Anda sebelum script ini dijalankan, atau buat dinamis seperti ini.
+if (!document.getElementById('timestampInfoIR')) {
+    document.body.insertAdjacentHTML('beforeend', '<p id="timestampInfoIR">Memuat citra satelit IR...</p>');
+}
+if (!document.getElementById('timestampInfoWV')) {
+    document.body.insertAdjacentHTML('beforeend', '<p id="timestampInfoWV">Memuat citra satelit WV...</p>');
+}
+
+// Panggil untuk memuat citra saat pertama kali halaman dimuat
+// Asumsikan 'map' adalah variabel global untuk Leaflet map Anda dan sudah diinisialisasi
+// Contoh: const map = L.map('mapid').setView([lat, lon], zoom);
+
+// updateRadar(); // Jika Anda punya fungsi ini, pastikan sudah didefinisikan
+
+// Panggil fungsi update untuk pertama kali
+updateIRSatellite();
+updateWVSatellite();
+
+// Set interval untuk pembaruan otomatis
 	updateRadar();
         updateIRSatellite();
+	updateWVSatellite();
 	setInterval(updateRadar, 600000);
         setInterval(updateIRSatellite, 600000);
+	setInterval(updateWVSatellite, 600000); // 10 menit
+// Fungsi untuk memperbarui overlay Visible Sat bmkg
+        function updateVSsatellite() {
+            var timestamp = new Date().getTime();
+            var newImageUrl = 'https://inderaja.bmkg.go.id/IMAGE/HIMA/H08_VS_Indonesia.png?_=' + timestamp;
+            VSsatelliteLayer.setUrl(newImageUrl);
+        }
         
 	    
 let controlContainer = null;
@@ -283,6 +359,8 @@ function addTimeControls() {
     function updateLayers(timeOffset) {
         updateRadar(timeOffset);
         updateIRSatellite(timeOffset);
+	updateWVSatellite(timeOffset);
+	updateVSsatellite();
         updateTimeLabel();}
 
     playButton.onclick = function () {
@@ -329,8 +407,9 @@ function addTimeControls() {
     document.body.appendChild(controlContainer);}
     function checkLayerStatus() {
     // Cek apakah layer "Radar Cuaca" atau "Satelit Inframerah" aktif
-    return map.hasLayer(radarLayer) || map.hasLayer(IRsatelliteLayer);
+    return map.hasLayer(radarLayer) || map.hasLayer(IRsatelliteLayer) || map.hasLayer(WVsatelliteLayer);
 }
+
 function toggleTimeControls() {
     if (checkLayerStatus()) {
         controlContainer.style.display = "flex"; // Tampilkan control container
@@ -656,6 +735,7 @@ function showAWOS(code) {
 	    "Satelit RDCA": VSsatelliteLayer,
             "Tekanan Udara (OWM)": pressureLayer,
             "Satelit Inframerah": IRsatelliteLayer,
+	    "Satelit Uap Air": WVsatelliteLayer,
             "Sebaran hujan (OWM)": precipitationLayer,
             "Radar Cuaca": radarLayer,
             "Cuaca Bandara": airportLayer,
