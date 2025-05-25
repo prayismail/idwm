@@ -283,7 +283,7 @@ updateWVSatellite();
 // Fungsi untuk memperbarui overlay Visible Sat bmkg
         function updateVSsatellite() {
             var timestamp = new Date().getTime();
-            var newImageUrl = 'https://inderaja.bmkg.go.id/IMAGE/HIMA/H08_VS_Indonesia.png?_=' + timestamp;
+            var newImageUrl = 'https://satelit.bmkg.go.id/IMAGE/HIMA/H08_RD_Indonesia.png' + timestamp;
             VSsatelliteLayer.setUrl(newImageUrl);
         }
         
