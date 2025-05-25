@@ -230,7 +230,53 @@
 .ir-labels-horizontal span:last-child {
     text-align: right;
 }
+/* --- Styling untuk Judul Utama Legenda WV --- */
+#wvSatelliteLegend strong {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 13px; /* Ukuran font judul utama */ 
+}
 
+/* --- Styling untuk Konten Spesifik Legenda WV --- */
+.wv-legend-title {
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 8px;
+    font-size: 12px;    
+}
+.wv-legend-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.wv-color-bar {
+    display: flex;
+    width: 100%;
+    height: 20px;
+    border: 1px solid #bbb;
+    margin-bottom: 5px;
+    border-radius: 2px;
+}
+.wv-color-bar span {
+    flex-grow: 1;
+    /* border-right: 1px solid #eee; */ /* Dihapus karena kita akan set border spesifik per warna gelap */
+}
+/* .wv-color-bar span:last-child {
+    border-right: none;
+} 
+
+.wv-labels-horizontal {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    font-size: 10px;  
+}
+.wv-labels-horizontal span:first-child {
+    text-align: left;
+}
+.wv-labels-horizontal span:last-child {
+    text-align: right;
+}
         @media screen and (max-width: 768px) { #legend { bottom:80px; right: 10px; } }
         #legend { display: block; z-index: 2000; }
         #precip-owm { display: none; z-index:1500; }
