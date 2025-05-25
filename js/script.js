@@ -10,6 +10,12 @@ document.getElementById("webmap-title").addEventListener("click", function() {
         map.on("overlayremove", function (eventLayer) {
             if (eventLayer.name === "Radar Cuaca") document.getElementById("legend").style.display = "none";
         });
+	map.on("overlayadd", function (eventLayer) {
+            if (eventLayer.name === "Satelit Inframerah") document.getElementById("irSatelliteLegend").style.display = "block";
+        });
+        map.on("overlayremove", function (eventLayer) {
+            if (eventLayer.name === "Satelit Inframerah") document.getElementById("irSatelliteLegend").style.display = "none";
+        });
         map.on("overlayadd", function (eventLayer) {
             if (eventLayer.name === "Sebaran hujan (OWM)") document.getElementById("precip-owm").style.display = "block";
         });
@@ -34,7 +40,7 @@ document.getElementById("webmap-title").addEventListener("click", function() {
         var topoMap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: 'Base map &copy; <a href="https://opentopomap.org/">OpenTopoMap</a> contributors' });
         var lulcMap = L.tileLayer.wms("https://services.terrascope.be/wms/v2", {layers: 'WORLDCOVER_2021_MAP', format: 'image/png', transparent: true, attribution: 'Base map &copy; ESA WorldCover 2021' });
         var radarLayer = L.tileLayer('', { opacity: 0.8, attribution: 'Radar data &copy; RainViewer' }); 
-        var IRsatelliteLayer = L.tileLayer('', { opacity: 0.6, attribution: 'Satellite data &copy; RainViewer' }); 
+        var IRsatelliteLayer = L.tileLayer('', { opacity: 0.9, attribution: 'Satellite data &copy; Accuweather' }); 
         var imageUrl = 'https://satelit.bmkg.go.id/IMAGE/HIMA/H08_RD_Indonesia.png';
         // Batas wilayah gambar satelit yang telah disesuaikan
         var imageBounds = [[-15, 90], [15, 150]];
@@ -145,26 +151,66 @@ addUserLocation();
             }
         })
         .catch(error => console.error("Gagal mengambil data radar:", error));}
-        function updateIRSatellite(timeOffset = 0) {
-            fetch('https://api.rainviewer.com/public/weather-maps.json')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.satellite && data.satellite.infrared.length > 0) {
-                        let index = Math.max(0, data.satellite.infrared.length - 1 - timeOffset);
-                        let timestamp = data.satellite.infrared[index].time;
-                        let path = data.satellite.infrared[index].path;
-                        let satelliteUrl = `https://tilecache.rainviewer.com${path}/256/{z}/{x}/{y}/0/0_0.png`;
-                        IRsatelliteLayer.setUrl(satelliteUrl);
-                    } else {
-                        console.error("Data satelit tidak tersedia.");
-                    }
-                })
-                .catch(error => console.error("Gagal mengambil data satelit:", error));
+        // --- Konfigurasi Satellite IR AccuWeather ---
+    const ACCUWEATHER_API_KEY = 'de13920f574d420984d3080b1fa6132b'; // GANTI DENGAN API KEY ANDA YANG VALID!
+    const ACCUWEATHER_API_BASE_URL = 'https://api.accuweather.com/maps/v1/satellite/globalIR/zxy/'; // Menggunakan globalIR seperti tujuan awal
+    const TIME_INTERVAL_MINUTES = 10; // Asumsi update citra setiap 10 menit
+
+    var IRsatelliteLayer; // Deklarasi variabel layer satelit
+
+       function getAccuweatherTimestamp(offsetIntervals = 0) {
+        const now = new Date();
+        const totalMinutesToSubtract = offsetIntervals * TIME_INTERVAL_MINUTES;
+        now.setUTCMinutes(now.getUTCMinutes() - totalMinutesToSubtract);
+
+        // Bulatkan ke bawah ke kelipatan TIME_INTERVAL_MINUTES terdekat
+        const currentMinutes = now.getUTCMinutes();
+        const roundedMinutes = Math.floor(currentMinutes / TIME_INTERVAL_MINUTES) * TIME_INTERVAL_MINUTES;
+        now.setUTCMinutes(roundedMinutes, 0, 0); // Set detik dan milidetik ke 0
+
+        return now.toISOString().split('.')[0] + "Z"; // Format YYYY-MM-DDTHH:mm:ssZ
+    }
+
+    function updateIRSatellite(timeOffsetIntervals = 0) {
+        try {
+            const timestamp = getAccuweatherTimestamp(timeOffsetIntervals);
+            const satelliteUrl = `${ACCUWEATHER_API_BASE_URL}${timestamp}/{z}/{x}/{y}.png?apikey=${ACCUWEATHER_API_KEY}`;
+            // Menggunakan .png sesuai spesifikasi format, bukan .jpeg seperti contoh URL
+
+            if (!IRsatelliteLayer) {
+                // Inisialisasi layer jika belum ada
+                IRsatelliteLayer = L.tileLayer(satelliteUrl, {
+                    attribution: 'Satellite Imagery © <a href="https://www.accuweather.com/" target="_blank">AccuWeather</a>',
+                    opacity: 0.8, // Atur opasitas sesuai keinginan
+                    minZoom: 1,
+                    maxZoom: 8 // Sesuaikan dengan batasan API AccuWeather jika ada
+                });
+                IRsatelliteLayer.addTo(map);
+                console.log("Layer satelit IR AccuWeather diinisialisasi dengan URL:", satelliteUrl);
+            } else {
+                // Jika layer sudah ada, cukup perbarui URL-nya
+                IRsatelliteLayer.setUrl(satelliteUrl);
+                console.log("Layer satelit IR AccuWeather diperbarui ke URL:", satelliteUrl);
+            }
+             // Anda bisa menambahkan elemen di HTML untuk menampilkan timestamp ini
+            document.getElementById('timestampInfo').innerText = `Menampilkan citra satelit untuk: ${timestamp}`;
+
+        } catch (error) {
+            console.error("Gagal membuat atau memperbarui URL satelit AccuWeather:", error);
+            // Anda mungkin ingin menampilkan pesan error ke pengguna di sini
+             document.getElementById('timestampInfo').innerText = `Gagal memuat citra satelit.`;
         }
-        updateRadar();
+    }
+
+    // Panggil untuk memuat citra saat pertama kali halaman dimuat
+    // Anda bisa menambahkan elemen untuk menampilkan info timestamp
+    document.body.insertAdjacentHTML('beforeend', '<p id="timestampInfo">Memuat citra satelit...</p>');
+    
+	updateRadar();
         updateIRSatellite();
-        setInterval(updateRadar, 600000);
+	setInterval(updateRadar, 600000);
         setInterval(updateIRSatellite, 600000);
+        
 	    
 let controlContainer = null;
 function addTimeControls() {
