@@ -185,6 +185,52 @@
             border: 0px solid black;
             position: relative;
         }
+#irSatelliteLegend strong { /* Pastikan judul utama juga terlihat bagus */
+    display: block;
+    margin-bottom: 5px;
+}
+
+.ir-legend-title {
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 8px; /* Jarak setelah judul "Clouds" */
+    font-size: 13px; /* Sedikit lebih besar */
+}
+
+.ir-legend-content {
+    display: flex;
+    flex-direction: column; /* Bar di atas, label di bawah */
+    align-items: center; /* Pusatkan bar dan label jika lebarnya tidak 100% */
+}
+
+.ir-color-bar {
+    display: flex;          /* Membuat span warna berbaris horizontal */
+    width: 100%;            /* Lebar penuh kontainer .ir-legend-content */
+    height: 20px;           /* Tinggi bar warna */
+    border: 1px solid #bbb; /* Border tipis di sekitar bar */
+    margin-bottom: 5px;     /* Jarak antara bar dan label horizontal */
+    border-radius: 2px;
+}
+
+.ir-color-bar span {
+    flex-grow: 1;           /* Setiap blok warna mengambil ruang yang sama */
+}
+
+.ir-labels-horizontal {
+    display: flex;
+    justify-content: space-between; /* "Low" di kiri, "High" di kanan */
+    width: 100%;            /* Lebar penuh kontainer .ir-legend-content */
+    font-size: 10px;
+}
+
+.ir-labels-horizontal span:first-child {
+    text-align: left;
+}
+
+.ir-labels-horizontal span:last-child {
+    text-align: right;
+}
+
         @media screen and (max-width: 768px) { #legend { bottom:80px; right: 10px; } }
         #legend { display: block; z-index: 2000; }
         #precip-owm { display: none; z-index:1500; }
