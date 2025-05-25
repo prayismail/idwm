@@ -234,7 +234,8 @@
 #wvSatelliteLegend strong {
     display: block;
     margin-bottom: 5px;
-    font-size: 13px; /* Ukuran font judul utama */ 
+    font-size: 13px; /* Ukuran font judul utama */
+    
 }
 
 /* --- Styling untuk Konten Spesifik Legenda WV --- */
@@ -242,13 +243,16 @@
     text-align: center;
     font-weight: bold;
     margin-bottom: 8px;
-    font-size: 12px;    
+    font-size: 12px;
+    
 }
+
 .wv-legend-content {
     display: flex;
     flex-direction: column;
     align-items: center;
 }
+
 .wv-color-bar {
     display: flex;
     width: 100%;
@@ -257,23 +261,28 @@
     margin-bottom: 5px;
     border-radius: 2px;
 }
+
 .wv-color-bar span {
     flex-grow: 1;
     /* border-right: 1px solid #eee; */ /* Dihapus karena kita akan set border spesifik per warna gelap */
 }
 /* .wv-color-bar span:last-child {
     border-right: none;
-} 
+} */ /* Tidak perlu jika border diatur inline */
+
 
 .wv-labels-horizontal {
     display: flex;
     justify-content: space-between;
     width: 100%;
-    font-size: 10px;  
+    font-size: 10px;
+    
 }
+
 .wv-labels-horizontal span:first-child {
     text-align: left;
 }
+
 .wv-labels-horizontal span:last-child {
     text-align: right;
 }
