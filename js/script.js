@@ -169,6 +169,9 @@ var IRsatelliteLayer; // Deklarasi variabel layer satelit IR
 // --- Konfigurasi Satellite WV AccuWeather ---
 const ACCUWEATHER_WV_API_BASE_URL = 'https://api.accuweather.com/maps/v1/satellite/globalWV/zxy/';
 var WVsatelliteLayer; // Deklarasi variabel layer satelit WV
+// --- Konfigurasi Satellite VIS AccuWeather ---
+const ACCUWEATHER_VIS_API_BASE_URL = 'https://api.accuweather.com/maps/v1/satellite/globalColor/zxy/';
+var VISsatelliteLayer; // Deklarasi variabel layer satelit VIS
 
 // Fungsi untuk mendapatkan timestamp AccuWeather yang dibulatkan
 function getAccuweatherTimestamp(offsetIntervals = 0) {
@@ -198,10 +201,10 @@ function updateIRSatellite(timeOffsetIntervals = 0) {
                 maxZoom: 8
             });
             // IRsatelliteLayer.addTo(map); // Penambahan ke map akan diatur oleh Layer Control atau di bawah
-            console.log("Layer satelit IR AccuWeather diinisialisasi dengan URL:", satelliteUrl);
+            
         } else {
             IRsatelliteLayer.setUrl(satelliteUrl);
-            console.log("Layer satelit IR AccuWeather diperbarui ke URL:", satelliteUrl);
+            
         }
         // Update info timestamp IR
         const timestampInfoIRElement = document.getElementById('timestampInfoIR');
@@ -232,10 +235,10 @@ function updateWVSatellite(timeOffsetIntervals = 0) {
                 maxZoom: 8
             });
             // WVsatelliteLayer.addTo(map); // Penambahan ke map akan diatur oleh Layer Control atau di bawah
-            console.log("Layer satelit WV AccuWeather diinisialisasi dengan URL:", satelliteUrl);
+            
         } else {
             WVsatelliteLayer.setUrl(satelliteUrl);
-            console.log("Layer satelit WV AccuWeather diperbarui ke URL:", satelliteUrl);
+            
         }
         // Update info timestamp WV
         const timestampInfoWVElement = document.getElementById('timestampInfoWV');
@@ -251,6 +254,39 @@ function updateWVSatellite(timeOffsetIntervals = 0) {
         }
     }
 }
+// Fungsi untuk memperbarui layer satelit VIS
+function updateVISSatellite(timeOffsetIntervals = 0) {
+    try {
+        const timestamp = getAccuweatherTimestamp(timeOffsetIntervals);
+        const satelliteUrl = `${ACCUWEATHER_VIS_API_BASE_URL}${timestamp}/{z}/{x}/{y}.png?apikey=${ACCUWEATHER_API_KEY}`;
+
+        if (!VISsatelliteLayer) {
+            VISsatelliteLayer = L.tileLayer(satelliteUrl, {
+                attribution: 'Satellite WV © <a href="https://www.accuweather.com/" target="_blank">AccuWeather</a>',
+                opacity: 0.8,
+                minZoom: 1,
+                maxZoom: 8
+            });
+            // VISsatelliteLayer.addTo(map); // Penambahan ke map akan diatur oleh Layer Control atau di bawah
+            
+        } else {
+            VISsatelliteLayer.setUrl(satelliteUrl);
+            
+        }
+        // Update info timestamp VIS
+        const timestampInfoVISElement = document.getElementById('timestampInfoVIS');
+        if (timestampInfoVISElement) {
+            timestampInfoVISElement.innerText = `Citra Satelit VIS (Visible) untuk: ${timestamp}`;
+        }
+
+    } catch (error) {
+        console.error("Gagal membuat atau memperbarui URL satelit VIS AccuWeather:", error);
+        const timestampInfoVISElement = document.getElementById('timestampInfoVIS');
+        if (timestampInfoVISElement) {
+            timestampInfoVISElement.innerText = `Gagal memuat citra satelit VIS.`;
+        }
+    }
+}
 
 // --- Inisialisasi dan Pembaruan ---
 
@@ -262,6 +298,9 @@ if (!document.getElementById('timestampInfoIR')) {
 if (!document.getElementById('timestampInfoWV')) {
     document.body.insertAdjacentHTML('beforeend', '<p id="timestampInfoWV">Memuat citra satelit WV...</p>');
 }
+if (!document.getElementById('timestampInfoVIS')) {
+    document.body.insertAdjacentHTML('beforeend', '<p id="timestampInfoVIS">Memuat citra satelit VIS...</p>');
+}
 
 // Panggil untuk memuat citra saat pertama kali halaman dimuat
 // Asumsikan 'map' adalah variabel global untuk Leaflet map Anda dan sudah diinisialisasi
@@ -272,14 +311,17 @@ if (!document.getElementById('timestampInfoWV')) {
 // Panggil fungsi update untuk pertama kali
 updateIRSatellite();
 updateWVSatellite();
+updateVISSatellite();
 
 // Set interval untuk pembaruan otomatis
 	updateRadar();
         updateIRSatellite();
 	updateWVSatellite();
+	updateVISSatellite();
 	setInterval(updateRadar, 600000);
         setInterval(updateIRSatellite, 600000);
-	setInterval(updateWVSatellite, 600000); // 10 menit
+	setInterval(updateWVSatellite, 600000); 
+	setInterval(updateVISSatellite, 600000); // 10 menit
 // Fungsi untuk memperbarui overlay Visible Sat bmkg
         function updateVSsatellite() {
             var timestamp = new Date().getTime();
@@ -360,6 +402,7 @@ function addTimeControls() {
         updateRadar(timeOffset);
         updateIRSatellite(timeOffset);
 	updateWVSatellite(timeOffset);
+	updateVISSatellite(timeOffset);
 	updateVSsatellite();
         updateTimeLabel();}
 
@@ -407,7 +450,7 @@ function addTimeControls() {
     document.body.appendChild(controlContainer);}
     function checkLayerStatus() {
     // Cek apakah layer "Radar Cuaca" atau "Satelit Inframerah" aktif
-    return map.hasLayer(radarLayer) || map.hasLayer(IRsatelliteLayer) || map.hasLayer(WVsatelliteLayer);
+    return map.hasLayer(radarLayer) || map.hasLayer(IRsatelliteLayer) || map.hasLayer(WVsatelliteLayer) || map.hasLayer(VISsatelliteLayer);
 }
 
 function toggleTimeControls() {
@@ -691,7 +734,7 @@ function showAWOS(code) {
 
         // Ambil Data SIGMET
         function fetchSIGMET(icao) {
-            let url = "https://aviationweather.gov/api/data/isigmet?format=json&level=3000";
+            let url = "https://api.allorigins.win/raw?url=https://aviationweather.gov/api/data/isigmet?format=json&level=3000";
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
@@ -736,6 +779,7 @@ function showAWOS(code) {
             "Tekanan Udara (OWM)": pressureLayer,
             "Satelit Inframerah": IRsatelliteLayer,
 	    "Satelit Uap Air": WVsatelliteLayer,
+	    "Satelit Visible": VISsatelliteLayer,
             "Sebaran hujan (OWM)": precipitationLayer,
             "Radar Cuaca": radarLayer,
             "Cuaca Bandara": airportLayer,
