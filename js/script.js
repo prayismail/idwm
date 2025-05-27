@@ -1,6 +1,6 @@
 
 var map = L.map('map', { center: [-2.5, 118], zoom: 5, attributionControl: false });
-        L.control.attribution({ position: 'bottomright' }).addAttribution('Proposed by <a href="https://mail.google.com/mail/?view=cm&fs=1&to=prayoga.ismail@bmkg.go.id" target="_blank">Prayoga Ismail</a>, Coding by OpenAI').addTo(map);
+        L.control.attribution({ position: 'bottomright' }).addAttribution('Proposed by <a href="https://mail.google.com/mail/?view=cm&fs=1&to=prayoga.ismail@bmkg.go.id" target="_blank">Prayoga Ismail</a>').addTo(map);
         document.getElementById("legend").style.display = "none";
 document.getElementById("webmap-title").addEventListener("click", function() {
     location.reload(); });
@@ -262,7 +262,7 @@ function updateVISSatellite(timeOffsetIntervals = 0) {
 
         if (!VISsatelliteLayer) {
             VISsatelliteLayer = L.tileLayer(satelliteUrl, {
-                attribution: 'Satellite WV © <a href="https://www.accuweather.com/" target="_blank">AccuWeather</a>',
+                attribution: 'Satellite VIS © <a href="https://www.accuweather.com/" target="_blank">AccuWeather</a>',
                 opacity: 0.8,
                 minZoom: 1,
                 maxZoom: 10
@@ -734,7 +734,7 @@ function showAWOS(code) {
 
         // Ambil Data SIGMET
         function fetchSIGMET(icao) {
-            //let url = "https://thingproxy.freeboard.io/fetch/https://aviationweather.gov/api/data/isigmet?format=json&level=3000";
+            //let url = "https://api.allorigins.win/raw?url=https://aviationweather.gov/api/data/isigmet?format=json&level=3000";
 	let url = "/api/sigmet";
             fetch(url)
                 .then(response => response.json())
