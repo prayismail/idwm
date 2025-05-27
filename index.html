@@ -10,6 +10,8 @@
     <script src="https://cdn.maptiler.com/maptiler-sdk-js/v3.2.0/maptiler-sdk.umd.min.js"></script>
   <link href="https://cdn.maptiler.com/maptiler-sdk-js/v3.2.0/maptiler-sdk.css" rel="stylesheet" />
   <script src="https://cdn.maptiler.com/maptiler-weather/v3.0.1/maptiler-weather.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+	
    <link rel="stylesheet" href="css/style.css"> <!-- Panggil CSS --> 
 </head>
 <body>
@@ -149,8 +151,30 @@
     <div id="maptiler"></div>
     <div id="layerSelector">
         <label><input type="radio" name="baseLayer" value="map" checked> Layar Utama</label><br>
-        <label><input type="radio" name="baseLayer" value="maptiler"> Animasi Angin</label>
+        <label><input type="radio" name="baseLayer" value="maptiler"> Animasi Angin</label><br><br>
+	<button id="start-crop-button" class="button" style="margin-left: 15px; background-color: #28a745;">Crop Peta</button>
     </div>
+<!-- Overlay untuk cropping -->
+    <div id="crop-overlay">
+        <div id="crop-shape-selector" style="margin-bottom: 10px; color:white;">
+            Bentuk Crop:
+            <button data-shape="polygon" class="button shape-btn active">Poligon</button>
+            <button data-shape="rectangle" class="button shape-btn">Persegi</button>
+            <button data-shape="circle" class="button shape-btn">Lingkaran</button>
+        </div>
+        <p id="crop-instructions" style="color: white; margin-bottom: 10px;">
+            Poligon: Klik untuk titik. Klik titik awal untuk menutup. Kanan untuk hapus.
+        </p>
+        <div id="crop-canvas-container">
+            <canvas id="crop-canvas"></canvas>
+        </div>
+        <div id="crop-buttons">
+            <button id="crop-image-button" class="button" style="background-color: #007bff;">Crop & Unduh</button>
+            <button id="reset-polygon-button" class="button" style="background-color: #ffc107; color:black;">Reset Bentuk</button>
+            <button id="cancel-crop-button" class="button" style="background-color: #dc3545;">Batal</button>
+        </div>
+    </div>
+
     <div id="wind-controls" style="display: none;">
         <div id="time-info">
             <span id="time-text"></span>
