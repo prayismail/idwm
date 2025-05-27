@@ -4,6 +4,382 @@ var map = L.map('map', { center: [-2.5, 118], zoom: 5, attributionControl: false
         document.getElementById("legend").style.display = "none";
 document.getElementById("webmap-title").addEventListener("click", function() {
     location.reload(); });
+// Bagian ini utk fungsi cropping layar
+
+const startCropButton = document.getElementById('start-crop-button');
+const cropOverlay = document.getElementById('crop-overlay');
+const cropCanvasContainer = document.getElementById('crop-canvas-container');
+const cropCanvas = document.getElementById('crop-canvas');
+const cropImageButton = document.getElementById('crop-image-button');
+const resetPolygonButton = document.getElementById('reset-polygon-button'); // Ganti nama jadi resetShapeButton
+const cancelCropButton = document.getElementById('cancel-crop-button');
+const cropShapeSelector = document.getElementById('crop-shape-selector');
+const cropInstructions = document.getElementById('crop-instructions');
+const ctx = cropCanvas.getContext('2d');
+
+let isCropping = false;
+let currentCropShape = 'polygon'; // 'polygon', 'rectangle', 'circle'
+let shapePoints = []; // Untuk poligon dan persegi (2 titik: start, end)
+let circleParams = null; // { x, y, radius } untuk lingkaran
+let originalImage = null;
+let isDrawingShape = false; // Flag untuk menandakan sedang drag (persegi/lingkaran)
+let startDragPoint = null;
+
+// Ganti nama tombol reset
+resetPolygonButton.id = 'reset-shape-button';
+resetPolygonButton.textContent = 'Reset Bentuk';
+const resetShapeButton = document.getElementById('reset-shape-button');
+
+
+// --- Event Listener untuk Pemilihan Bentuk ---
+cropShapeSelector.addEventListener('click', (e) => {
+    if (e.target.classList.contains('shape-btn')) {
+        document.querySelectorAll('.shape-btn.active').forEach(btn => btn.classList.remove('active'));
+        e.target.classList.add('active');
+        currentCropShape = e.target.dataset.shape;
+        resetCurrentShape(); // Reset bentuk saat ganti mode
+        updateInstructions();
+    }
+});
+
+function updateInstructions() {
+    if (currentCropShape === 'polygon') {
+        cropInstructions.textContent = 'Poligon: Klik untuk titik. Klik titik awal untuk menutup. Kanan untuk hapus.';
+    } else if (currentCropShape === 'rectangle') {
+        cropInstructions.textContent = 'Persegi: Klik dan seret untuk menggambar persegi.';
+    } else if (currentCropShape === 'circle') {
+        cropInstructions.textContent = 'Lingkaran: Klik dan seret dari pusat ke tepi lingkaran.';
+    }
+}
+
+
+startCropButton.addEventListener('click', async () => {
+    // ... (kode screenshot html2canvas Anda tetap sama) ...
+    const leafletControls = document.querySelectorAll('.leaflet-control-container, .leaflet-control, #layerSelector, #webmap-title, #time-indicator, .search-toggle, .search-box, #legend, #irSatelliteLegend, #wvSatelliteLegend, #precip-owm, #pressure-owm, #topo-legend, #lulc-legend, #legend-sigmet, #wind-controls, #controls, #start-crop-button, #crop-shape-selector');
+    leafletControls.forEach(el => el.style.visibility = 'hidden');
+    document.getElementById('map').style.cursor = 'wait';
+
+    try {
+        const mapElement = document.getElementById('map');
+        window.scrollTo(0,0);
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const canvas = await html2canvas(mapElement, {
+            useCORS: true,
+            allowTaint: true,
+            logging: false, // Ubah ke true untuk debug
+        });
+
+        originalImage = new Image();
+        originalImage.onload = () => {
+            const maxOverlayWidth = window.innerWidth * 0.9;
+            const maxOverlayHeight = window.innerHeight * 0.8;
+            let displayWidth = originalImage.width;
+            let displayHeight = originalImage.height;
+
+            if (displayWidth > maxOverlayWidth) { /* ... (logika resize Anda tetap sama) ... */ }
+            if (displayHeight > maxOverlayHeight) { /* ... (logika resize Anda tetap sama) ... */ }
+             if (displayWidth > maxOverlayWidth) {
+                const ratio = maxOverlayWidth / displayWidth;
+                displayWidth = maxOverlayWidth;
+                displayHeight *= ratio;
+            }
+            if (displayHeight > maxOverlayHeight) {
+                const ratio = maxOverlayHeight / displayHeight;
+                displayHeight = maxOverlayHeight;
+                displayWidth *= ratio;
+            }
+
+
+            cropCanvas.width = displayWidth;
+            cropCanvas.height = displayHeight;
+            cropCanvasContainer.style.width = displayWidth + 'px';
+            cropCanvasContainer.style.height = displayHeight + 'px';
+
+            ctx.drawImage(originalImage, 0, 0, cropCanvas.width, cropCanvas.height);
+            resetCurrentShape();
+            cropOverlay.style.display = 'flex';
+            isCropping = true;
+            updateInstructions(); // Tampilkan instruksi yang benar
+        };
+        originalImage.onerror = (e) => {
+            console.error("Gagal memuat screenshot ke Image object:", e);
+            alert("Gagal memproses screenshot. Mungkin ada masalah dengan CORS atau konten eksternal.");
+        };
+        originalImage.src = canvas.toDataURL('image/png');
+
+    } catch (error) {
+        console.error('Error mengambil screenshot:', error);
+        alert('Gagal mengambil screenshot peta.');
+    } finally {
+        leafletControls.forEach(el => el.style.visibility = 'visible');
+        document.getElementById('map').style.cursor = '';
+    }
+});
+
+// --- Logika Menggambar Bentuk ---
+cropCanvas.addEventListener('mousedown', (event) => {
+    if (!isCropping || !originalImage) return;
+    if (event.button !== 0) return; // Hanya untuk klik kiri
+
+    const rect = cropCanvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    if (currentCropShape === 'rectangle' || currentCropShape === 'circle') {
+        isDrawingShape = true;
+        startDragPoint = { x, y };
+        if (currentCropShape === 'rectangle') {
+            shapePoints = [startDragPoint, startDragPoint]; // Mulai dengan titik yang sama
+        } else { // circle
+            circleParams = { cx: x, cy: y, radius: 0 };
+        }
+    }
+});
+
+cropCanvas.addEventListener('mousemove', (event) => {
+    if (!isCropping || !isDrawingShape || !originalImage || !startDragPoint) return;
+
+    const rect = cropCanvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    if (currentCropShape === 'rectangle') {
+        shapePoints[1] = { x, y };
+    } else if (currentCropShape === 'circle') {
+        const dx = x - startDragPoint.x;
+        const dy = y - startDragPoint.y;
+        circleParams.radius = Math.sqrt(dx * dx + dy * dy);
+    }
+    drawCurrentShape();
+});
+
+cropCanvas.addEventListener('mouseup', (event) => {
+    if (!isCropping || !originalImage) return;
+    if (event.button !== 0) return;
+
+    isDrawingShape = false;
+    startDragPoint = null;
+
+    // Untuk rectangle, shapePoints sudah diupdate di mousemove.
+    // Untuk circle, circleParams sudah diupdate.
+    // Untuk polygon, ini tidak relevan, karena penambahan titik ada di 'click'.
+    if (currentCropShape === 'rectangle' || currentCropShape === 'circle') {
+        drawCurrentShape(); // Gambar final setelah mouseup
+    }
+});
+
+
+cropCanvas.addEventListener('click', (event) => {
+    if (!isCropping || !originalImage || isDrawingShape) return; // Jangan proses jika sedang drag
+    if (event.button !== 0) return;
+
+    if (currentCropShape === 'polygon') {
+        const rect = cropCanvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        if (shapePoints.length > 2) {
+            const firstPoint = shapePoints[0];
+            const distanceToFirst = Math.sqrt(Math.pow(firstPoint.x - x, 2) + Math.pow(firstPoint.y - y, 2));
+            if (distanceToFirst < 10) {
+                shapePoints.push({ ...firstPoint });
+                drawCurrentShape();
+                return;
+            }
+        }
+        shapePoints.push({ x, y });
+        drawCurrentShape();
+    }
+});
+
+cropCanvas.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+    if (!isCropping || isDrawingShape) return;
+
+    if (currentCropShape === 'polygon' && shapePoints.length > 0) {
+        if (shapePoints.length <= 1 ||
+            (shapePoints[shapePoints.length - 1].x !== shapePoints[0].x ||
+             shapePoints[shapePoints.length - 1].y !== shapePoints[0].y)) {
+            shapePoints.pop();
+        }
+        drawCurrentShape();
+    }
+});
+
+function resetCurrentShape() {
+    shapePoints = [];
+    circleParams = null;
+    isDrawingShape = false;
+    startDragPoint = null;
+    if (originalImage) { // Hanya gambar ulang jika gambar sudah ada
+       drawCurrentShape();
+    }
+}
+
+function drawCurrentShape() {
+    if (!originalImage) return;
+    ctx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+    ctx.drawImage(originalImage, 0, 0, cropCanvas.width, cropCanvas.height);
+
+    ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+    ctx.lineWidth = 2;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+
+    if (currentCropShape === 'polygon' && shapePoints.length > 0) {
+        ctx.beginPath();
+        ctx.moveTo(shapePoints[0].x, shapePoints[0].y);
+        for (let i = 1; i < shapePoints.length; i++) {
+            ctx.lineTo(shapePoints[i].x, shapePoints[i].y);
+        }
+        if (shapePoints.length > 2 && shapePoints[shapePoints.length - 1].x === shapePoints[0].x && shapePoints[shapePoints.length - 1].y === shapePoints[0].y) {
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0, 255, 0, 1)';
+            ctx.lineWidth = 3;
+        }
+        ctx.stroke();
+        ctx.fillStyle = 'red';
+        shapePoints.forEach(p => {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 4, 0, 2 * Math.PI);
+            ctx.fill();
+        });
+    } else if (currentCropShape === 'rectangle' && shapePoints.length === 2) {
+        const start = shapePoints[0];
+        const end = shapePoints[1];
+        const width = end.x - start.x;
+        const height = end.y - start.y;
+        ctx.beginPath();
+        ctx.rect(start.x, start.y, width, height);
+        if (isDrawingShape) { // Hanya preview garis saat menggambar
+             ctx.stroke();
+        } else if (width !== 0 || height !== 0) { // Isi dan pertebal jika sudah selesai dan valid
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0, 255, 0, 1)';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        }
+
+    } else if (currentCropShape === 'circle' && circleParams && circleParams.radius > 0) {
+        ctx.beginPath();
+        ctx.arc(circleParams.cx, circleParams.cy, circleParams.radius, 0, 2 * Math.PI);
+        if (isDrawingShape) {
+             ctx.stroke();
+        } else {
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0, 255, 0, 1)';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        }
+    }
+}
+
+resetShapeButton.addEventListener('click', resetCurrentShape);
+
+cancelCropButton.addEventListener('click', () => {
+    cropOverlay.style.display = 'none';
+    isCropping = false;
+    resetCurrentShape();
+    originalImage = null;
+    ctx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+});
+
+
+// --- Logika Cropping ---
+cropImageButton.addEventListener('click', () => {
+    if (!isCropping || !originalImage) {
+        alert('Ambil screenshot terlebih dahulu.');
+        return;
+    }
+
+    const scaleX = originalImage.width / cropCanvas.width;
+    const scaleY = originalImage.height / cropCanvas.height;
+
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCanvas.width = originalImage.width;
+    tempCanvas.height = originalImage.height;
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let validShape = false;
+
+    tempCtx.beginPath(); // Mulai path untuk clipping
+
+    if (currentCropShape === 'polygon') {
+        if (shapePoints.length < 3 || !(shapePoints[shapePoints.length - 1].x === shapePoints[0].x && shapePoints[shapePoints.length - 1].y === shapePoints[0].y)) {
+            alert('Poligon belum lengkap atau belum ditutup.');
+            return;
+        }
+        tempCtx.moveTo(shapePoints[0].x * scaleX, shapePoints[0].y * scaleY);
+        shapePoints.forEach((p, index) => {
+            if (index > 0) tempCtx.lineTo(p.x * scaleX, p.y * scaleY);
+            minX = Math.min(minX, p.x * scaleX);
+            minY = Math.min(minY, p.y * scaleY);
+            maxX = Math.max(maxX, p.x * scaleX);
+            maxY = Math.max(maxY, p.y * scaleY);
+        });
+        tempCtx.closePath();
+        validShape = true;
+    } else if (currentCropShape === 'rectangle' && shapePoints.length === 2) {
+        const start = { x: shapePoints[0].x * scaleX, y: shapePoints[0].y * scaleY };
+        const end = { x: shapePoints[1].x * scaleX, y: shapePoints[1].y * scaleY };
+        minX = Math.min(start.x, end.x);
+        minY = Math.min(start.y, end.y);
+        maxX = Math.max(start.x, end.x);
+        maxY = Math.max(start.y, end.y);
+        if (maxX - minX <=0 || maxY - minY <=0) {
+            alert("Ukuran persegi tidak valid."); return;
+        }
+        tempCtx.rect(minX, minY, maxX - minX, maxY - minY);
+        validShape = true;
+    } else if (currentCropShape === 'circle' && circleParams && circleParams.radius > 0) {
+        const scaledCx = circleParams.cx * scaleX;
+        const scaledCy = circleParams.cy * scaleY;
+        const scaledRadius = circleParams.radius * Math.min(scaleX, scaleY); // Gunakan skala terkecil agar tidak distorsi
+        if (scaledRadius <=0) {
+            alert("Radius lingkaran tidak valid."); return;
+        }
+        tempCtx.arc(scaledCx, scaledCy, scaledRadius, 0, 2 * Math.PI);
+        minX = scaledCx - scaledRadius;
+        minY = scaledCy - scaledRadius;
+        maxX = scaledCx + scaledRadius;
+        maxY = scaledCy + scaledRadius;
+        validShape = true;
+    }
+
+    if (!validShape) {
+        alert('Bentuk crop belum digambar atau tidak valid.');
+        return;
+    }
+
+    tempCtx.clip();
+    tempCtx.drawImage(originalImage, 0, 0, originalImage.width, originalImage.height);
+
+    const cropWidth = Math.round(maxX - minX);
+    const cropHeight = Math.round(maxY - minY);
+
+    if (cropWidth <= 0 || cropHeight <= 0) {
+        alert("Area crop menghasilkan ukuran gambar yang tidak valid.");
+        return;
+    }
+
+    const finalCanvas = document.createElement('canvas');
+    finalCanvas.width = cropWidth;
+    finalCanvas.height = cropHeight;
+    const finalCtx = finalCanvas.getContext('2d');
+    finalCtx.drawImage(tempCanvas, minX, minY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+
+    const dataURL = finalCanvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.href = dataURL;
+    link.download = `idwm_cropped_${currentCropShape}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    cancelCropButton.click();
+});
         map.on("overlayadd", function (eventLayer) {
             if (eventLayer.name === "Radar Cuaca") document.getElementById("legend").style.display = "block";
         });
