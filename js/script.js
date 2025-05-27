@@ -734,7 +734,8 @@ function showAWOS(code) {
 
         // Ambil Data SIGMET
         function fetchSIGMET(icao) {
-            let url = "https://api.allorigins.win/raw?url=https://aviationweather.gov/api/data/isigmet?format=json&level=3000";
+            //let url = "https://api.allorigins.win/raw?url=https://aviationweather.gov/api/data/isigmet?format=json&level=3000";
+	let url = "/api/sigmet";
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
