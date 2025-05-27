@@ -43,7 +43,48 @@
         @media screen and (max-width: 768px) {
             #map { height: 90vh; }
         }
+/* Style untuk overlay cropping */
+        #crop-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 6000; /* Pastikan di atas segalanya */
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
 
+        #crop-canvas-container {
+            position: relative;
+            max-width: 90vw; /* Batasi lebar agar tidak terlalu besar */
+            max-height: 80vh; /* Batasi tinggi */
+            overflow: auto; /* Jika gambar lebih besar dari container */
+            border: 2px solid white;
+        }
+
+        #crop-canvas {
+            display: block; /* Menghilangkan spasi ekstra di bawah canvas */
+            cursor: crosshair;
+        }
+        #crop-buttons {
+            margin-top: 15px;
+        }
+        #crop-buttons button {
+            margin: 0 5px;
+            padding: 8px 15px;
+        }
+	 .shape-btn {
+            background-color: #6c757d; /* Abu-abu */
+            margin-left: 5px;
+        }
+        .shape-btn.active {
+            background-color: #17a2b8; /* Biru info */
+            border: 2px solid white;
+        }
 /* Tombol Toggle Pencarian */
         .search-toggle {
             position: fixed;
