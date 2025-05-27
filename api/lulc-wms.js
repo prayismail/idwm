@@ -1,6 +1,4 @@
 // File: api/lulc-wms.js
-import fetch from 'node-fetch'; // atau gunakan https modul bawaan jika prefer
-                               // Pastikan node-fetch ada di package.json jika Node < 18
 
 export default async function handler(req, res) {
   // Ambil semua query parameter dari permintaan asli
