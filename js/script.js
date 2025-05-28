@@ -639,7 +639,7 @@ function updateVISSatellite(timeOffsetIntervals = 0) {
         if (!VISsatelliteLayer) {
             VISsatelliteLayer = L.tileLayer(satelliteUrl, {
                 attribution: 'Satellite VIS © <a href="https://www.accuweather.com/" target="_blank">AccuWeather</a>',
-                opacity: 0.8,
+                opacity: 0.9,
                 minZoom: 1,
                 maxZoom: 10
             });
