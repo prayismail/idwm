@@ -574,7 +574,6 @@ function updateIRSatellite(timeOffsetIntervals = 0) {
                 attribution: 'Satellite IR © <a href="https://www.accuweather.com/" target="_blank">AccuWeather</a>',
                 opacity: 0.8,
                 minZoom: 1,
-                maxZoom: 10
             });
             // IRsatelliteLayer.addTo(map); // Penambahan ke map akan diatur oleh Layer Control atau di bawah
             
@@ -608,7 +607,6 @@ function updateWVSatellite(timeOffsetIntervals = 0) {
                 attribution: 'Satellite WV © <a href="https://www.accuweather.com/" target="_blank">AccuWeather</a>',
                 opacity: 0.8,
                 minZoom: 1,
-                maxZoom: 10
             });
             // WVsatelliteLayer.addTo(map); // Penambahan ke map akan diatur oleh Layer Control atau di bawah
             
@@ -641,7 +639,6 @@ function updateVISSatellite(timeOffsetIntervals = 0) {
                 attribution: 'Satellite VIS © <a href="https://www.accuweather.com/" target="_blank">AccuWeather</a>',
                 opacity: 0.9,
                 minZoom: 1,
-                maxZoom: 10
             });
             // VISsatelliteLayer.addTo(map); // Penambahan ke map akan diatur oleh Layer Control atau di bawah
             
