@@ -1151,10 +1151,10 @@ function showAWOS(code) {
         var overlayMaps = {
 	    "Satelit RDCA": VSsatelliteLayer,
             "Tekanan Udara (OWM)": pressureLayer,
+	    "Satelit Visible": VISsatelliteLayer,
             "Satelit Inframerah": IRsatelliteLayer,
 	    "Satelit Uap Air": WVsatelliteLayer,
-	    "Satelit Visible": VISsatelliteLayer,
-            "Sebaran hujan (OWM)": precipitationLayer,
+	    "Sebaran hujan (OWM)": precipitationLayer,
             "Radar Cuaca": radarLayer,
             "Cuaca Bandara": airportLayer,
 	    "Tropical Waves": TropicalLayer
