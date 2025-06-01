@@ -1080,7 +1080,7 @@ function showAWOS(code) {
         // Ambil Data METAR
         function fetchMETAR() {
             var icaoCodes = airports.map(a => a.code).join("%2C");
-            var apiUrl = `https://api.met.no/weatherapi/tafmetar/1.0/metar.txt?icao=${icaoCodes}`;
+            var apiUrl = `/api/metar?icao=${icaoCodes}`;
 
             fetch(apiUrl, { headers: { 'User-Agent': 'IDWM/prayoga.ismail@bmkg.go.id' } })
                 .then(response => response.text())
