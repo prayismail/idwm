@@ -696,13 +696,89 @@ updateVISSatellite();
 	setInterval(updateWVSatellite, 600000); 
 	setInterval(updateVISSatellite, 600000); // 10 menit
 // Fungsi untuk memperbarui overlay Visible Sat bmkg
-        function updateVSsatellite() {
-            var timestamp = new Date().getTime();
-            var newImageUrl = 'https://satelit.bmkg.go.id/IMAGE/HIMA/H08_RD_Indonesia.png' + timestamp;
-            VSsatelliteLayer.setUrl(newImageUrl);
+// Variabel global untuk menyimpan timestamp terakhir yang berhasil dimuat
+// Ini untuk fallback jika gagal membuat URL baru atau gambar tidak ada
+let lastSuccessfulRDCAUrl = 'https://satelit.bmkg.go.id/IMAGE/HIMA/H08_RD_Indonesia.png'; // Default lama sebagai fallback awal
+
+function updateVSsatellite() {
+    const now = new Date();
+    let currentMinutes = now.getUTCMinutes();
+    let roundedMinutes;
+
+    // Pembulatan ke 10 menit sebelumnya
+    if (currentMinutes < 10) { // Jika antara xx:00 dan xx:09
+        roundedMinutes = 0; // Ambil dari menit ke-00
+        // Jika kita ambil dari menit ke-00, dan sekarang misal 03, mungkin lebih aman mundur satu jam ke menit 50
+        if (currentMinutes < 3 ) { // Toleransi 3 menit, jika belum ada, mundur
+             now.setUTCHours(now.getUTCHours() - 1);
+             roundedMinutes = 50;
         }
+    } else {
+        roundedMinutes = Math.floor(currentMinutes / 10) * 10;
+    }
+   
+    if (roundedMinutes === 0) {
         
-	    
+        if (currentMinutes >= 10) { // Hanya mundur jika pembulatan berasal dari >=10
+            now.setUTCHours(now.getUTCHours() - 1);
+            roundedMinutes = 50;
+        }
+    } else {
+    }
+    now.setUTCMinutes(roundedMinutes, 0, 0); // Set detik dan milidetik ke 0
+    const year = now.getUTCFullYear();
+    const month = (now.getUTCMonth() + 1).toString().padStart(2, '0'); // Bulan dimulai dari 0
+    const day = now.getUTCDate().toString().padStart(2, '0');
+    const hours = now.getUTCHours().toString().padStart(2, '0');
+    const minutes = now.getUTCMinutes().toString().padStart(2, '0'); // Ini akan selalu xx0
+
+    const timestampString = `${year}${month}${day}${hours}${minutes}`;
+    const newImageUrl = `https://radar.bmkg.go.id/sidarma-nowcast/data/raster/satelit/rdca/H08_RT_Indonesia_${timestampString}.png`;
+
+    console.log("Mencoba memuat citra RDCA:", newImageUrl);
+
+    const img = new Image();
+    img.onload = function() {
+        console.log("Citra RDCA berhasil dimuat:", newImageUrl);
+        if (VSsatelliteLayer) { // Pastikan layer sudah diinisialisasi
+            VSsatelliteLayer.setUrl(newImageUrl);
+            lastSuccessfulRDCAUrl = newImageUrl; // Simpan URL yang berhasil
+        }
+    };
+    img.onerror = function() {
+        console.warn("Gagal memuat citra RDCA baru:", newImageUrl, ". Menggunakan URL terakhir yang berhasil:", lastSuccessfulRDCAUrl);
+        // Jika gagal, kita bisa coba mundur 10 menit lagi atau gunakan URL lama yang berhasil
+        // Untuk sederhana, kita gunakan lastSuccessfulRDCAUrl
+        if (VSsatelliteLayer && VSsatelliteLayer.setUrl && VSsatelliteLayer.getURL() !== lastSuccessfulRDCAUrl) {
+             // Coba mundur 10 menit dari now (yang sudah dibulatkan)
+            now.setUTCMinutes(now.getUTCMinutes() - 10);
+            const prevYear = now.getUTCFullYear();
+            const prevMonth = (now.getUTCMonth() + 1).toString().padStart(2, '0');
+            const prevDay = now.getUTCDate().toString().padStart(2, '0');
+            const prevHours = now.getUTCHours().toString().padStart(2, '0');
+            const prevMinutes = now.getUTCMinutes().toString().padStart(2, '0');
+            const prevTimestampString = `${prevYear}${prevMonth}${prevDay}${prevHours}${prevMinutes}`;
+            const fallbackImageUrl = `https://radar.bmkg.go.id/sidarma-nowcast/data/raster/satelit/rdca/H08_RT_Indonesia_${prevTimestampString}.png`;
+
+            console.log("Mencoba URL fallback (10 menit sebelumnya):", fallbackImageUrl);
+            const fallbackImg = new Image();
+            fallbackImg.onload = function() {
+                console.log("Citra RDCA fallback berhasil dimuat:", fallbackImageUrl);
+                VSsatelliteLayer.setUrl(fallbackImageUrl);
+                lastSuccessfulRDCAUrl = fallbackImageUrl;
+            };
+            fallbackImg.onerror = function() {
+                 console.warn("Gagal memuat citra RDCA fallback. Tetap menggunakan:", lastSuccessfulRDCAUrl);
+                 if (VSsatelliteLayer.getURL() !== lastSuccessfulRDCAUrl) { // Hindari setUrl berulang jika sudah sama
+                    VSsatelliteLayer.setUrl(lastSuccessfulRDCAUrl);
+                 }
+            };
+            fallbackImg.src = fallbackImageUrl;
+        }
+    };
+    img.src = newImageUrl; // Mulai memuat gambar baru
+}
+   
 let controlContainer = null;
 function addTimeControls() {
     controlContainer = document.createElement("div");
