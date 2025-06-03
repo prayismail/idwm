@@ -422,7 +422,7 @@ cropImageButton.addEventListener('click', () => {
         var topoMap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: 'Base map &copy; <a href="https://opentopomap.org/">OpenTopoMap</a> contributors' });
         var lulcMap = L.tileLayer.wms("/api/lulc-wms", {layers: 'WORLDCOVER_2021_MAP', format: 'image/png', transparent: true, attribution: 'Base map &copy; ESA WorldCover 2021' });
         var radarLayer = L.tileLayer('', { opacity: 0.8, attribution: 'Radar data &copy; RainViewer' }); 
-        var IRsatelliteLayer = L.tileLayer('', { opacity: 0.9, attribution: 'Satellite data &copy; Accuweather' }); 
+        var IRsatelliteLayer = L.tileLayer('', { opacity: 0.6, attribution: 'Satellite data &copy; Accuweather' }); 
 	var WVsatelliteLayer = L.tileLayer('', { opacity: 0.6, attribution: 'Satellite data &copy; Accuweather' });
         var imageUrl = 'https://satelit.bmkg.go.id/IMAGE/HIMA/H08_RD_Indonesia.png';
         // Batas wilayah gambar satelit yang telah disesuaikan
@@ -572,7 +572,7 @@ function updateIRSatellite(timeOffsetIntervals = 0) {
         if (!IRsatelliteLayer) {
             IRsatelliteLayer = L.tileLayer(satelliteUrl, {
                 attribution: 'Satellite IR © <a href="https://www.accuweather.com/" target="_blank">AccuWeather</a>',
-                opacity: 0.8,
+                opacity: 0.6,
                 minZoom: 1,
             });
             // IRsatelliteLayer.addTo(map); // Penambahan ke map akan diatur oleh Layer Control atau di bawah
@@ -605,7 +605,7 @@ function updateWVSatellite(timeOffsetIntervals = 0) {
         if (!WVsatelliteLayer) {
             WVsatelliteLayer = L.tileLayer(satelliteUrl, {
                 attribution: 'Satellite WV © <a href="https://www.accuweather.com/" target="_blank">AccuWeather</a>',
-                opacity: 0.8,
+                opacity: 0.6,
                 minZoom: 1,
             });
             // WVsatelliteLayer.addTo(map); // Penambahan ke map akan diatur oleh Layer Control atau di bawah
