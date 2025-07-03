@@ -1,37 +1,16 @@
-{
-  "name": "idwm-backend",
-  "version": "1.0.0",
-  "private": true,
-  "dependencies": {
-    "basic-ftp": "^5.0.5"
-  }
-}
-
 // File: api/check-vaac.js
+// VERSI FINAL dengan direktori tahun dinamis
 
-// Gunakan library basic-ftp untuk koneksi FTP
-import * as ftp from 'basic-ftp';
-import { Writable } from 'stream';
+const ftp = require('basic-ftp');
 
-// Helper function untuk mengubah stream menjadi string
-async function streamToString(stream) {
-    const chunks = [];
-    return new Promise((resolve, reject) => {
-        stream.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
-        stream.on('error', (err) => reject(err));
-        stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
-    });
-}
-
-export default async function handler(req, res) {
-  // Hanya izinkan metode GET
+module.exports = async (req, res) => {
   if (req.method !== 'GET') {
     res.setHeader('Allow', ['GET']);
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 
-  const client = new ftp.Client(30000); // 30 detik timeout
-  // client.ftp.verbose = true; // Uncomment untuk debugging koneksi FTP di log Vercel
+  const client = new ftp.Client(30000);
+  // client.ftp.verbose = true; // Uncomment untuk debugging
 
   try {
     console.log('[Proxy VAAC-FTP] Menerima permintaan...');
@@ -39,14 +18,22 @@ export default async function handler(req, res) {
     await client.access({
       host: "ftp.bom.gov.au"
     });
+    console.log('[Proxy VAAC-FTP] Berhasil terhubung ke server FTP.');
 
-    // Pindah ke direktori VAAC
-    await client.cd("/anon/gen/vaac/");
+    // --- PERUBAHAN KUNCI DI SINI ---
+    // 1. Dapatkan tahun saat ini secara dinamis
+    const currentYear = new Date().getFullYear();
+    
+    // 2. Bentuk path direktori yang lengkap
+    const directoryPath = `/anon/gen/vaac/${currentYear}`;
+    console.log(`[Proxy VAAC-FTP] Mencoba masuk ke direktori: ${directoryPath}`);
 
-    // Ambil daftar file
+    // 3. Pindah ke direktori tahunan tersebut
+    await client.cd(directoryPath);
+    console.log(`[Proxy VAAC-FTP] Berhasil masuk ke direktori ${currentYear}.`);
+
     const list = await client.list();
 
-    // Filter hanya untuk file advisory Darwin (biasanya berawalan 'IDD' dan .txt)
     const darwinFiles = list.filter(item => 
         item.name.startsWith('IDD') && 
         item.name.endsWith('.txt') &&
@@ -54,29 +41,20 @@ export default async function handler(req, res) {
     );
 
     if (darwinFiles.length === 0) {
-        console.warn('[Proxy VAAC-FTP] Tidak ada file advisory Darwin yang ditemukan.');
-        return res.status(404).json({ error: 'Tidak ada file advisory Darwin yang ditemukan di server FTP.' });
+        const message = `Tidak ada file advisory Darwin yang ditemukan di direktori tahun ${currentYear}.`;
+        console.warn(`[Proxy VAAC-FTP] ${message}`);
+        // Kirim status 404 Not Found jika tidak ada file sama sekali
+        return res.status(404).json({ error: message });
     }
 
-    // Urutkan file berdasarkan tanggal modifikasi, dari yang terbaru ke terlama
-    darwinFiles.sort((a, b) => b.modifiedAt - a.modifiedAt);
+    // Urutkan file berdasarkan tanggal modifikasi (sudah benar)
+    darwinFiles.sort((a, b) => new Date(b.rawModifiedAt) - new Date(a.rawModifiedAt));
     
-    // File terbaru adalah yang pertama dalam daftar setelah diurutkan
     const latestFile = darwinFiles[0];
     console.log(`[Proxy VAAC-FTP] File terbaru ditemukan: ${latestFile.name}`);
-
-    // Siapkan stream untuk menampung data file yang diunduh
-    const writable = new Writable();
-    const chunks = [];
-    writable._write = (chunk, encoding, next) => {
-        chunks.push(chunk);
-        next();
-    };
     
-    // Unduh file ke stream
-    await client.downloadTo(writable, latestFile.name);
-    
-    const fullText = Buffer.concat(chunks).toString('utf-8');
+    const buffer = await client.downloadToBuffer(latestFile.name);
+    const fullText = buffer.toString("utf-8");
     
     const match = fullText.match(/ADVISORY NUMBER:\s*(\d{4}\/\d+)/);
     const advisoryNumber = match && match[1] ? match[1] : null;
@@ -85,10 +63,9 @@ export default async function handler(req, res) {
         console.warn('[Proxy VAAC-FTP] Konten file diunduh, tetapi nomor advisory tidak dapat di-parse.');
     }
 
-    // Set header cache
-    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');
+    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate'); // Cache 1 menit
 
-    console.log(`[Proxy VAAC-FTP] Berhasil mengambil dan mengirim data VAAC dari file: ${latestFile.name}`);
+    console.log(`[Proxy VAAC-FTP] Berhasil mengirim data VAAC dari file: ${latestFile.name}`);
     
     res.status(200).json({
       advisoryNumber: advisoryNumber,
@@ -97,15 +74,21 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('[Proxy VAAC-FTP] Kesalahan internal pada proxy function:', error);
+    // Cek jika errornya adalah "No such file or directory"
+    if (error.code === 550) {
+        return res.status(404).json({
+            error: `Direktori tahunan tidak ditemukan di server FTP. Mungkin belum ada advisory tahun ini.`,
+            details: error.message
+        });
+    }
     res.status(500).json({
       error: 'Terjadi kesalahan internal pada server proxy FTP.',
       details: error.message
     });
   } finally {
-    // Pastikan koneksi FTP selalu ditutup, bahkan jika terjadi error
     if (!client.closed) {
       console.log('[Proxy VAAC-FTP] Menutup koneksi FTP.');
       client.close();
     }
   }
-}
+};
