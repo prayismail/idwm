@@ -1,7 +1,9 @@
 // File: api/check-vaac.js
-// VERSI FINAL dengan perbaikan filter nama file
+// VERSI FINAL dengan perbaikan metode download file
 
 const ftp = require('basic-ftp');
+// Kita memerlukan 'Writable' dari 'stream' untuk menampung data
+const { Writable } = require('stream');
 
 module.exports = async (req, res) => {
   if (req.method !== 'GET') {
@@ -10,27 +12,21 @@ module.exports = async (req, res) => {
   }
 
   const client = new ftp.Client(30000);
-  // client.ftp.verbose = true; // Uncomment untuk debugging
 
   try {
     console.log('[Proxy VAAC-FTP] Menerima permintaan...');
     
-    await client.access({
-      host: "ftp.bom.gov.au"
-    });
+    await client.access({ host: "ftp.bom.gov.au" });
     console.log('[Proxy VAAC-FTP] Berhasil terhubung ke server FTP.');
 
     const currentYear = new Date().getFullYear();
     const directoryPath = `/anon/gen/vaac/${currentYear}`;
-    console.log(`[Proxy VAAC-FTP] Mencoba masuk ke direktori: ${directoryPath}`);
-
+    
     await client.cd(directoryPath);
     console.log(`[Proxy VAAC-FTP] Berhasil masuk ke direktori ${currentYear}.`);
 
     const list = await client.list();
 
-    // --- PERUBAHAN DI SINI ---
-    // Mengubah filter dari 'IDD' menjadi 'IDY' sesuai dengan nama file sebenarnya
     const darwinFiles = list.filter(item => 
         item.name.startsWith('IDY') && 
         item.name.endsWith('.txt') &&
@@ -48,8 +44,21 @@ module.exports = async (req, res) => {
     const latestFile = darwinFiles[0];
     console.log(`[Proxy VAAC-FTP] File terbaru ditemukan: ${latestFile.name}`);
     
-    const buffer = await client.downloadToBuffer(latestFile.name);
-    const fullText = buffer.toString("utf-8");
+    // --- PERBAIKAN KUNCI DI SINI ---
+    // 1. Buat 'penampung data' (Writable stream)
+    const writable = new Writable();
+    const chunks = [];
+    writable._write = (chunk, encoding, next) => {
+        chunks.push(chunk);
+        next();
+    };
+
+    // 2. Gunakan metode downloadTo() yang benar untuk mengunduh ke penampung
+    await client.downloadTo(writable, latestFile.name);
+    
+    // 3. Gabungkan semua potongan data dan ubah menjadi teks
+    const fullText = Buffer.concat(chunks).toString('utf-8');
+    // --- AKHIR PERBAIKAN ---
     
     const match = fullText.match(/ADVISORY NUMBER:\s*(\d{4}\/\d+)/);
     const advisoryNumber = match && match[1] ? match[1] : null;
