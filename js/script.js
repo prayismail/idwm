@@ -1448,29 +1448,34 @@ function checkVAAdvisory() {
         });
 }
 
-// Event listener untuk mengontrol pengecekan
-    // Event listener untuk mengontrol pengecekan
-    map.on('overlayadd', function(e) {
-        // --- TAMBAHAN DEBUG ---
-        // Baris ini akan memberitahu kita setiap kali ADA layer APAPUN yang dicentang.
-        console.log("Event overlayadd terdeteksi. Nama layer:", e.name, "Objek layer:", e.layer);
+// === KODE YANG TELAH DIPERBAIKI ===
 
-        // Kondisi utama kita
-        if (e.layer === vaAdvisoryLayer) {
-            console.log('Kondisi `e.layer === vaAdvisoryLayer` TERPENUHI. Menampilkan panel debug.');
-            if (debugStatusElement) debugStatusElement.classList.add('visible'); // Tampilkan panel debug
-            updateDebugStatus('VA Advisory Notifier Aktif. Menunggu pengecekan pertama...');
+// Event listener untuk mengontrol pengecekan (KONDISI IF DIPERBAIKI)
+map.on('overlayadd', function(e) {
+    // --- DEBUGGING: Boleh Anda hapus atau biarkan untuk referensi ---
+    console.log("Event overlayadd terdeteksi. Nama layer:", e.name);
 
-            checkVAAdvisory(); // Pengecekan pertama
-            // UBAH INTERVAL MENJADI 1 MENIT (60000 ms)
-            vaAdvisoryCheckerInterval = setInterval(checkVAAdvisory, 60000);
-        }
-    });
+    // GANTI KONDISI DI SINI: dari e.layer === vaAdvisoryLayer menjadi e.name === 'VA Advisory'
+    if (e.name === 'VA Advisory') {
+        console.log("Kondisi `e.name === 'VA Advisory'` TERPENUHI. Menampilkan panel debug.");
+        
+        if (debugStatusElement) debugStatusElement.classList.add('visible');
+        updateDebugStatus('VA Advisory Notifier Aktif. Menunggu pengecekan pertama...');
+
+        checkVAAdvisory();
+        vaAdvisoryCheckerInterval = setInterval(checkVAAdvisory, 60000);
+    }
+});
 
 map.on('overlayremove', function(e) {
-    if (e.layer === vaAdvisoryLayer) {
-        console.log('Layer VA Advisory dinonaktifkan. Menghentikan pengecekan.');
-        if (debugStatusElement) debugStatusElement.classList.remove('visible'); // Sembunyikan panel debug
+    // --- DEBUGGING: Boleh Anda hapus atau biarkan untuk referensi ---
+    console.log("Event overlayremove terdeteksi. Nama layer:", e.name);
+
+    // GANTI KONDISI DI SINI JUGA UNTUK KONSISTENSI
+    if (e.name === 'VA Advisory') {
+        console.log("Kondisi `e.name === 'VA Advisory'` TERPENUHI. Menyembunyikan panel debug.");
+        
+        if (debugStatusElement) debugStatusElement.classList.remove('visible');
 
         clearInterval(vaAdvisoryCheckerInterval);
         vaAdvisoryCheckerInterval = null;
