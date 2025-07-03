@@ -1,0 +1,13 @@
+{
+  "name": "idwm-proxy-functions",
+  "version": "1.0.0",
+  "description": "Serverless functions for the IDWM project to handle CORS and data fetching.",
+  "private": true,
+  "author": "Prayoga Ismail",
+  "scripts": {
+    "start": "echo 'No start script needed for Vercel functions'"
+  },
+  "dependencies": {
+    "basic-ftp": "^5.0.5"
+  }
+}
