@@ -1,9 +1,7 @@
 // File: api/check-vaac.js
-// VERSI FINAL dengan perbaikan metode download file
+// VERSI FINAL dengan perbaikan pada logika pengurutan tanggal
 
 const ftp = require('basic-ftp');
-// Kita memerlukan 'Writable' dari 'stream' untuk menampung data
-const { Writable } = require('stream');
 
 module.exports = async (req, res) => {
   if (req.method !== 'GET') {
@@ -16,14 +14,13 @@ module.exports = async (req, res) => {
   try {
     console.log('[Proxy VAAC-FTP] Menerima permintaan...');
     
-    await client.access({ host: "ftp.bom.gov.au" });
-    console.log('[Proxy VAAC-FTP] Berhasil terhubung ke server FTP.');
+    await client.access({
+      host: "ftp.bom.gov.au"
+    });
 
     const currentYear = new Date().getFullYear();
     const directoryPath = `/anon/gen/vaac/${currentYear}`;
-    
     await client.cd(directoryPath);
-    console.log(`[Proxy VAAC-FTP] Berhasil masuk ke direktori ${currentYear}.`);
 
     const list = await client.list();
 
@@ -39,26 +36,16 @@ module.exports = async (req, res) => {
         return res.status(404).json({ error: message });
     }
 
-    darwinFiles.sort((a, b) => new Date(b.rawModifiedAt) - new Date(a.rawModifiedAt));
+    // --- PERUBAHAN UTAMA DI SINI ---
+    // Menggunakan properti `modifiedAt` (objek Date) bukan `rawModifiedAt` (string)
+    // Ini jauh lebih aman dan andal untuk pengurutan.
+    darwinFiles.sort((a, b) => b.modifiedAt - a.modifiedAt);
     
     const latestFile = darwinFiles[0];
     console.log(`[Proxy VAAC-FTP] File terbaru ditemukan: ${latestFile.name}`);
     
-    // --- PERBAIKAN KUNCI DI SINI ---
-    // 1. Buat 'penampung data' (Writable stream)
-    const writable = new Writable();
-    const chunks = [];
-    writable._write = (chunk, encoding, next) => {
-        chunks.push(chunk);
-        next();
-    };
-
-    // 2. Gunakan metode downloadTo() yang benar untuk mengunduh ke penampung
-    await client.downloadTo(writable, latestFile.name);
-    
-    // 3. Gabungkan semua potongan data dan ubah menjadi teks
-    const fullText = Buffer.concat(chunks).toString('utf-8');
-    // --- AKHIR PERBAIKAN ---
+    const buffer = await client.downloadToBuffer(latestFile.name);
+    const fullText = buffer.toString("utf-8");
     
     const match = fullText.match(/ADVISORY NUMBER:\s*(\d{4}\/\d+)/);
     const advisoryNumber = match && match[1] ? match[1] : null;
@@ -68,8 +55,6 @@ module.exports = async (req, res) => {
     }
 
     res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate');
-
-    console.log(`[Proxy VAAC-FTP] Berhasil mengirim data VAAC dari file: ${latestFile.name}`);
     
     res.status(200).json({
       advisoryNumber: advisoryNumber,
@@ -78,19 +63,12 @@ module.exports = async (req, res) => {
 
   } catch (error) {
     console.error('[Proxy VAAC-FTP] Kesalahan internal pada proxy function:', error);
-    if (error.code === 550) {
-        return res.status(404).json({
-            error: `Direktori tahunan tidak ditemukan di server FTP. Mungkin belum ada advisory tahun ini.`,
-            details: error.message
-        });
-    }
     res.status(500).json({
       error: 'Terjadi kesalahan internal pada server proxy FTP.',
       details: error.message
     });
   } finally {
     if (!client.closed) {
-      console.log('[Proxy VAAC-FTP] Menutup koneksi FTP.');
       client.close();
     }
   }
