@@ -1138,7 +1138,7 @@ function showAWOS(code) {
                 default: return "purple";
             }
         }
-
+var vaAdvisoryLayer = L.layerGroup();
         var baseMaps = {
             "Peta OSM": osmLayer,
             "Peta Esri Imagery": esriImagery,
@@ -1155,7 +1155,8 @@ function showAWOS(code) {
 	    "Sebaran hujan (OWM)": precipitationLayer,
             "Radar Cuaca": radarLayer,
             "Cuaca Bandara": airportLayer,
-	    "Tropical Waves": TropicalLayer
+	    "Tropical Waves": TropicalLayer,
+	     "VA Advisory": vaAdvisoryLayer
         };
         setTimeout(() => {
             let layerControl = document.querySelector('.leaflet-control-layers');
