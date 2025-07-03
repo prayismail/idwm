@@ -1393,6 +1393,18 @@ function showVANotification(advisoryNumber, fullText) {
         notificationDiv.classList.remove('show');
     }, 15000);
 }
+function showStatusToast(message) {
+    const toastElement = document.getElementById('status-toast');
+    if (!toastElement) return;
+
+    toastElement.textContent = message;
+    toastElement.classList.add('show');
+
+    // Sembunyikan toast setelah 4 detik
+    setTimeout(() => {
+        toastElement.classList.remove('show');
+    }, 4000);
+}
 
 function checkVAAdvisory() {
     console.log("Memeriksa VA Advisory via Vercel Serverless Function (sumber: FTP)...");
@@ -1435,6 +1447,8 @@ function checkVAAdvisory() {
                     console.log(logMsg);
                     // Ini adalah debug visual yang Anda minta
                     updateDebugStatus(logMsg);
+		// PANGGIL TOAST DI SINI
+                    showStatusToast('✔️ Status VAA OK. Tidak ada pembaruan.'); 
                 }
             } else {
                 const errorMsg = 'API OK, tapi no. advisory tidak ditemukan.';
