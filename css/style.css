@@ -85,7 +85,7 @@
     border-radius: 5px;
     font-family: monospace;
     font-size: 11px;
-    z-index: 9999;
+    z-index: 20001;
     opacity: 0; /* Awalnya transparan */
     transition: opacity 0.5s ease-in-out;
     pointer-events: none; /* Agar tidak bisa diklik */
