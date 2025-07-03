@@ -62,8 +62,7 @@ module.exports = async (req, res) => {
     // Gabungkan semua potongan data dan ubah menjadi teks
     const fullText = Buffer.concat(chunks).toString('utf-8');
     // --- AKHIR PERBAIKAN ---
-    
-    const match = fullText.match(/ADVISORY NUMBER:\s*(\d{4}\/\d+)/);
+    const match = fullText.match(/ADVISORY\s+NR:\s*(\d{4}\/\d+)/i);
     const advisoryNumber = match && match[1] ? match[1] : null;
 
     if (!advisoryNumber) {
