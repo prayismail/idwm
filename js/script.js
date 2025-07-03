@@ -1344,116 +1344,133 @@ let searchMarker;
         map.setView([latitude, longitude], 13);
         document.getElementById("searchBox").style.display = "none";
     }
-    // === FITUR NOTIFIKASI VOLCANIC ASH ADVISORY (V5.0 - FINAL DENGAN SUMBER FTP) ===
-    
-    // 1. Deklarasikan layer saklar
-    var vaAdvisoryLayer = L.layerGroup(); 
-    
-    // 2. Tambahkan ke kontrol layer (modifikasi objek overlayMaps Anda)
-    // Cari var overlayMaps = { ... }; dan pastikan baris ini ada di dalamnya:
-    // "VA Advisory": vaAdvisoryLayer 
-    // Contoh lengkap:
-    /*
-    var overlayMaps = {
-        // ...layer-layer Anda yang lain...
-        "VA Advisory": vaAdvisoryLayer
-    };
-    */
+    // === FITUR NOTIFIKASI VOLCANIC ASH ADVISORY (V5.1 - DENGAN DEBUG VISUAL) ===
 
-    // 3. Logika utama fitur notifikasi
-    let vaAdvisoryCheckerInterval = null;
-    let lastAdvisoryNumber = null;
-    let isFirstCheck = true;
+// 1. Deklarasikan layer saklar
+var vaAdvisoryLayer = L.layerGroup();
 
-    // Panggil API lokal kita yang ada di Vercel. Inilah satu-satunya endpoint yang kita butuhkan.
-    const vaacApiUrl = '/api/check-vaac';
+// [PASTIKAN ANDA SUDAH MENAMBAHKAN LAYER INI KE `overlayMaps`]
+// "VA Advisory": vaAdvisoryLayer
 
-    function showVANotification(advisoryNumber, fullText) {
-        const notificationDiv = document.getElementById('va-notification');
-        const contentDiv = document.getElementById('va-notification-content');
-        // Link ke halaman web, bukan FTP, agar mudah dibaca pengguna
-        const originalVaacUrl = 'http://www.bom.gov.au/aviation/volcanic-ash/darwin-va-advisory.shtml';
+// 2. Logika utama fitur notifikasi
+let vaAdvisoryCheckerInterval = null;
+let lastAdvisoryNumber = null;
+let isFirstCheck = true;
+const vaacApiUrl = '/api/check-vaac';
 
-        console.log(`VA Advisory Baru Terdeteksi: ${advisoryNumber}`);
+// Ambil elemen debug dari DOM
+const debugStatusElement = document.getElementById('va-debug-status');
 
-        // Ambil beberapa baris pertama dari teks untuk preview
-        const previewText = fullText.split('\n').slice(0, 5).join('<br>');
-
-        contentDiv.innerHTML = `
-            <strong>🚨 Peringatan VA Advisory Baru! 🚨</strong><br>
-            Nomor Advisory: <strong>${advisoryNumber}</strong> telah diterbitkan oleh Darwin VAAC.<br>
-            <hr style="margin: 5px 0; border-color: #33333355;">
-            <p style="font-family: monospace; font-size: 11px; margin: 5px 0;">${previewText}...</p>
-            <a href="${originalVaacUrl}" target="_blank">Lihat Advisory Lengkap di Situs Web Darwin VAAC</a>
-        `;
-
-        notificationDiv.classList.add('show');
-
-        // Sembunyikan notifikasi setelah 15 detik
-        setTimeout(() => {
-            notificationDiv.classList.remove('show');
-        }, 15000);
+// Fungsi untuk update panel debug
+function updateDebugStatus(message, isError = false) {
+    if (debugStatusElement) {
+        debugStatusElement.textContent = message;
+        debugStatusElement.style.color = isError ? '#ff6b6b' : '#a7ff83'; // Merah jika error, hijau jika OK
     }
+}
 
-    function checkVAAdvisory() {
-        console.log("Memeriksa VA Advisory via Vercel Serverless Function (sumber: FTP)...");
-        fetch(vaacApiUrl)
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(err => {
-                        throw new Error(`API Function Error: ${err.error || response.statusText}`);
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (!data || data.error) {
-                    console.error('Error dari API Function:', data ? data.error : 'No data returned');
+function showVANotification(advisoryNumber, fullText) {
+    const notificationDiv = document.getElementById('va-notification');
+    const contentDiv = document.getElementById('va-notification-content');
+    const originalVaacUrl = 'http://www.bom.gov.au/aviation/volcanic-ash/darwin-va-advisory.shtml';
+
+    console.log(`VA Advisory Baru Terdeteksi: ${advisoryNumber}`);
+    updateDebugStatus(`BARU: Advisory #${advisoryNumber} terdeteksi!`);
+
+    const previewText = fullText.split('\n').slice(0, 5).join('<br>');
+
+    contentDiv.innerHTML = `
+        <strong>🚨 Peringatan VA Advisory Baru! 🚨</strong><br>
+        Nomor Advisory: <strong>${advisoryNumber}</strong> telah diterbitkan oleh Darwin VAAC.<br>
+        <hr style="margin: 5px 0; border-color: #33333355;">
+        <p style="font-family: monospace; font-size: 11px; margin: 5px 0;">${previewText}...</p>
+        <a href="${originalVaacUrl}" target="_blank">Lihat Advisory Lengkap di Situs Web Darwin VAAC</a>
+    `;
+
+    notificationDiv.classList.add('show');
+
+    setTimeout(() => {
+        notificationDiv.classList.remove('show');
+    }, 15000);
+}
+
+function checkVAAdvisory() {
+    console.log("Memeriksa VA Advisory via Vercel Serverless Function (sumber: FTP)...");
+    updateDebugStatus('Memeriksa VAAC FTP...');
+
+    fetch(vaacApiUrl)
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(`API Function Error: ${err.error || response.statusText}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (!data || data.error) {
+                const errorMsg = data ? data.error : 'No data returned';
+                console.error('Error dari API Function:', errorMsg);
+                updateDebugStatus(`Error: ${errorMsg}`, true);
+                return;
+            }
+
+            const currentAdvisoryNumber = data.advisoryNumber;
+
+            if (currentAdvisoryNumber) {
+                if (isFirstCheck) {
+                    lastAdvisoryNumber = currentAdvisoryNumber;
+                    isFirstCheck = false;
+                    const logMsg = `Pengecekan awal OK. Advisory saat ini: #${lastAdvisoryNumber}`;
+                    console.log(logMsg);
+                    updateDebugStatus(logMsg);
                     return;
                 }
-                
-                const currentAdvisoryNumber = data.advisoryNumber;
 
-                if (currentAdvisoryNumber) {
-                    if (isFirstCheck) {
-                        lastAdvisoryNumber = currentAdvisoryNumber;
-                        isFirstCheck = false;
-                        console.log(`Pengecekan awal VA Advisory berhasil. Nomor saat ini: ${lastAdvisoryNumber}`);
-                        return;
-                    }
-
-                    if (currentAdvisoryNumber !== lastAdvisoryNumber) {
-                        lastAdvisoryNumber = currentAdvisoryNumber;
-                        showVANotification(currentAdvisoryNumber, data.fullText);
-                    } else {
-                        console.log(`Tidak ada VA Advisory baru. Nomor masih sama: ${lastAdvisoryNumber}`);
-                    }
+                if (currentAdvisoryNumber !== lastAdvisoryNumber) {
+                    lastAdvisoryNumber = currentAdvisoryNumber;
+                    showVANotification(currentAdvisoryNumber, data.fullText);
                 } else {
-                    console.error('API Function berhasil dijalankan, tetapi tidak dapat menemukan nomor advisory.');
+                    const logMsg = `Status OK. Tidak ada advisory baru. Masih di #${lastAdvisoryNumber}`;
+                    console.log(logMsg);
+                    // Ini adalah debug visual yang Anda minta
+                    updateDebugStatus(logMsg);
                 }
-            })
-            .catch(error => {
-                console.error('Gagal total saat menghubungi Vercel API Function:', error);
-            });
+            } else {
+                const errorMsg = 'API OK, tapi no. advisory tidak ditemukan.';
+                console.error(errorMsg);
+                updateDebugStatus(errorMsg, true);
+            }
+        })
+        .catch(error => {
+            console.error('Gagal total saat menghubungi Vercel API Function:', error);
+            updateDebugStatus(`Gagal fetch: ${error.message}`, true);
+        });
+}
+
+// Event listener untuk mengontrol pengecekan
+map.on('overlayadd', function(e) {
+    if (e.layer === vaAdvisoryLayer) {
+        console.log('Layer VA Advisory diaktifkan. Memulai pengecekan setiap 1 menit.');
+        if (debugStatusElement) debugStatusElement.classList.add('visible'); // Tampilkan panel debug
+        updateDebugStatus('VA Advisory Notifier Aktif. Menunggu pengecekan pertama...');
+
+        checkVAAdvisory(); // Pengecekan pertama
+        // UBAH INTERVAL MENJADI 1 MENIT (60000 ms)
+        vaAdvisoryCheckerInterval = setInterval(checkVAAdvisory, 60000);
     }
+});
 
-    // Event listener untuk mengontrol pengecekan (tidak perlu diubah)
-    map.on('overlayadd', function(e) {
-        if (e.layer === vaAdvisoryLayer) {
-            console.log('Layer VA Advisory diaktifkan. Memulai pengecekan.');
-            checkVAAdvisory(); // Pengecekan pertama
-            vaAdvisoryCheckerInterval = setInterval(checkVAAdvisory, 300000); // Setiap 5 menit
-        }
-    });
+map.on('overlayremove', function(e) {
+    if (e.layer === vaAdvisoryLayer) {
+        console.log('Layer VA Advisory dinonaktifkan. Menghentikan pengecekan.');
+        if (debugStatusElement) debugStatusElement.classList.remove('visible'); // Sembunyikan panel debug
 
-    map.on('overlayremove', function(e) {
-        if (e.layer === vaAdvisoryLayer) {
-            console.log('Layer VA Advisory dinonaktifkan. Menghentikan pengecekan.');
-            clearInterval(vaAdvisoryCheckerInterval);
-            vaAdvisoryCheckerInterval = null;
-            lastAdvisoryNumber = null;
-            isFirstCheck = true;
-        }
-    });
+        clearInterval(vaAdvisoryCheckerInterval);
+        vaAdvisoryCheckerInterval = null;
+        lastAdvisoryNumber = null;
+        isFirstCheck = true;
+    }
+});
 
-    // === AKHIR FITUR NOTIFIKASI VOLCANIC ASH ADVISORY (V5.0) ===
+// === AKHIR FITUR NOTIFIKASI VOLCANIC ASH ADVISORY (V5.1) ===
