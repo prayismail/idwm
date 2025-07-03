@@ -1,5 +1,5 @@
 // File: api/check-vaac.js
-// VERSI FINAL dengan direktori tahun dinamis
+// VERSI FINAL dengan perbaikan filter nama file
 
 const ftp = require('basic-ftp');
 
@@ -20,34 +20,29 @@ module.exports = async (req, res) => {
     });
     console.log('[Proxy VAAC-FTP] Berhasil terhubung ke server FTP.');
 
-    // --- PERUBAHAN KUNCI DI SINI ---
-    // 1. Dapatkan tahun saat ini secara dinamis
     const currentYear = new Date().getFullYear();
-    
-    // 2. Bentuk path direktori yang lengkap
     const directoryPath = `/anon/gen/vaac/${currentYear}`;
     console.log(`[Proxy VAAC-FTP] Mencoba masuk ke direktori: ${directoryPath}`);
 
-    // 3. Pindah ke direktori tahunan tersebut
     await client.cd(directoryPath);
     console.log(`[Proxy VAAC-FTP] Berhasil masuk ke direktori ${currentYear}.`);
 
     const list = await client.list();
 
+    // --- PERUBAHAN DI SINI ---
+    // Mengubah filter dari 'IDD' menjadi 'IDY' sesuai dengan nama file sebenarnya
     const darwinFiles = list.filter(item => 
-        item.name.startsWith('IDD') && 
+        item.name.startsWith('IDY') && 
         item.name.endsWith('.txt') &&
         item.type === ftp.FileType.File
     );
 
     if (darwinFiles.length === 0) {
-        const message = `Tidak ada file advisory Darwin yang ditemukan di direktori tahun ${currentYear}.`;
+        const message = `Tidak ada file advisory Darwin (IDY*.txt) yang ditemukan di direktori tahun ${currentYear}.`;
         console.warn(`[Proxy VAAC-FTP] ${message}`);
-        // Kirim status 404 Not Found jika tidak ada file sama sekali
         return res.status(404).json({ error: message });
     }
 
-    // Urutkan file berdasarkan tanggal modifikasi (sudah benar)
     darwinFiles.sort((a, b) => new Date(b.rawModifiedAt) - new Date(a.rawModifiedAt));
     
     const latestFile = darwinFiles[0];
@@ -63,7 +58,7 @@ module.exports = async (req, res) => {
         console.warn('[Proxy VAAC-FTP] Konten file diunduh, tetapi nomor advisory tidak dapat di-parse.');
     }
 
-    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate'); // Cache 1 menit
+    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate');
 
     console.log(`[Proxy VAAC-FTP] Berhasil mengirim data VAAC dari file: ${latestFile.name}`);
     
@@ -74,7 +69,6 @@ module.exports = async (req, res) => {
 
   } catch (error) {
     console.error('[Proxy VAAC-FTP] Kesalahan internal pada proxy function:', error);
-    // Cek jika errornya adalah "No such file or directory"
     if (error.code === 550) {
         return res.status(404).json({
             error: `Direktori tahunan tidak ditemukan di server FTP. Mungkin belum ada advisory tahun ini.`,
