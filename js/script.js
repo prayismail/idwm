@@ -1449,17 +1449,23 @@ function checkVAAdvisory() {
 }
 
 // Event listener untuk mengontrol pengecekan
-map.on('overlayadd', function(e) {
-    if (e.layer === vaAdvisoryLayer) {
-        console.log('Layer VA Advisory diaktifkan. Memulai pengecekan setiap 1 menit.');
-        if (debugStatusElement) debugStatusElement.classList.add('visible'); // Tampilkan panel debug
-        updateDebugStatus('VA Advisory Notifier Aktif. Menunggu pengecekan pertama...');
+    // Event listener untuk mengontrol pengecekan
+    map.on('overlayadd', function(e) {
+        // --- TAMBAHAN DEBUG ---
+        // Baris ini akan memberitahu kita setiap kali ADA layer APAPUN yang dicentang.
+        console.log("Event overlayadd terdeteksi. Nama layer:", e.name, "Objek layer:", e.layer);
 
-        checkVAAdvisory(); // Pengecekan pertama
-        // UBAH INTERVAL MENJADI 1 MENIT (60000 ms)
-        vaAdvisoryCheckerInterval = setInterval(checkVAAdvisory, 60000);
-    }
-});
+        // Kondisi utama kita
+        if (e.layer === vaAdvisoryLayer) {
+            console.log('Kondisi `e.layer === vaAdvisoryLayer` TERPENUHI. Menampilkan panel debug.');
+            if (debugStatusElement) debugStatusElement.classList.add('visible'); // Tampilkan panel debug
+            updateDebugStatus('VA Advisory Notifier Aktif. Menunggu pengecekan pertama...');
+
+            checkVAAdvisory(); // Pengecekan pertama
+            // UBAH INTERVAL MENJADI 1 MENIT (60000 ms)
+            vaAdvisoryCheckerInterval = setInterval(checkVAAdvisory, 60000);
+        }
+    });
 
 map.on('overlayremove', function(e) {
     if (e.layer === vaAdvisoryLayer) {
