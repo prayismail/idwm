@@ -194,22 +194,27 @@
             <button class="awos-close" onclick="toggleAWOS(false)">✖</button>
             <iframe id="awosIframe"></iframe>
         </div>    
-	<!-- Overlay untuk Pop-up Peringatan VAA -->
+	
 <div id="vaa-popup-overlay">
     <div id="vaa-popup-content">
-        <h3 id="vaa-popup-title">📄 VA Advisory Terkini</h3>
-        <pre id="vaa-text-display"></pre>
+        <h3>🚨 Peringatan VA Advisory Baru! 🚨</h3>
+        <p>Volcano Ash Advisory Center (VAAC) Darwin telah menerbitkan informasi baru.</p>
+        
+        <!-- Area untuk menampilkan teks advisory -->
+        <pre id="vaa-text-display">Memuat teks advisory...</pre>
+
+        <!-- Kontainer untuk tombol-tombol -->
         <div id="vaa-popup-buttons">
-            <button id="vaa-download-txt" class="button" style="background-color: #007bff;">Unduh (.txt)</button>
-            <button id="vaa-download-png" class="button" style="background-color: #28a745;">Unduh (.png)</button>
-            <button id="vaa-close-popup" class="button" style="background-color: #dc3545;">Tutup</button>
+            <button id="vaa-download-txt">Unduh (.txt)</button>
+            <button id="vaa-download-png" style="display:none;">Unduh Gambar (.png)</button>
+            <button id="vaa-close-popup" style="background-color: #dc3545;">TUTUP</button>
         </div>
     </div>
 </div>
-	    <div id="va-debug-status"></div>
-	    <div id="status-toast"></div>
-	    <audio id="vaa-alert-sound" loop>
-    <source src="https://www.soundjay.com/buttons/sounds/beep-07a.mp3" type="audio/mpeg">
+
+<!-- Elemen Audio untuk Suara Alarm (disembunyikan) -->
+<audio id="vaa-alert-sound" preload="auto" hidden>
+    <source src="https://www.soundjay.com/buttons/sounds/beep-01a.mp3" type="audio/mpeg">
     Browser Anda tidak mendukung elemen audio.
 </audio>
       <script src="js/script.js"></script> <!-- Panggil JavaScript -->                           
