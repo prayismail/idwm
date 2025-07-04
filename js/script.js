@@ -1344,30 +1344,26 @@ let searchMarker;
         map.setView([latitude, longitude], 13);
         document.getElementById("searchBox").style.display = "none";
     }
-  // === FITUR NOTIFIKASI VAA OTOMATIS (V9.0 - UI Disempurnakan) ===
+// =======================================================================
+// === FITUR NOTIFIKASI VA ADVISORY DENGAN INTEGRASI PETA (VERSI BARU) ===
+// =======================================================================
 
 // --- Deklarasi Variabel Global untuk Fitur VAA ---
-var vaAdvisoryLayer = L.layerGroup();
+var vaAdvisoryLayer = L.layerGroup(); // Layer untuk menampung marker & popup
 let vaaCheckerInterval = null;
-let lastAdvisoryData = null; // Menyimpan seluruh data, bukan hanya nomor
+let lastAdvisoryData = null;
 let isFirstCheck = true;
 const vaacApiUrl = '/api/check-vaac';
 const debugStatusElement = document.getElementById('va-debug-status');
 
-// --- Fungsi Utama untuk Mengambil Data VAA dari API ---
+// --- Helper Function untuk Mengambil Data VAA dari API (Tetap Sama) ---
 async function fetchLatestVAA() {
     updateDebugStatus('Mengambil data VAA...');
     try {
-        // Gunakan cache-busting untuk memastikan data selalu baru
         const response = await fetch(`${vaacApiUrl}?t=${new Date().getTime()}`);
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({ error: 'Respons bukan JSON' }));
-            throw new Error(`API Error: ${err.error || response.statusText}`);
-        }
+        if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
         const data = await response.json();
-        if (!data || data.error) {
-            throw new Error(data ? data.error : 'Data VAA tidak valid');
-        }
+        if (!data || data.error) throw new Error(data ? data.error : 'Data VAA tidak valid');
         return data;
     } catch (error) {
         console.error('[fetchLatestVAA] Gagal mengambil data:', error);
@@ -1376,90 +1372,106 @@ async function fetchLatestVAA() {
     }
 }
 
-// --- Fungsi untuk Menampilkan dan Mengontrol Pop-up (VERSI DENGAN ALARM LOOPING) ---
-function showVAAPopup(vaaData) {
-    // Ambil semua elemen dari DOM
-    const overlay = document.getElementById('vaa-popup-overlay');
-    const textDisplay = document.getElementById('vaa-text-display');
-    const closeBtn = document.getElementById('vaa-close-popup');
-    const downloadTxtBtn = document.getElementById('vaa-download-txt');
-    const downloadPngBtn = document.getElementById('vaa-download-png');
-    const alertSound = document.getElementById('vaa-alert-sound');
-    const popupTitle = overlay.querySelector('h3');
+/**
+ * FUNGSI BARU: Mengurai teks VAA untuk info peta.
+ * @param {string} vaaFullText - Konten teks lengkap dari VA Advisory.
+ * @returns {object|null} Objek berisi { volcanoName, lat, lon } atau null jika gagal.
+ */
+function parseVaaForMapInfo(vaaFullText) {
+    try {
+        const volcanoMatch = vaaFullText.match(/VOLCANO: ([\w\s-]+?)\s+\d+/);
+        // Regex ini menangkap N/S, derajat, menit, E/W, derajat, menit
+        const psnMatch = vaaFullText.match(/PSN: (N|S)(\d{2})(\d{2}) (E|W)(\d{3})(\d{2})/);
 
-    // PENTING: Jika elemen pop-up tidak ada di HTML, hentikan fungsi.
-    if (!overlay || !textDisplay || !closeBtn || !popupTitle) {
-        console.error("KRUSIAL: Elemen HTML untuk pop-up VAA tidak ditemukan! Pop-up tidak bisa ditampilkan.");
-        alert("Developer alert: Elemen HTML untuk pop-up VAA tidak ditemukan. Periksa console untuk detail.");
+        if (!volcanoMatch || !psnMatch) {
+            console.error("Gagal mem-parsing nama atau posisi gunung dari VAA.");
+            return null;
+        }
+
+        const volcanoName = volcanoMatch[1].trim();
+        
+        // Konversi koordinat dari format N0142 E12754 ke desimal
+        const latDir = psnMatch[1];
+        const latDeg = parseInt(psnMatch[2]);
+        const latMin = parseInt(psnMatch[3]);
+        let lat = latDeg + (latMin / 60);
+        if (latDir === 'S') lat = -lat;
+
+        const lonDir = psnMatch[4];
+        const lonDeg = parseInt(psnMatch[5]);
+        const lonMin = parseInt(psnMatch[6]);
+        let lon = lonDeg + (lonMin / 60);
+        if (lonDir === 'W') lon = -lon;
+        
+        return { volcanoName, lat: lat.toFixed(4), lon: lon.toFixed(4) };
+    } catch (error) {
+        console.error("Error saat parsing VAA untuk info peta:", error);
+        return null;
+    }
+}
+
+
+/**
+ * FUNGSI UTAMA YANG DIUBAH: Menampilkan notifikasi di peta, bukan modal.
+ * @param {object} vaaData - Objek data lengkap dari API VAA.
+ */
+function showVaaNotificationOnMap(vaaData) {
+    // Langkah 1: Parse data untuk mendapatkan info lokasi
+    const mapInfo = parseVaaForMapInfo(vaaData.fullText);
+    if (!mapInfo) {
+        alert("Gagal memproses lokasi gunung dari VAA terbaru.");
         return;
     }
+    
+    // Langkah 2: Hapus notifikasi lama (jika ada) dan siapkan alarm
+    vaAdvisoryLayer.clearLayers();
+    const alertSound = document.getElementById('vaa-alert-sound');
 
-    // Isi konten pop-up dengan data baru
-    popupTitle.textContent = `🚨 Peringatan VA Advisory #${vaaData.advisoryNumber} 🚨`;
-    textDisplay.textContent = vaaData.fullText;
+    // Langkah 3: Buat ikon marker kustom yang berkedip
+    const volcanoIcon = L.divIcon({
+        className: 'blinking-volcano-marker',
+        iconSize: [24, 24],
+        iconAnchor: [12, 22] // Titik bawah segitiga
+    });
+
+    // Langkah 4: Buat marker di lokasi gunung
+    const volcanoMarker = L.marker([mapInfo.lat, mapInfo.lon], { icon: volcanoIcon });
+
+    // Langkah 5: Buat konten untuk pop-up
+    const popupContent = `
+        <b>🚨 VA Advisory Baru Terdeteksi! 🚨</b><br>
+        <b>Gunung:</b> ${mapInfo.volcanoName}<br>
+        <b>Posisi:</b> ${mapInfo.lat}, ${mapInfo.lon}<br>
+        <hr>
+        <i>Alarm akan berhenti jika pop-up ini ditutup.</i>
+    `;
     
-    // Tampilkan pop-up
-    overlay.style.display = 'flex';
-    
-    // Mainkan suara alarm (akan berulang karena ada atribut 'loop')
+    // Langkah 6: Ikat pop-up ke marker dan tambahkan ke layer
+    volcanoMarker.bindPopup(popupContent);
+    vaAdvisoryLayer.addLayer(volcanoMarker);
+    vaAdvisoryLayer.addTo(map);
+
+    // Langkah 7: Arahkan peta, buka pop-up, dan nyalakan alarm
+    map.panTo([mapInfo.lat, mapInfo.lon]);
+    volcanoMarker.openPopup();
     if (alertSound) {
-        alertSound.play().catch(e => {
-            console.warn("Autoplay suara diblokir oleh browser.", e);
-            popupTitle.style.animation = 'blinker 1s linear infinite';
-        });
+        alertSound.play().catch(e => console.warn("Autoplay suara diblokir.", e));
     }
-    
-    // --- KONTROL UNTUK TOMBOL TUTUP ---
-    // Fungsi ini akan dipanggil HANYA saat tombol TUTUP diklik
-    closeBtn.onclick = function() {
-        // 1. Hentikan suara dan reset ke awal
+
+    // Langkah 8: Atur apa yang terjadi saat pop-up ditutup
+    volcanoMarker.on('popupclose', function() {
+        console.log("Pop-up VAA ditutup oleh pengguna. Menghentikan alarm dan menghapus marker.");
         if (alertSound) {
             alertSound.pause();
             alertSound.currentTime = 0;
         }
-        
-        // 2. Sembunyikan pop-up
-        overlay.style.display = 'none';
-        
-        // 3. Hentikan animasi kedip (jika ada)
-        popupTitle.style.animation = '';
-        
-        console.log("Pop-up ditutup dan alarm dihentikan oleh pengguna.");
-    };
-    
-    // (Fungsionalitas tombol unduh Anda tetap sama di sini)
-    // ...
-    // Fungsionalitas Tombol Unduh Teks (.txt)
-    downloadTxtBtn.onclick = function() {
-        const blob = new Blob([vaaData.fullText], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `VAA_${vaaData.advisoryNumber}.txt`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    };
-
-    // Fungsionalitas Tombol Unduh Gambar (.png)
-    if (vaaData.imageUrl) {
-        downloadPngBtn.style.display = 'inline-block';
-        downloadPngBtn.onclick = function() {
-            const proxyUrl = `/api/fetch-image?url=${encodeURIComponent(vaaData.imageUrl)}`;
-            const a = document.createElement('a');
-            a.href = proxyUrl;
-            a.download = `VAA_MAP_${vaaData.advisoryNumber}.png`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        };
-    } else {
-        downloadPngBtn.style.display = 'none';
-    }
+        vaAdvisoryLayer.clearLayers(); // Hapus marker dari peta
+    });
 }
 
-// --- Fungsi Pengecek Utama yang Berjalan Periodik (VERSI DIPERBARUI) ---
+/**
+ * FUNGSI PENGECEK UTAMA (Disederhanakan)
+ */
 async function checkForNewVAA() {
     const data = await fetchLatestVAA();
 
@@ -1471,91 +1483,53 @@ async function checkForNewVAA() {
     if (isFirstCheck) {
         lastAdvisoryData = data;
         isFirstCheck = false;
-        const logMsg = `Pengecekan awal OK. Advisory saat ini: #${lastAdvisoryData.advisoryNumber}`;
-        console.log(logMsg);
-        updateDebugStatus(logMsg);
+        updateDebugStatus(`Pengecekan awal OK. Advisory saat ini: #${lastAdvisoryData.advisoryNumber}`);
         return;
     }
 
-    // --- LOGIKA UTAMA YANG DIUBAH ---
     if (data.advisoryNumber !== lastAdvisoryData.advisoryNumber) {
-        const logMsg = `BARU: Advisory #${data.advisoryNumber} terdeteksi! (Sebelumnya: #${lastAdvisoryData.advisoryNumber})`;
+        const logMsg = `BARU: Advisory #${data.advisoryNumber} terdeteksi!`;
         console.log(logMsg);
         updateDebugStatus(logMsg);
         
         lastAdvisoryData = data;
-
-        // Langkah 1: SEGERA panggil fungsi untuk menyalakan alarm dan menampilkan pop-up HTML.
-        // Kode ini akan berjalan DI BELAKANG layar dialog konfirmasi.
-        showVAAPopup(data);
-// Langkah 2: Mainkan suara. Karena ada 'loop' di HTML, ini akan berulang.
-        // Kita letakkan di sini untuk memastikan audio mulai SEBELUM dialog confirm.
-	const alertSound = document.getElementById('vaa-alert-sound');
-        if (alertSound) {
-            alertSound.play().catch(e => {
-                console.warn("Autoplay suara diblokir oleh browser.", e);
-                // Jika suara diblokir, setidaknya kita bisa menampilkan pop-up HTML
-            });
-        }
         
-        // Langkah 3: Tampilkan dialog konfirmasi. Audio akan terus berjalan di belakang.
-        const userAcknowledged = confirm(
-            '🚨 PERINGATAN VAA BARU! 🚨\n\n' +
-            `Advisory #${data.advisoryNumber} telah terdeteksi.\n\n` +
-            'Klik "OK" untuk MENGHENTIKAN ALARM.'
-        );
-
-        // Langkah 4: Jika pengguna mengklik "OK", hentikan alarm.
-        if (userAcknowledged) {
-            if (alertSound) {
-                alertSound.pause();
-                alertSound.currentTime = 0;
-            }
-        }
-        
+        // Panggil fungsi notifikasi di peta yang baru
+        showVaaNotificationOnMap(data);
     } else {
-        const logMsg = `Status OK. Masih di advisory #${lastAdvisoryData.advisoryNumber}`;
-        console.log(logMsg);
-        updateDebugStatus(logMsg);
+        updateDebugStatus(`Status OK. Masih di advisory #${lastAdvisoryData.advisoryNumber}`);
     }
 }
-        
-// --- Event Listeners untuk Mengaktifkan/Menonaktifkan Fitur ---
+
+// --- Event Listeners untuk Mengaktifkan/Menonaktifkan Fitur (Tetap Sama) ---
 document.addEventListener('DOMContentLoaded', function() {
-    // Saat layer "VA Advisory" ditambahkan ke peta
     map.on('overlayadd', function(e) {
         if (e.name === 'VA Advisory') {
             if (debugStatusElement) debugStatusElement.classList.add('visible');
             updateDebugStatus('VA Advisory Notifier Aktif...');
-            
-            isFirstCheck = true; // Reset status setiap kali diaktifkan
-            checkForNewVAA(); // Lakukan pengecekan pertama segera
-            
-            // Mulai pengecekan rutin setiap 60 detik
+            isFirstCheck = true;
+            checkForNewVAA();
             if (vaaCheckerInterval) clearInterval(vaaCheckerInterval);
             vaaCheckerInterval = setInterval(checkForNewVAA, 60000);
         }
     });
 
-    // Saat layer "VA Advisory" dihapus dari peta
     map.on('overlayremove', function(e) {
         if (e.name === 'VA Advisory') {
             if (debugStatusElement) debugStatusElement.classList.remove('visible');
-            
-            // Hentikan pengecekan rutin
             clearInterval(vaaCheckerInterval);
             vaaCheckerInterval = null;
+            vaAdvisoryLayer.clearLayers(); // Bersihkan marker jika layer dinonaktifkan
             console.log("VA Advisory Notifier Dinonaktifkan.");
         }
     });
 });
 
-// --- Helper Function untuk Update Status Debug di UI ---
+// --- Helper Function untuk Update Status Debug di UI (Tetap Sama) ---
 function updateDebugStatus(message, isError = false) {
     if (debugStatusElement) {
         debugStatusElement.textContent = message;
         debugStatusElement.style.color = isError ? '#ff6b6b' : '#a7ff83';
     }
 }
-
-// --- AKHIR KODE VAA ---
+// ========================= AKHIR KODE VAA =========================
