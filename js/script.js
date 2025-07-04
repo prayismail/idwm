@@ -1468,36 +1468,44 @@ function showVaaNotificationOnMap(vaaData) {
         vaAdvisoryLayer.clearLayers(); // Hapus marker dari peta
     });
 }
-
 /**
- * FUNGSI PENGECEK UTAMA (Disederhanakan)
+ * FUNGSI PENGECEK UTAMA (DIPERBARUI DENGAN LOGGING LENGKAP)
  */
 async function checkForNewVAA() {
     const data = await fetchLatestVAA();
 
     if (!data || !data.advisoryNumber) {
-        updateDebugStatus('Data VAA tidak lengkap atau gagal diambil.', true);
+        // Log untuk kasus data gagal atau tidak lengkap
+        const errorMsg = 'Data VAA tidak lengkap atau gagal diambil.';
+        console.error(`[checkForNewVAA] ${errorMsg}`); // Gunakan console.error untuk masalah
+        updateDebugStatus(errorMsg, true);
         return;
     }
 
     if (isFirstCheck) {
         lastAdvisoryData = data;
         isFirstCheck = false;
-        updateDebugStatus(`Pengecekan awal OK. Advisory saat ini: #${lastAdvisoryData.advisoryNumber}`);
+        
+        // Log untuk pengecekan pertama kali
+        const logMsg = `Pengecekan awal OK. Advisory saat ini: #${lastAdvisoryData.advisoryNumber}`;
+        console.log(`[checkForNewVAA] ${logMsg}`); // <-- LOG DITAMBAHKAN DI SINI
+        updateDebugStatus(logMsg);
         return;
     }
 
     if (data.advisoryNumber !== lastAdvisoryData.advisoryNumber) {
+        // Log ini sudah ada, jadi tidak perlu diubah
         const logMsg = `BARU: Advisory #${data.advisoryNumber} terdeteksi!`;
-        console.log(logMsg);
+        console.log(`[checkForNewVAA] ${logMsg}`);
         updateDebugStatus(logMsg);
         
         lastAdvisoryData = data;
-        
-        // Panggil fungsi notifikasi di peta yang baru
         showVaaNotificationOnMap(data);
     } else {
-        updateDebugStatus(`Status OK. Masih di advisory #${lastAdvisoryData.advisoryNumber}`);
+        // Log untuk kasus tidak ada VAA baru (status OK)
+        const logMsg = `Status OK. Masih di advisory #${lastAdvisoryData.advisoryNumber}`;
+        console.log(`[checkForNewVAA] ${logMsg}`); // <-- LOG DITAMBAHKAN DI SINI
+        updateDebugStatus(logMsg);
     }
 }
 
