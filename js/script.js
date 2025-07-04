@@ -1344,219 +1344,211 @@ let searchMarker;
         map.setView([latitude, longitude], 13);
         document.getElementById("searchBox").style.display = "none";
     }
-    // === FITUR NOTIFIKASI VOLCANIC ASH ADVISORY (V5.1 - DENGAN DEBUG VISUAL) ===
+   // === FITUR NOTIFIKASI & PEMERIKSAAN VAA (V8.0 - FINAL DENGAN TOMBOL MANUAL DAN KODE LENGKAP) ===
 
-// 1. Deklarasikan layer saklar
+// --- Bagian 1: Deklarasi dan Elemen ---
 var vaAdvisoryLayer = L.layerGroup();
-
-// [PASTIKAN ANDA SUDAH MENAMBAHKAN LAYER INI KE `overlayMaps`]
-// "VA Advisory": vaAdvisoryLayer
-
-// 2. Logika utama fitur notifikasi
-let vaAdvisoryCheckerInterval = null;
+let vaaCheckerInterval = null;
 let lastAdvisoryNumber = null;
 let isFirstCheck = true;
 const vaacApiUrl = '/api/check-vaac';
-
-// Ambil elemen debug dari DOM
 const debugStatusElement = document.getElementById('va-debug-status');
+const checkVaaNowBtn = document.getElementById('check-vaa-now-btn');
 
-// Fungsi untuk update panel debug
-function updateDebugStatus(message, isError = false) {
-    if (debugStatusElement) {
-        debugStatusElement.textContent = message;
-        debugStatusElement.style.color = isError ? '#ff6b6b' : '#a7ff83'; // Merah jika error, hijau jika OK
+// --- Bagian 2: Fungsi-fungsi Utama ---
+
+/**
+ * Fungsi ini HANYA bertanggung jawab untuk mengambil data VAA dari server.
+ * @returns {Promise<object|null>} Data VAA atau null jika gagal.
+ */
+async function fetchLatestVAA() {
+    console.log("Mengambil data VAA dari Vercel API (sumber: FTP)...");
+    updateDebugStatus('Mengambil data VAA...');
+    try {
+        const response = await fetch(vaacApiUrl);
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(`API Function Error: ${err.error || response.statusText}`);
+        }
+        const data = await response.json();
+        if (!data || data.error) {
+            throw new Error(data ? data.error : 'No data returned');
+        }
+        updateDebugStatus('Data VAA berhasil diambil.');
+        return data;
+    } catch (error) {
+        console.error('Gagal mengambil data VAA:', error);
+        updateDebugStatus(`Error: ${error.message}`, true);
+        return null;
     }
 }
 
-function showVANotification(advisoryNumber, fullText, imageUrl) {
-    // Ambil semua elemen dari HTML, termasuk elemen audio
+/**
+ * Fungsi ini HANYA menampilkan pop-up dengan data yang diberikan.
+ * @param {object} vaaData - Objek berisi advisoryNumber, fullText, dan imageUrl.
+ * @param {boolean} isNew - Apakah ini notifikasi untuk advisory baru (untuk memutar suara).
+ */
+function showVAAPopup(vaaData, isNew = false) {
+    const { advisoryNumber, fullText, imageUrl } = vaaData;
+    
+    // Ambil elemen pop-up
     const overlay = document.getElementById('vaa-popup-overlay');
     const textDisplay = document.getElementById('vaa-text-display');
     const closeBtn = document.getElementById('vaa-close-popup');
     const downloadTxtBtn = document.getElementById('vaa-download-txt');
     const downloadPngBtn = document.getElementById('vaa-download-png');
     const alertSound = document.getElementById('vaa-alert-sound');
-    
-    if (!overlay || !textDisplay || !closeBtn || !downloadTxtBtn || !downloadPngBtn || !alertSound) {
-        console.error("KRITIS: Satu atau lebih elemen pop-up/suara VAA tidak ditemukan di HTML!");
+    const popupTitle = overlay.querySelector('h3');
+
+    if (!overlay || !textDisplay || !closeBtn || !downloadTxtBtn || !downloadPngBtn || !alertSound || !popupTitle) {
+        console.error("KRITIS: Elemen pop-up VAA tidak ditemukan!");
         return;
     }
 
-    console.log(`Menampilkan pop-up dan suara untuk Advisory #${advisoryNumber}...`);
-    updateDebugStatus(`BARU: Advisory #${advisoryNumber} terdeteksi!`);
-
+    // Update konten pop-up
+    popupTitle.textContent = isNew ? "🚨 Peringatan VA Advisory Baru! 🚨" : "📄 VA Advisory Terkini";
     textDisplay.textContent = fullText;
     overlay.style.display = 'flex';
-
-    // --- KONTROL SUARA DIMULAI DI SINI ---
-    // Banyak browser modern memblokir autoplay. Kita harus menanganinya dengan .catch()
-    const playPromise = alertSound.play();
-    if (playPromise !== undefined) {
-        playPromise.then(_ => {
-            console.log("Suara peringatan VAA diputar.");
-        }).catch(error => {
-            // Ini terjadi jika pengguna belum berinteraksi dengan halaman.
-            // Kita bisa menambahkan fallback di sini jika perlu, misal judul yang berkedip.
-            console.warn("Pemutaran suara otomatis diblokir oleh browser. Diperlukan interaksi pengguna.", error);
-            // Sebagai fallback, kita bisa membuat judul berkedip
-            overlay.querySelector('h3').style.animation = 'blinker 1s linear infinite';
-        });
+    
+    // Putar suara HANYA jika ini advisory baru
+    if (isNew) {
+        updateDebugStatus(`BARU: Advisory #${advisoryNumber} terdeteksi!`);
+        const playPromise = alertSound.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(error => {
+                console.warn("Autoplay suara diblokir.", error);
+                popupTitle.style.animation = 'blinker 1s linear infinite';
+            });
+        }
     }
 
-    // Fungsi untuk menghentikan semuanya (suara dan pop-up)
     function stopAlert() {
-        alertSound.pause(); // Hentikan suara
-        alertSound.currentTime = 0; // Reset suara ke awal
-        overlay.style.display = 'none'; // Sembunyikan pop-up
-        // Hentikan animasi berkedip jika ada
-        overlay.querySelector('h3').style.animation = '';
-        console.log("Peringatan VAA ditutup, suara dihentikan.");
+        alertSound.pause();
+        alertSound.currentTime = 0;
+        overlay.style.display = 'none';
+        popupTitle.style.animation = '';
     }
-
-    // Atur fungsi tombol TUTUP untuk memanggil stopAlert
+    
     closeBtn.onclick = stopAlert;
 
-    // --- Fungsi tombol unduh tetap sama ---
+    // --- BAGIAN INI TELAH DILENGKAPI ---
+    // Fungsi tombol unduh TXT
     downloadTxtBtn.onclick = function() {
+        // Buat nama file yang dinamis, misal: VAA-2025_750.txt
+        const fileName = `VAA-${advisoryNumber ? advisoryNumber.replace('/', '_') : 'terkini'}.txt`;
         const blob = new Blob([fullText], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `VAA-${advisoryNumber.replace('/', '_')}.txt`;
+        a.download = fileName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     };
-
+    
+    // Fungsi tombol unduh PNG
     if (imageUrl) {
         downloadPngBtn.style.display = 'inline-block';
         downloadPngBtn.onclick = async function() {
             try {
+                // Fetch gambar sebagai blob untuk mengatasi masalah CORS saat download langsung
                 const response = await fetch(imageUrl);
                 const imageBlob = await response.blob();
                 const url = URL.createObjectURL(imageBlob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `VAA-${advisoryNumber.replace('/', '_')}.png`;
+                // Buat nama file yang dinamis
+                const fileName = `VAA-${advisoryNumber ? advisoryNumber.replace('/', '_') : 'terkini'}.png`;
+                a.download = fileName;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
             } catch (err) {
                 console.error("Gagal mengunduh PNG:", err);
+                // Jika gagal, buka di tab baru sebagai alternatif
                 window.open(imageUrl, '_blank');
             }
         };
     } else {
+        // Jika tidak ada URL gambar, sembunyikan tombol Unduh PNG
         downloadPngBtn.style.display = 'none';
+    }
+    // --- AKHIR BAGIAN YANG DILENGKAPI ---
+}
+
+/**
+ * Fungsi ini berjalan setiap menit untuk memeriksa notifikasi BARU.
+ */
+async function checkForNewVAA() {
+    const data = await fetchLatestVAA();
+    if (!data || !data.advisoryNumber) return;
+
+    const currentAdvisoryNumber = data.advisoryNumber;
+
+    if (isFirstCheck) {
+        lastAdvisoryNumber = currentAdvisoryNumber;
+        isFirstCheck = false;
+        const logMsg = `Pengecekan awal OK. Advisory saat ini: #${lastAdvisoryNumber}`;
+        console.log(logMsg);
+        updateDebugStatus(logMsg);
+        return;
+    }
+
+    if (currentAdvisoryNumber !== lastAdvisoryNumber) {
+        lastAdvisoryNumber = currentAdvisoryNumber;
+        console.log(`VA Advisory Baru Terdeteksi: ${currentAdvisoryNumber}`);
+        showVAAPopup(data, true); // Panggil pop-up dengan mode "baru" (true)
+    } else {
+        const logMsg = `Status OK. Tidak ada advisory baru. Masih di #${lastAdvisoryNumber}`;
+        console.log(logMsg);
+        updateDebugStatus(logMsg);
     }
 }
 
-function showStatusToast(message) {
-    const toastElement = document.getElementById('status-toast');
-    if (!toastElement) return;
+// --- Bagian 3: Event Listeners ---
 
-    toastElement.textContent = message;
-    toastElement.classList.add('show');
+// Event listener untuk tombol "Periksa VAA Terkini"
+checkVaaNowBtn.addEventListener('click', async function() {
+    this.textContent = 'Memeriksa...';
+    this.disabled = true;
+    const data = await fetchLatestVAA();
+    if (data) {
+        showVAAPopup(data, false); // Panggil pop-up dengan mode "tidak baru" (false)
+    } else {
+        alert('Gagal mengambil data VAA. Coba lagi nanti.');
+    }
+    this.textContent = 'Periksa VAA Terkini';
+    this.disabled = false;
+});
 
-    // Sembunyikan toast setelah 4 detik
-    setTimeout(() => {
-        toastElement.classList.remove('show');
-    }, 4000);
-}
 
-function checkVAAdvisory() {
-    console.log("Memeriksa VA Advisory via Vercel Serverless Function (sumber: FTP)...");
-    updateDebugStatus('Memeriksa VAAC FTP...');
-
-    fetch(vaacApiUrl)
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(err => {
-                    throw new Error(`API Function Error: ${err.error || response.statusText}`);
-                });
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (!data || data.error) {
-                const errorMsg = data ? data.error : 'No data returned';
-                console.error('Error dari API Function:', errorMsg);
-                updateDebugStatus(`Error: ${errorMsg}`, true);
-                return;
-            }
-
-            const currentAdvisoryNumber = data.advisoryNumber;
-
-            if (currentAdvisoryNumber) {
-                if (isFirstCheck) {
-                    lastAdvisoryNumber = currentAdvisoryNumber;
-                    isFirstCheck = false;
-                    const logMsg = `Pengecekan awal OK. Advisory saat ini: #${lastAdvisoryNumber}`;
-                    console.log(logMsg);
-                    updateDebugStatus(logMsg);
-                    return;
-                }
-
-                if (currentAdvisoryNumber !== lastAdvisoryNumber) {
-                    lastAdvisoryNumber = currentAdvisoryNumber;
-                    showVANotification(currentAdvisoryNumber, data.fullText);
-                } else {
-                    const logMsg = `Status OK. Tidak ada advisory baru. Masih di #${lastAdvisoryNumber}`;
-                    console.log(logMsg);
-                    // Ini adalah debug visual yang Anda minta
-                    updateDebugStatus(logMsg);
-		// PANGGIL TOAST DI SINI
-                    showStatusToast('✔️ Status VAA OK. Tidak ada pembaruan.'); 
-                }
-            } else {
-                const errorMsg = 'API OK, tapi no. advisory tidak ditemukan.';
-                console.error(errorMsg);
-                updateDebugStatus(errorMsg, true);
-            }
-        })
-        .catch(error => {
-            console.error('Gagal total saat menghubungi Vercel API Function:', error);
-            updateDebugStatus(`Gagal fetch: ${error.message}`, true);
-        });
-}
-
-// === KODE YANG TELAH DIPERBAIKI ===
-
-// Event listener untuk mengontrol pengecekan (KONDISI IF DIPERBAIKI)
+// Event listener untuk layer kontrol
 map.on('overlayadd', function(e) {
-    // --- DEBUGGING: Boleh Anda hapus atau biarkan untuk referensi ---
-    console.log("Event overlayadd terdeteksi. Nama layer:", e.name);
-
-    // GANTI KONDISI DI SINI: dari e.layer === vaAdvisoryLayer menjadi e.name === 'VA Advisory'
     if (e.name === 'VA Advisory') {
-        console.log("Kondisi `e.name === 'VA Advisory'` TERPENUHI. Menampilkan panel debug.");
-        
         if (debugStatusElement) debugStatusElement.classList.add('visible');
-        updateDebugStatus('VA Advisory Notifier Aktif. Menunggu pengecekan pertama...');
-
-        checkVAAdvisory();
-        vaAdvisoryCheckerInterval = setInterval(checkVAAdvisory, 60000);
+        updateDebugStatus('VA Advisory Notifier Aktif...');
+        checkForNewVAA(); // Cek pertama kali
+        vaaCheckerInterval = setInterval(checkForNewVAA, 60000); // Cek setiap 1 menit
     }
 });
 
 map.on('overlayremove', function(e) {
-    // --- DEBUGGING: Boleh Anda hapus atau biarkan untuk referensi ---
-    console.log("Event overlayremove terdeteksi. Nama layer:", e.name);
-
-    // GANTI KONDISI DI SINI JUGA UNTUK KONSISTENSI
     if (e.name === 'VA Advisory') {
-        console.log("Kondisi `e.name === 'VA Advisory'` TERPENUHI. Menyembunyikan panel debug.");
-        
         if (debugStatusElement) debugStatusElement.classList.remove('visible');
-
-        clearInterval(vaAdvisoryCheckerInterval);
-        vaAdvisoryCheckerInterval = null;
+        clearInterval(vaaCheckerInterval);
+        vaaCheckerInterval = null;
         lastAdvisoryNumber = null;
         isFirstCheck = true;
     }
 });
 
-// === AKHIR FITUR NOTIFIKASI VOLCANIC ASH ADVISORY (V5.1) ===
+// Helper untuk update status
+function updateDebugStatus(message, isError = false) {
+    if (debugStatusElement) {
+        debugStatusElement.textContent = message;
+        debugStatusElement.style.color = isError ? '#ff6b6b' : '#a7ff83'; // Merah jika error, hijau jika OK
+    }
+}
+// --- AKHIR KODE VAA --- //
