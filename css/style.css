@@ -43,36 +43,55 @@
         @media screen and (max-width: 768px) {
             #map { height: 90vh; }
         }
-#va-notification {
+/* HAPUS SEMUA CSS #va-notification dan GANTI DENGAN INI */
+
+/* Overlay untuk menutupi seluruh layar */
+#vaa-popup-overlay {
+    display: none; /* Awalnya tersembunyi */
     position: fixed;
-    top: -150px; /* Mulai dari luar layar */
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: #ffc107; /* Warna kuning peringatan */
-    color: #333;
-    padding: 15px 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    z-index: 10000; /* Pastikan di atas segalanya */
-    transition: top 0.5s ease-in-out;
-    font-family: 'Roboto', sans-serif;
-    font-size: 14px;
-    width: 90%;
-    max-width: 600px;
-    border-left: 5px solid #d93a29; /* Aksen merah */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 30000; /* Paling atas */
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
 }
 
-#va-notification.show {
-    top: 20px; /* Muncul ke posisi ini */
+/* Konten pop-up di tengah */
+#vaa-popup-content {
+    background: white;
+    padding: 20px 25px;
+    border-radius: 10px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    width: 100%;
+    max-width: 600px; /* Lebar maksimum */
+    text-align: center;
 }
 
-#va-notification a {
-    color: #0056b3;
-    font-weight: bold;
-    text-decoration: none;
+/* Area untuk menampilkan teks advisory */
+#vaa-text-display {
+    background-color: #f4f4f4;
+    border: 1px solid #ddd;
+    padding: 15px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    text-align: left;
+    white-space: pre-wrap; /* Agar teks tidak melebar keluar */
+    word-wrap: break-word;
+    max-height: 50vh; /* Tinggi maksimum, bisa discroll */
+    overflow-y: auto; /* Tambahkan scroll jika teksnya panjang */
+    margin: 15px 0;
 }
-#va-notification a:hover {
-    text-decoration: underline;
+
+/* Kontainer untuk tombol-tombol */
+#vaa-popup-buttons {
+    display: flex;
+    justify-content: flex-end; /* Tombol di kanan */
+    gap: 10px; /* Jarak antar tombol */
+    margin-top: 15px;
 }
 /* Styling untuk panel debug status */
 #va-debug-status {
