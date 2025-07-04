@@ -1376,7 +1376,7 @@ async function fetchLatestVAA() {
     }
 }
 
-// --- Fungsi untuk Menampilkan dan Mengontrol Pop-up ---
+// --- Fungsi untuk Menampilkan dan Mengontrol Pop-up (VERSI DENGAN ALARM LOOPING) ---
 function showVAAPopup(vaaData) {
     // Ambil semua elemen dari DOM
     const overlay = document.getElementById('vaa-popup-overlay');
@@ -1387,9 +1387,10 @@ function showVAAPopup(vaaData) {
     const alertSound = document.getElementById('vaa-alert-sound');
     const popupTitle = overlay.querySelector('h3');
 
-    // Pastikan semua elemen penting ada sebelum melanjutkan
+    // PENTING: Jika elemen pop-up tidak ada di HTML, hentikan fungsi.
     if (!overlay || !textDisplay || !closeBtn || !popupTitle) {
-        console.error("Elemen HTML untuk pop-up VAA tidak ditemukan!");
+        console.error("KRUSIAL: Elemen HTML untuk pop-up VAA tidak ditemukan! Pop-up tidak bisa ditampilkan.");
+        alert("Developer alert: Elemen HTML untuk pop-up VAA tidak ditemukan. Periksa console untuk detail.");
         return;
     }
 
@@ -1400,28 +1401,34 @@ function showVAAPopup(vaaData) {
     // Tampilkan pop-up
     overlay.style.display = 'flex';
     
-    // Mainkan suara alarm
+    // Mainkan suara alarm (akan berulang karena ada atribut 'loop')
     if (alertSound) {
         alertSound.play().catch(e => {
             console.warn("Autoplay suara diblokir oleh browser.", e);
-            // Sebagai alternatif, buat judul berkedip jika suara diblokir
             popupTitle.style.animation = 'blinker 1s linear infinite';
         });
     }
     
-    // Fungsi untuk menghentikan alarm dan menutup pop-up
-    function stopAlertAndClose() {
+    // --- KONTROL UNTUK TOMBOL TUTUP ---
+    // Fungsi ini akan dipanggil HANYA saat tombol TUTUP diklik
+    closeBtn.onclick = function() {
+        // 1. Hentikan suara dan reset ke awal
         if (alertSound) {
             alertSound.pause();
             alertSound.currentTime = 0;
         }
+        
+        // 2. Sembunyikan pop-up
         overlay.style.display = 'none';
-        popupTitle.style.animation = ''; // Hentikan animasi kedip
-    }
+        
+        // 3. Hentikan animasi kedip (jika ada)
+        popupTitle.style.animation = '';
+        
+        console.log("Pop-up ditutup dan alarm dihentikan oleh pengguna.");
+    };
     
-    // Hubungkan fungsi close ke tombol TUTUP
-    closeBtn.onclick = stopAlertAndClose;
-    
+    // (Fungsionalitas tombol unduh Anda tetap sama di sini)
+    // ...
     // Fungsionalitas Tombol Unduh Teks (.txt)
     downloadTxtBtn.onclick = function() {
         const blob = new Blob([vaaData.fullText], { type: 'text/plain' });
@@ -1437,9 +1444,8 @@ function showVAAPopup(vaaData) {
 
     // Fungsionalitas Tombol Unduh Gambar (.png)
     if (vaaData.imageUrl) {
-        downloadPngBtn.style.display = 'inline-block'; // Tampilkan tombol jika ada URL gambar
+        downloadPngBtn.style.display = 'inline-block';
         downloadPngBtn.onclick = function() {
-            // Kita gunakan proxy untuk menghindari masalah CORS
             const proxyUrl = `/api/fetch-image?url=${encodeURIComponent(vaaData.imageUrl)}`;
             const a = document.createElement('a');
             a.href = proxyUrl;
@@ -1449,7 +1455,7 @@ function showVAAPopup(vaaData) {
             document.body.removeChild(a);
         };
     } else {
-        downloadPngBtn.style.display = 'none'; // Sembunyikan jika tidak ada gambar
+        downloadPngBtn.style.display = 'none';
     }
 }
 
@@ -1475,7 +1481,8 @@ async function checkForNewVAA() {
 
     // Logika untuk pengecekan berikutnya: bandingkan nomor advisory
     if (data.advisoryNumber !== lastAdvisoryData.advisoryNumber) {
-        const logMsg = `BARU: Advisory #${data.advisoryNumber} terdeteksi! (Sebelumnya: #${lastAdvisoryData.advisoryNumber})`;
+        alert('KONDISI VAA BARU TERPENUHI! Pop-up dan alarm akan dipicu SEKARANG.'); 
+	const logMsg = `BARU: Advisory #${data.advisoryNumber} terdeteksi! (Sebelumnya: #${lastAdvisoryData.advisoryNumber})`;
         console.log(logMsg);
         updateDebugStatus(logMsg);
         
