@@ -1459,42 +1459,61 @@ function showVAAPopup(vaaData) {
     }
 }
 
-// --- Fungsi Pengecek Utama yang Berjalan Periodik ---
+// --- Fungsi Pengecek Utama yang Berjalan Periodik (VERSI DIPERBARUI) ---
 async function checkForNewVAA() {
     const data = await fetchLatestVAA();
 
-    // Jika pengambilan data gagal, berhenti. Pesan error sudah ditangani.
     if (!data || !data.advisoryNumber) {
         updateDebugStatus('Data VAA tidak lengkap atau gagal diambil.', true);
         return;
     }
 
-    // Logika untuk pengecekan pertama kali saat layer diaktifkan
     if (isFirstCheck) {
         lastAdvisoryData = data;
         isFirstCheck = false;
         const logMsg = `Pengecekan awal OK. Advisory saat ini: #${lastAdvisoryData.advisoryNumber}`;
         console.log(logMsg);
         updateDebugStatus(logMsg);
-        return; // Tidak ada notifikasi pada pengecekan pertama
+        return;
     }
 
-    // Logika untuk pengecekan berikutnya: bandingkan nomor advisory
+    // --- LOGIKA UTAMA YANG DIUBAH ---
     if (data.advisoryNumber !== lastAdvisoryData.advisoryNumber) {
-        alert('KONDISI VAA BARU TERPENUHI! Pop-up dan alarm akan dipicu SEKARANG.'); 
-	const logMsg = `BARU: Advisory #${data.advisoryNumber} terdeteksi! (Sebelumnya: #${lastAdvisoryData.advisoryNumber})`;
+        const logMsg = `BARU: Advisory #${data.advisoryNumber} terdeteksi! (Sebelumnya: #${lastAdvisoryData.advisoryNumber})`;
         console.log(logMsg);
         updateDebugStatus(logMsg);
         
-        lastAdvisoryData = data; // Update data terakhir
-        showVAAPopup(data); // PICU POP-UP PERINGATAN!
+        lastAdvisoryData = data;
+
+        // Langkah 1: SEGERA panggil fungsi untuk menyalakan alarm dan menampilkan pop-up HTML.
+        // Kode ini akan berjalan DI BELAKANG layar dialog konfirmasi.
+        showVAAPopup(data);
+
+        // Langkah 2: Munculkan dialog konfirmasi yang sekarang bersifat non-blocking terhadap audio.
+        // Dialog ini akan muncul DI ATAS pop-up HTML yang sudah tampil.
+        const userAcknowledged = confirm(
+            '🚨 KONDISI VAA BARU TERPENUHI! 🚨\n\n' +
+            `Advisory baru #${data.advisoryNumber} telah terdeteksi.\n\n` +
+            'Klik "OK" untuk melihat detail dan MENGHENTIKAN ALARM.'
+        );
+
+        // Langkah 3: Jika pengguna mengklik "OK", kita hentikan alarm.
+        // Jika mereka mengklik "Cancel", alarm akan terus berbunyi sampai mereka menutup pop-up HTML secara manual.
+        if (userAcknowledged) {
+            const alertSound = document.getElementById('vaa-alert-sound');
+            if (alertSound) {
+                alertSound.pause();
+                alertSound.currentTime = 0;
+            }
+            // Kita biarkan pop-up HTML tetap terbuka agar pengguna bisa berinteraksi.
+        }
+
     } else {
         const logMsg = `Status OK. Masih di advisory #${lastAdvisoryData.advisoryNumber}`;
         console.log(logMsg);
         updateDebugStatus(logMsg);
     }
 }
-
 // --- Event Listeners untuk Mengaktifkan/Menonaktifkan Fitur ---
 document.addEventListener('DOMContentLoaded', function() {
     // Saat layer "VA Advisory" ditambahkan ke peta
