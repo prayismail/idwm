@@ -194,8 +194,17 @@
             <button class="awos-close" onclick="toggleAWOS(false)">✖</button>
             <iframe id="awosIframe"></iframe>
         </div>    
-	<div id="va-notification">
-    <div id="va-notification-content"></div>
+	<!-- Overlay untuk Pop-up Peringatan VAA -->
+<div id="vaa-popup-overlay">
+    <div id="vaa-popup-content">
+        <h3>🚨 Peringatan VA Advisory Baru! 🚨</h3>
+        <pre id="vaa-text-display"></pre>
+        <div id="vaa-popup-buttons">
+            <button id="vaa-download-txt" class="button" style="background-color: #007bff;">Unduh (.txt)</button>
+            <button id="vaa-download-png" class="button" style="background-color: #28a745;">Unduh (.png)</button>
+            <button id="vaa-close-popup" class="button" style="background-color: #dc3545;">Tutup</button>
+        </div>
+    </div>
 </div>
 	    <div id="va-debug-status"></div>
 	    <div id="status-toast"></div>
