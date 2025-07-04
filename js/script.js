@@ -1369,30 +1369,91 @@ function updateDebugStatus(message, isError = false) {
     }
 }
 
-function showVANotification(advisoryNumber, fullText) {
-    const notificationDiv = document.getElementById('va-notification');
-    const contentDiv = document.getElementById('va-notification-content');
-    const originalVaacUrl = 'http://www.bom.gov.au/aviation/volcanic-ash/darwin-va-advisory.shtml';
+function showVANotification(advisoryNumber, fullText, imageUrl) {
+    // Ambil semua elemen dari HTML, termasuk elemen audio
+    const overlay = document.getElementById('vaa-popup-overlay');
+    const textDisplay = document.getElementById('vaa-text-display');
+    const closeBtn = document.getElementById('vaa-close-popup');
+    const downloadTxtBtn = document.getElementById('vaa-download-txt');
+    const downloadPngBtn = document.getElementById('vaa-download-png');
+    const alertSound = document.getElementById('vaa-alert-sound');
+    
+    if (!overlay || !textDisplay || !closeBtn || !downloadTxtBtn || !downloadPngBtn || !alertSound) {
+        console.error("KRITIS: Satu atau lebih elemen pop-up/suara VAA tidak ditemukan di HTML!");
+        return;
+    }
 
-    console.log(`VA Advisory Baru Terdeteksi: ${advisoryNumber}`);
+    console.log(`Menampilkan pop-up dan suara untuk Advisory #${advisoryNumber}...`);
     updateDebugStatus(`BARU: Advisory #${advisoryNumber} terdeteksi!`);
 
-    const previewText = fullText.split('\n').slice(0, 5).join('<br>');
+    textDisplay.textContent = fullText;
+    overlay.style.display = 'flex';
 
-    contentDiv.innerHTML = `
-        <strong>🚨 Peringatan VA Advisory Baru! 🚨</strong><br>
-        Nomor Advisory: <strong>${advisoryNumber}</strong> telah diterbitkan oleh Darwin VAAC.<br>
-        <hr style="margin: 5px 0; border-color: #33333355;">
-        <p style="font-family: monospace; font-size: 11px; margin: 5px 0;">${previewText}...</p>
-        <a href="${originalVaacUrl}" target="_blank">Lihat Advisory Lengkap di Situs Web Darwin VAAC</a>
-    `;
+    // --- KONTROL SUARA DIMULAI DI SINI ---
+    // Banyak browser modern memblokir autoplay. Kita harus menanganinya dengan .catch()
+    const playPromise = alertSound.play();
+    if (playPromise !== undefined) {
+        playPromise.then(_ => {
+            console.log("Suara peringatan VAA diputar.");
+        }).catch(error => {
+            // Ini terjadi jika pengguna belum berinteraksi dengan halaman.
+            // Kita bisa menambahkan fallback di sini jika perlu, misal judul yang berkedip.
+            console.warn("Pemutaran suara otomatis diblokir oleh browser. Diperlukan interaksi pengguna.", error);
+            // Sebagai fallback, kita bisa membuat judul berkedip
+            overlay.querySelector('h3').style.animation = 'blinker 1s linear infinite';
+        });
+    }
 
-    notificationDiv.classList.add('show');
+    // Fungsi untuk menghentikan semuanya (suara dan pop-up)
+    function stopAlert() {
+        alertSound.pause(); // Hentikan suara
+        alertSound.currentTime = 0; // Reset suara ke awal
+        overlay.style.display = 'none'; // Sembunyikan pop-up
+        // Hentikan animasi berkedip jika ada
+        overlay.querySelector('h3').style.animation = '';
+        console.log("Peringatan VAA ditutup, suara dihentikan.");
+    }
 
-    setTimeout(() => {
-        notificationDiv.classList.remove('show');
-    }, 15000);
+    // Atur fungsi tombol TUTUP untuk memanggil stopAlert
+    closeBtn.onclick = stopAlert;
+
+    // --- Fungsi tombol unduh tetap sama ---
+    downloadTxtBtn.onclick = function() {
+        const blob = new Blob([fullText], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `VAA-${advisoryNumber.replace('/', '_')}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    if (imageUrl) {
+        downloadPngBtn.style.display = 'inline-block';
+        downloadPngBtn.onclick = async function() {
+            try {
+                const response = await fetch(imageUrl);
+                const imageBlob = await response.blob();
+                const url = URL.createObjectURL(imageBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `VAA-${advisoryNumber.replace('/', '_')}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                console.error("Gagal mengunduh PNG:", err);
+                window.open(imageUrl, '_blank');
+            }
+        };
+    } else {
+        downloadPngBtn.style.display = 'none';
+    }
 }
+
 function showStatusToast(message) {
     const toastElement = document.getElementById('status-toast');
     if (!toastElement) return;
