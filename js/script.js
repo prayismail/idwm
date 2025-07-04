@@ -1360,25 +1360,37 @@ const checkVaaNowBtn = document.getElementById('check-vaa-now-btn');
 /**
  * Fungsi ini HANYA bertanggung jawab untuk mengambil data VAA dari server.
  * @returns {Promise<object|null>} Data VAA atau null jika gagal.
+ *//**
+ * Mengambil data VAA dari server.
+ * @param {boolean} forceFresh - Jika true, akan mengabaikan cache browser.
+ * @returns {Promise<object|null>}
  */
-async function fetchLatestVAA() {
-    console.log("Mengambil data VAA dari Vercel API (sumber: FTP)...");
-    updateDebugStatus('Mengambil data VAA...');
+async function fetchLatestVAA(forceFresh = false) {
+    const fetchOptions = {};
+    // Jika tombol manual diklik, kita paksa ambil data baru dari server
+    if (forceFresh) {
+        fetchOptions.cache = 'no-cache';
+    }
+    
     try {
-        const response = await fetch(vaacApiUrl);
+        const response = await fetch(vaacApiUrl, fetchOptions);
         if (!response.ok) {
-            const err = await response.json();
+            // Jika status 304 (Not Modified), kita anggap tidak ada data untuk ditampilkan saat ini
+            if (response.status === 304) {
+                console.log("Status 304: Data di cache masih valid, tidak ada data baru yang dikirim.");
+                // Untuk permintaan manual, kita perlu memberitahu pemanggil bahwa tidak ada apa-apa
+                // agar ia bisa mengambil dari cache jika perlu, atau kita bisa coba lagi.
+                // Untuk kesederhanaan, kita anggap ini sebagai "tidak ada data baru".
+                // Namun, untuk tombol, kita ingin SELALU ada data.
+                // Pendekatan no-cache adalah yang terbaik.
+                return null;
+            }
+            const err = await response.json().catch(() => ({ error: 'Respons bukan JSON' }));
             throw new Error(`API Function Error: ${err.error || response.statusText}`);
         }
-        const data = await response.json();
-        if (!data || data.error) {
-            throw new Error(data ? data.error : 'No data returned');
-        }
-        updateDebugStatus('Data VAA berhasil diambil.');
-        return data;
+        return await response.json();
     } catch (error) {
-        console.error('Gagal mengambil data VAA:', error);
-        updateDebugStatus(`Error: ${error.message}`, true);
+        console.error('[fetchLatestVAA] Gagal mengambil data VAA:', error);
         return null;
     }
 }
@@ -1510,31 +1522,29 @@ async function checkForNewVAA() {
 // --- Bagian 3: Event Listeners ---
 // Pastikan kita memasang listener setelah dokumen sepenuhnya dimuat
 document.addEventListener('DOMContentLoaded', function() {
+   const checkVaaNowBtn = document.getElementById('check-vaa-now-btn');
+if (checkVaaNowBtn) {
+    checkVaaNowBtn.addEventListener('click', async function() {
+        this.textContent = 'Memeriksa...';
+        this.disabled = true;
+        
+        // Memanggil dengan 'true' untuk memaksa pengambilan data dari server, mengabaikan cache.
+        const data = await fetchLatestVAA(true); 
+        
+        if (data) {
+            // Tampilkan pop-up dalam mode "tidak baru" (tanpa alarm)
+            showVAAPopup(data, false);
+        } else {
+            // Ini terjadi jika ada error server atau jaringan
+            alert('Gagal mengambil data VAA. Periksa console untuk detail.');
+        }
+        
+        this.textContent = 'Periksa VAA Terkini';
+        this.disabled = false;
+    });
+}
+ 
     
-    const checkVaaNowBtn = document.getElementById('check-vaa-now-btn');
-
-    // Cek apakah tombolnya ada sebelum memasang listener
-    if (checkVaaNowBtn) {
-        // Event listener untuk tombol "Periksa VAA Terkini"
-        checkVaaNowBtn.addEventListener('click', async function() {
-            console.log("Tombol 'Periksa VAA Terkini' diklik!"); // DEBUG
-            this.textContent = 'Memeriksa...';
-            this.disabled = true;
-            
-            const data = await fetchLatestVAA();
-            if (data) {
-                showVAAPopup(data, false); // Panggil pop-up dengan mode "tidak baru" (false)
-            } else {
-                alert('Gagal mengambil data VAA. Coba lagi nanti.');
-            }
-            
-            this.textContent = 'Periksa VAA Terkini';
-            this.disabled = false;
-        });
-    } else {
-        console.error("Tombol 'check-vaa-now-btn' tidak ditemukan di HTML!");
-    }
-
     // Event listener untuk layer kontrol Leaflet
     map.on('overlayadd', function(e) {
         if (e.name === 'VA Advisory') {
