@@ -109,7 +109,12 @@
     transition: opacity 0.5s ease-in-out;
     pointer-events: none; /* Agar tidak bisa diklik */
 }
-
+/* Tambahkan ini ke CSS Anda untuk animasi berkedip */
+@keyframes blinker {
+  50% {
+    opacity: 0.3;
+  }
+}
 #va-debug-status.visible {
     opacity: 1; /* Tampilkan saat layer aktif */
 }
