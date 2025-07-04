@@ -1400,7 +1400,7 @@ function showVAAPopup(vaaData) {
     
     // Tampilkan pop-up
     overlay.style.display = 'flex';
-    
+    const alertSound = document.getElementById('vaa-alert-sound');
     // Mainkan suara alarm (akan berulang karena ada atribut 'loop')
     if (alertSound) {
         alertSound.play().catch(e => {
