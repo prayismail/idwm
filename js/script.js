@@ -1344,40 +1344,41 @@ let searchMarker;
         map.setView([latitude, longitude], 13);
         document.getElementById("searchBox").style.display = "none";
     }
-  // === FITUR NOTIFIKASI VAA OTOMATIS (V9.0 - UI Disederhanakan) ===
+  // === FITUR NOTIFIKASI VAA OTOMATIS (V9.0 - UI Disempurnakan) ===
 
-// --- Deklarasi ---
+// --- Deklarasi Variabel Global untuk Fitur VAA ---
 var vaAdvisoryLayer = L.layerGroup();
 let vaaCheckerInterval = null;
-let lastAdvisoryNumber = null;
+let lastAdvisoryData = null; // Menyimpan seluruh data, bukan hanya nomor
 let isFirstCheck = true;
 const vaacApiUrl = '/api/check-vaac';
 const debugStatusElement = document.getElementById('va-debug-status');
 
-// --- Fungsi Utama ---
+// --- Fungsi Utama untuk Mengambil Data VAA dari API ---
 async function fetchLatestVAA() {
-    console.log("Mengambil data VAA dari Vercel API...");
     updateDebugStatus('Mengambil data VAA...');
     try {
-        const response = await fetch(vaacApiUrl);
+        // Gunakan cache-busting untuk memastikan data selalu baru
+        const response = await fetch(`${vaacApiUrl}?t=${new Date().getTime()}`);
         if (!response.ok) {
             const err = await response.json().catch(() => ({ error: 'Respons bukan JSON' }));
-            throw new Error(`API Function Error: ${err.error || response.statusText}`);
+            throw new Error(`API Error: ${err.error || response.statusText}`);
         }
         const data = await response.json();
         if (!data || data.error) {
-            throw new Error(data ? data.error : 'No data returned');
+            throw new Error(data ? data.error : 'Data VAA tidak valid');
         }
         return data;
     } catch (error) {
-        console.error('[fetchLatestVAA] Gagal mengambil data VAA:', error);
+        console.error('[fetchLatestVAA] Gagal mengambil data:', error);
         updateDebugStatus(`Error: ${error.message}`, true);
         return null;
     }
 }
 
+// --- Fungsi untuk Menampilkan dan Mengontrol Pop-up ---
 function showVAAPopup(vaaData) {
-    const { advisoryNumber, fullText, imageUrl } = vaaData;
+    // Ambil semua elemen dari DOM
     const overlay = document.getElementById('vaa-popup-overlay');
     const textDisplay = document.getElementById('vaa-text-display');
     const closeBtn = document.getElementById('vaa-close-popup');
@@ -1386,117 +1387,143 @@ function showVAAPopup(vaaData) {
     const alertSound = document.getElementById('vaa-alert-sound');
     const popupTitle = overlay.querySelector('h3');
 
-    if (!overlay || !popupTitle) return; // Pengecekan sederhana
+    // Pastikan semua elemen penting ada sebelum melanjutkan
+    if (!overlay || !textDisplay || !closeBtn || !popupTitle) {
+        console.error("Elemen HTML untuk pop-up VAA tidak ditemukan!");
+        return;
+    }
 
-    popupTitle.textContent = "🚨 Peringatan VA Advisory Baru! 🚨";
-    textDisplay.textContent = fullText;
+    // Isi konten pop-up dengan data baru
+    popupTitle.textContent = `🚨 Peringatan VA Advisory #${vaaData.advisoryNumber} 🚨`;
+    textDisplay.textContent = vaaData.fullText;
+    
+    // Tampilkan pop-up
     overlay.style.display = 'flex';
     
+    // Mainkan suara alarm
     if (alertSound) {
-        const playPromise = alertSound.play();
-        if (playPromise) {
-            playPromise.catch(e => {
-                console.warn("Autoplay suara diblokir.", e);
-                popupTitle.style.animation = 'blinker 1s linear infinite';
-            });
-        }
+        alertSound.play().catch(e => {
+            console.warn("Autoplay suara diblokir oleh browser.", e);
+            // Sebagai alternatif, buat judul berkedip jika suara diblokir
+            popupTitle.style.animation = 'blinker 1s linear infinite';
+        });
     }
     
-    function stopAlert() {
-        if(alertSound) { alertSound.pause(); alertSound.currentTime = 0; }
+    // Fungsi untuk menghentikan alarm dan menutup pop-up
+    function stopAlertAndClose() {
+        if (alertSound) {
+            alertSound.pause();
+            alertSound.currentTime = 0;
+        }
         overlay.style.display = 'none';
-        popupTitle.style.animation = '';
+        popupTitle.style.animation = ''; // Hentikan animasi kedip
     }
     
-    if (closeBtn) closeBtn.onclick = stopAlert;
+    // Hubungkan fungsi close ke tombol TUTUP
+    closeBtn.onclick = stopAlertAndClose;
     
-    // Logika tombol unduh
-    if (downloadTxtBtn) { /* ... kode unduh TXT ... */ }
-    if (downloadPngBtn) {
-        if (imageUrl) {
-            downloadPngBtn.style.display = 'inline-block';
-            /* ... kode unduh PNG ... */
-        } else {
-            downloadPngBtn.style.display = 'none';
-        }
+    // Fungsionalitas Tombol Unduh Teks (.txt)
+    downloadTxtBtn.onclick = function() {
+        const blob = new Blob([vaaData.fullText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `VAA_${vaaData.advisoryNumber}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    // Fungsionalitas Tombol Unduh Gambar (.png)
+    if (vaaData.imageUrl) {
+        downloadPngBtn.style.display = 'inline-block'; // Tampilkan tombol jika ada URL gambar
+        downloadPngBtn.onclick = function() {
+            // Kita gunakan proxy untuk menghindari masalah CORS
+            const proxyUrl = `/api/fetch-image?url=${encodeURIComponent(vaaData.imageUrl)}`;
+            const a = document.createElement('a');
+            a.href = proxyUrl;
+            a.download = `VAA_MAP_${vaaData.advisoryNumber}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        };
+    } else {
+        downloadPngBtn.style.display = 'none'; // Sembunyikan jika tidak ada gambar
     }
 }
-// GANTI FUNGSI checkForNewVAA LAMA ANDA DENGAN VERSI BARU INI
 
-/**
- * Fungsi ini berjalan setiap menit untuk memeriksa notifikasi BARU.
- * Versi ini memiliki logika debug yang lebih baik.
- */
+// --- Fungsi Pengecek Utama yang Berjalan Periodik ---
 async function checkForNewVAA() {
-    // Panggil fungsi untuk mengambil data
     const data = await fetchLatestVAA();
 
-    // Cek apakah pengambilan data GAGAL. 
-    // Jika ya, pesan error sudah ditampilkan oleh fetchLatestVAA. Kita cukup berhenti.
-    if (!data) {
-        console.log("[checkForNewVAA] Proses dihentikan karena fetchLatestVAA gagal.");
+    // Jika pengambilan data gagal, berhenti. Pesan error sudah ditangani.
+    if (!data || !data.advisoryNumber) {
+        updateDebugStatus('Data VAA tidak lengkap atau gagal diambil.', true);
         return;
     }
 
-    // Jika pengambilan data BERHASIL, lanjutkan logika di bawah ini.
-    if (!data.advisoryNumber) {
-        // Ini terjadi jika server FTP merespons, tetapi isinya aneh (tidak ada nomor advisory)
-        updateDebugStatus('API OK, tapi no. advisory tidak ditemukan.', true);
-        return;
-    }
-
-    const currentAdvisoryNumber = data.advisoryNumber;
-
-    // Logika untuk pengecekan pertama kali
+    // Logika untuk pengecekan pertama kali saat layer diaktifkan
     if (isFirstCheck) {
-        lastAdvisoryNumber = currentAdvisoryNumber;
+        lastAdvisoryData = data;
         isFirstCheck = false;
-        const logMsg = `Pengecekan awal OK. Advisory saat ini: #${lastAdvisoryNumber}`;
+        const logMsg = `Pengecekan awal OK. Advisory saat ini: #${lastAdvisoryData.advisoryNumber}`;
         console.log(logMsg);
         updateDebugStatus(logMsg);
-        return;
+        return; // Tidak ada notifikasi pada pengecekan pertama
     }
 
-    // Logika untuk pengecekan berikutnya
-    if (currentAdvisoryNumber !== lastAdvisoryNumber) {
-        lastAdvisoryNumber = currentAdvisoryNumber;
-        console.log(`VA Advisory Baru Terdeteksi: ${currentAdvisoryNumber}`);
-        updateDebugStatus(`BARU: Advisory #${currentAdvisoryNumber} terdeteksi!`);
-        showVAAPopup(data); // Memanggil pop-up peringatan
+    // Logika untuk pengecekan berikutnya: bandingkan nomor advisory
+    if (data.advisoryNumber !== lastAdvisoryData.advisoryNumber) {
+        const logMsg = `BARU: Advisory #${data.advisoryNumber} terdeteksi! (Sebelumnya: #${lastAdvisoryData.advisoryNumber})`;
+        console.log(logMsg);
+        updateDebugStatus(logMsg);
+        
+        lastAdvisoryData = data; // Update data terakhir
+        showVAAPopup(data); // PICU POP-UP PERINGATAN!
     } else {
-        const logMsg = `Status OK. Tidak ada advisory baru. Masih di #${lastAdvisoryNumber}`;
+        const logMsg = `Status OK. Masih di advisory #${lastAdvisoryData.advisoryNumber}`;
         console.log(logMsg);
         updateDebugStatus(logMsg);
     }
 }
 
-// --- Event Listeners ---
+// --- Event Listeners untuk Mengaktifkan/Menonaktifkan Fitur ---
 document.addEventListener('DOMContentLoaded', function() {
+    // Saat layer "VA Advisory" ditambahkan ke peta
     map.on('overlayadd', function(e) {
         if (e.name === 'VA Advisory') {
             if (debugStatusElement) debugStatusElement.classList.add('visible');
             updateDebugStatus('VA Advisory Notifier Aktif...');
-            checkForNewVAA();
+            
+            isFirstCheck = true; // Reset status setiap kali diaktifkan
+            checkForNewVAA(); // Lakukan pengecekan pertama segera
+            
+            // Mulai pengecekan rutin setiap 60 detik
+            if (vaaCheckerInterval) clearInterval(vaaCheckerInterval);
             vaaCheckerInterval = setInterval(checkForNewVAA, 60000);
         }
     });
 
+    // Saat layer "VA Advisory" dihapus dari peta
     map.on('overlayremove', function(e) {
         if (e.name === 'VA Advisory') {
             if (debugStatusElement) debugStatusElement.classList.remove('visible');
+            
+            // Hentikan pengecekan rutin
             clearInterval(vaaCheckerInterval);
             vaaCheckerInterval = null;
-            lastAdvisoryNumber = null;
-            isFirstCheck = true;
+            console.log("VA Advisory Notifier Dinonaktifkan.");
         }
     });
 });
 
-// Helper untuk update status
+// --- Helper Function untuk Update Status Debug di UI ---
 function updateDebugStatus(message, isError = false) {
     if (debugStatusElement) {
         debugStatusElement.textContent = message;
         debugStatusElement.style.color = isError ? '#ff6b6b' : '#a7ff83';
     }
 }
-// --- AKHIR KODE VAA --- //
+
+// --- AKHIR KODE VAA ---
