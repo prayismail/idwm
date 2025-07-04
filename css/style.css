@@ -118,24 +118,39 @@
 #va-debug-status.visible {
     opacity: 1; /* Tampilkan saat layer aktif */
 }
-/* Tambahkan ini ke css/style.css */
-#status-toast {
-    position: fixed;
-    bottom: 10px;
-    right: -300px; /* Mulai dari luar layar kanan */
-    background-color: #28a745; /* Hijau sukses */
-    color: white;
-    padding: 10px 15px;
-    border-radius: 5px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    font-family: 'Roboto', sans-serif;
-    font-size: 13px;
-    z-index: 20000;
-    transition: right 0.5s ease-in-out;
+.blinking-volcano-marker {
+    /* Membuat bentuk segitiga dengan CSS borders */
+    width: 0;
+    height: 0;
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-bottom: 22px solid #ff0a0a; /* Merah terang */
+    
+    /* Menambahkan outline agar lebih terlihat */
+    position: relative;
+    filter: drop-shadow(0 0 3px rgba(0,0,0,0.7));
 }
 
-#status-toast.show {
-    right: 10px; /* Muncul ke posisi ini */
+.blinking-volcano-marker:after {
+    content: '';
+    position: absolute;
+    left: -12px; top: 0;
+    width: 0; height: 0;
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-bottom: 22px solid white;
+    transform: scale(0.6);
+    opacity: 0.7;
+}
+
+@keyframes blinker {
+  50% {
+    opacity: 0;
+  }
+}
+
+.blinking-volcano-marker {
+    animation: blinker 1s linear infinite;
 }
 /* Style untuk overlay cropping */
         #crop-overlay {
