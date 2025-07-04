@@ -1400,7 +1400,7 @@ function showVAAPopup(vaaData) {
     
     // Tampilkan pop-up
     overlay.style.display = 'flex';
-    const alertSound = document.getElementById('vaa-alert-sound');
+    
     // Mainkan suara alarm (akan berulang karena ada atribut 'loop')
     if (alertSound) {
         alertSound.play().catch(e => {
@@ -1490,6 +1490,7 @@ async function checkForNewVAA() {
         showVAAPopup(data);
 // Langkah 2: Mainkan suara. Karena ada 'loop' di HTML, ini akan berulang.
         // Kita letakkan di sini untuk memastikan audio mulai SEBELUM dialog confirm.
+	const alertSound = document.getElementById('vaa-alert-sound');
         if (alertSound) {
             alertSound.play().catch(e => {
                 console.warn("Autoplay suara diblokir oleh browser.", e);
