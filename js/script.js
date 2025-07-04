@@ -1421,26 +1421,52 @@ function showVAAPopup(vaaData) {
         }
     }
 }
+// GANTI FUNGSI checkForNewVAA LAMA ANDA DENGAN VERSI BARU INI
 
+/**
+ * Fungsi ini berjalan setiap menit untuk memeriksa notifikasi BARU.
+ * Versi ini memiliki logika debug yang lebih baik.
+ */
 async function checkForNewVAA() {
+    // Panggil fungsi untuk mengambil data
     const data = await fetchLatestVAA();
-    if (!data || !data.advisoryNumber) return;
-    const currentAdvisoryNumber = data.advisoryNumber;
 
-    if (isFirstCheck) {
-        lastAdvisoryNumber = currentAdvisoryNumber;
-        isFirstCheck = false;
-        updateDebugStatus(`Pengecekan awal OK. Advisory saat ini: #${lastAdvisoryNumber}`);
+    // Cek apakah pengambilan data GAGAL. 
+    // Jika ya, pesan error sudah ditampilkan oleh fetchLatestVAA. Kita cukup berhenti.
+    if (!data) {
+        console.log("[checkForNewVAA] Proses dihentikan karena fetchLatestVAA gagal.");
         return;
     }
 
+    // Jika pengambilan data BERHASIL, lanjutkan logika di bawah ini.
+    if (!data.advisoryNumber) {
+        // Ini terjadi jika server FTP merespons, tetapi isinya aneh (tidak ada nomor advisory)
+        updateDebugStatus('API OK, tapi no. advisory tidak ditemukan.', true);
+        return;
+    }
+
+    const currentAdvisoryNumber = data.advisoryNumber;
+
+    // Logika untuk pengecekan pertama kali
+    if (isFirstCheck) {
+        lastAdvisoryNumber = currentAdvisoryNumber;
+        isFirstCheck = false;
+        const logMsg = `Pengecekan awal OK. Advisory saat ini: #${lastAdvisoryNumber}`;
+        console.log(logMsg);
+        updateDebugStatus(logMsg);
+        return;
+    }
+
+    // Logika untuk pengecekan berikutnya
     if (currentAdvisoryNumber !== lastAdvisoryNumber) {
         lastAdvisoryNumber = currentAdvisoryNumber;
         console.log(`VA Advisory Baru Terdeteksi: ${currentAdvisoryNumber}`);
         updateDebugStatus(`BARU: Advisory #${currentAdvisoryNumber} terdeteksi!`);
-        showVAAPopup(data);
+        showVAAPopup(data); // Memanggil pop-up peringatan
     } else {
-        updateDebugStatus(`Status OK. Tidak ada advisory baru. Masih di #${lastAdvisoryNumber}`);
+        const logMsg = `Status OK. Tidak ada advisory baru. Masih di #${lastAdvisoryNumber}`;
+        console.log(logMsg);
+        updateDebugStatus(logMsg);
     }
 }
 
