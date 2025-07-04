@@ -1508,40 +1508,52 @@ async function checkForNewVAA() {
 }
 
 // --- Bagian 3: Event Listeners ---
+// Pastikan kita memasang listener setelah dokumen sepenuhnya dimuat
+document.addEventListener('DOMContentLoaded', function() {
+    
+    const checkVaaNowBtn = document.getElementById('check-vaa-now-btn');
 
-// Event listener untuk tombol "Periksa VAA Terkini"
-checkVaaNowBtn.addEventListener('click', async function() {
-    this.textContent = 'Memeriksa...';
-    this.disabled = true;
-    const data = await fetchLatestVAA();
-    if (data) {
-        showVAAPopup(data, false); // Panggil pop-up dengan mode "tidak baru" (false)
+    // Cek apakah tombolnya ada sebelum memasang listener
+    if (checkVaaNowBtn) {
+        // Event listener untuk tombol "Periksa VAA Terkini"
+        checkVaaNowBtn.addEventListener('click', async function() {
+            console.log("Tombol 'Periksa VAA Terkini' diklik!"); // DEBUG
+            this.textContent = 'Memeriksa...';
+            this.disabled = true;
+            
+            const data = await fetchLatestVAA();
+            if (data) {
+                showVAAPopup(data, false); // Panggil pop-up dengan mode "tidak baru" (false)
+            } else {
+                alert('Gagal mengambil data VAA. Coba lagi nanti.');
+            }
+            
+            this.textContent = 'Periksa VAA Terkini';
+            this.disabled = false;
+        });
     } else {
-        alert('Gagal mengambil data VAA. Coba lagi nanti.');
+        console.error("Tombol 'check-vaa-now-btn' tidak ditemukan di HTML!");
     }
-    this.textContent = 'Periksa VAA Terkini';
-    this.disabled = false;
-});
 
+    // Event listener untuk layer kontrol Leaflet
+    map.on('overlayadd', function(e) {
+        if (e.name === 'VA Advisory') {
+            if (debugStatusElement) debugStatusElement.classList.add('visible');
+            updateDebugStatus('VA Advisory Notifier Aktif...');
+            checkForNewVAA(); // Cek pertama kali
+            vaaCheckerInterval = setInterval(checkForNewVAA, 60000); // Cek setiap 1 menit
+        }
+    });
 
-// Event listener untuk layer kontrol
-map.on('overlayadd', function(e) {
-    if (e.name === 'VA Advisory') {
-        if (debugStatusElement) debugStatusElement.classList.add('visible');
-        updateDebugStatus('VA Advisory Notifier Aktif...');
-        checkForNewVAA(); // Cek pertama kali
-        vaaCheckerInterval = setInterval(checkForNewVAA, 60000); // Cek setiap 1 menit
-    }
-});
-
-map.on('overlayremove', function(e) {
-    if (e.name === 'VA Advisory') {
-        if (debugStatusElement) debugStatusElement.classList.remove('visible');
-        clearInterval(vaaCheckerInterval);
-        vaaCheckerInterval = null;
-        lastAdvisoryNumber = null;
-        isFirstCheck = true;
-    }
+    map.on('overlayremove', function(e) {
+        if (e.name === 'VA Advisory') {
+            if (debugStatusElement) debugStatusElement.classList.remove('visible');
+            clearInterval(vaaCheckerInterval);
+            vaaCheckerInterval = null;
+            lastAdvisoryNumber = null;
+            isFirstCheck = true;
+        }
+    });
 });
 
 // Helper untuk update status
