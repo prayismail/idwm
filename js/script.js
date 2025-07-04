@@ -1488,32 +1488,37 @@ async function checkForNewVAA() {
         // Langkah 1: SEGERA panggil fungsi untuk menyalakan alarm dan menampilkan pop-up HTML.
         // Kode ini akan berjalan DI BELAKANG layar dialog konfirmasi.
         showVAAPopup(data);
-
-        // Langkah 2: Munculkan dialog konfirmasi yang sekarang bersifat non-blocking terhadap audio.
-        // Dialog ini akan muncul DI ATAS pop-up HTML yang sudah tampil.
+// Langkah 2: Mainkan suara. Karena ada 'loop' di HTML, ini akan berulang.
+        // Kita letakkan di sini untuk memastikan audio mulai SEBELUM dialog confirm.
+        if (alertSound) {
+            alertSound.play().catch(e => {
+                console.warn("Autoplay suara diblokir oleh browser.", e);
+                // Jika suara diblokir, setidaknya kita bisa menampilkan pop-up HTML
+            });
+        }
+        
+        // Langkah 3: Tampilkan dialog konfirmasi. Audio akan terus berjalan di belakang.
         const userAcknowledged = confirm(
-            '🚨 KONDISI VAA BARU TERPENUHI! 🚨\n\n' +
-            `Advisory baru #${data.advisoryNumber} telah terdeteksi.\n\n` +
-            'Klik "OK" untuk melihat detail dan MENGHENTIKAN ALARM.'
+            '🚨 PERINGATAN VAA BARU! 🚨\n\n' +
+            `Advisory #${data.advisoryNumber} telah terdeteksi.\n\n` +
+            'Klik "OK" untuk MENGHENTIKAN ALARM.'
         );
 
-        // Langkah 3: Jika pengguna mengklik "OK", kita hentikan alarm.
-        // Jika mereka mengklik "Cancel", alarm akan terus berbunyi sampai mereka menutup pop-up HTML secara manual.
+        // Langkah 4: Jika pengguna mengklik "OK", hentikan alarm.
         if (userAcknowledged) {
-            const alertSound = document.getElementById('vaa-alert-sound');
             if (alertSound) {
                 alertSound.pause();
                 alertSound.currentTime = 0;
             }
-            // Kita biarkan pop-up HTML tetap terbuka agar pengguna bisa berinteraksi.
         }
-
+        
     } else {
         const logMsg = `Status OK. Masih di advisory #${lastAdvisoryData.advisoryNumber}`;
         console.log(logMsg);
         updateDebugStatus(logMsg);
     }
 }
+        
 // --- Event Listeners untuk Mengaktifkan/Menonaktifkan Fitur ---
 document.addEventListener('DOMContentLoaded', function() {
     // Saat layer "VA Advisory" ditambahkan ke peta
