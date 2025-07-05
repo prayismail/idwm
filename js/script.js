@@ -421,7 +421,7 @@ cropImageButton.addEventListener('click', () => {
         var cartoPositron = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: 'Base map &copy; CartoDB' });
         var topoMap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: 'Base map &copy; <a href="https://opentopomap.org/">OpenTopoMap</a> contributors' });
         var lulcMap = L.tileLayer.wms("/api/lulc-wms", {layers: 'WORLDCOVER_2021_MAP', format: 'image/png', transparent: true, attribution: 'Base map &copy; ESA WorldCover 2021' });
-        var radarLayer = L.tileLayer('', { opacity: 0.8, attribution: 'Radar data &copy; RainViewer' }); 
+        var radarLayer = L.tileLayer('', { opacity: 0.8, attribution: 'Radar data &copy; Accuweather' }); 
         var IRsatelliteLayer = L.tileLayer('', { opacity: 0.6, attribution: 'Satellite data &copy; Accuweather' }); 
 	var WVsatelliteLayer = L.tileLayer('', { opacity: 0.6, attribution: 'Satellite data &copy; Accuweather' });
         var imageUrl = 'https://satelit.bmkg.go.id/IMAGE/HIMA/H08_RD_Indonesia.png';
@@ -499,7 +499,7 @@ addUserLocation();
             img.onload = callback;
             img.src = url;
         }
-        function updateRadar(timeOffset = 0) {
+       /** function updateRadar(timeOffset = 0) {
     fetch('https://api.rainviewer.com/public/weather-maps.json')
         .then(response => response.json())
         .then(data => {
@@ -534,8 +534,123 @@ addUserLocation();
             }
         })
         .catch(error => console.error("Gagal mengambil data radar:", error));}
-        // --- Konfigurasi Umum AccuWeather ---
-const ACCUWEATHER_API_KEY = 'de13920f574d420984d3080b1fa6132b'; // GANTI DENGAN API KEY ANDA YANG VALID!
+  **/      
+// --- Konfigurasi Umum AccuWeather ---
+const ACCUWEATHER_API_KEY = 'de13920f574d420984d3080b1fa6132b'; 
+const RADAR_TIME_INTERVAL_MINUTES = 5; // AccuWeather radar biasanya memiliki interval 5 menit. Sesuaikan jika perlu.
+
+
+// --- Konfigurasi Radar AccuWeather ---
+// Ganti 'futureSIR' jika Anda ingin menggunakan produk radar lain (misal: 'SIR' untuk data historis)
+const ACCUWEATHER_RADAR_PRODUCT = 'globalSIR'; 
+const ACCUWEATHER_RADAR_API_BASE_URL = `https://api.accuweather.com/maps/v1/radar/${ACCUWEATHER_RADAR_PRODUCT}/zxy/`;
+
+
+/**
+ * Fungsi untuk mendapatkan timestamp AccuWeather di MASA DEPAN yang dibulatkan.
+ * @param {number} offsetIntervals - Kelipatan interval waktu dari sekarang (0 = citra prediksi terdekat, 1 = citra prediksi berikutnya, dst.)
+ * @returns {string} Timestamp dalam format ISO (YYYY-MM-DDTHH:mm:ssZ)
+ */
+function getAccuweatherFutureTimestamp(offsetIntervals = 0) {
+    const now = new Date();
+    // Menambahkan menit ke waktu saat ini untuk mendapatkan prediksi di masa depan
+    const totalMinutesToAdd = offsetIntervals * RADAR_TIME_INTERVAL_MINUTES;
+    now.setUTCMinutes(now.getUTCMinutes() + totalMinutesToAdd);
+
+    // Bulatkan ke bawah ke kelipatan RADAR_TIME_INTERVAL_MINUTES terdekat
+    const currentMinutes = now.getUTCMinutes();
+    const roundedMinutes = Math.floor(currentMinutes / RADAR_TIME_INTERVAL_MINUTES) * RADAR_TIME_INTERVAL_MINUTES;
+    now.setUTCMinutes(roundedMinutes, 0, 0); // Set detik dan milidetik ke 0
+
+    return now.toISOString().split('.')[0] + "Z"; // Format YYYY-MM-DDTHH:mm:ssZ
+}
+
+/**
+// --- Konfigurasi Umum AccuWeather ---
+const ACCUWEATHER_API_KEY = 'de13920f574d420984d3080b1fa6132b'; // PASTIKAN INI API KEY ANDA YANG VALID!
+var radarLayer; // Pastikan variabel ini sudah dideklarasikan secara global.
+
+// --- Konfigurasi Radar Historis AccuWeather ---
+// UBAH: Gunakan produk 'globalSIR' untuk data radar historis global.
+const ACCUWEATHER_RADAR_PRODUCT = 'globalSIR'; 
+const RADAR_TIME_INTERVAL_MINUTES = 10; // Interval waktu disesuaikan dengan slider "10 menit lalu"
+const ACCUWEATHER_RADAR_API_BASE_URL = `https://api.accuweather.com/maps/v1/radar/${ACCUWEATHER_RADAR_PRODUCT}/zxy/`;
+
+/**
+ * Fungsi untuk mendapatkan timestamp AccuWeather di MASA LALU yang dibulatkan.
+ * @param {number} offsetIntervals - Kelipatan interval waktu ke masa lalu (0 = citra terbaru, 1 = 10 menit lalu, dst.)
+ * @returns {string} Timestamp dalam format ISO (YYYY-MM-DDTHH:mm:ssZ)
+ */
+function getAccuweatherPastTimestamp(offsetIntervals = 0) {
+    const now = new Date();
+    // Mengurangi menit dari waktu saat ini untuk mendapatkan data historis
+    const totalMinutesToSubtract = offsetIntervals * RADAR_TIME_INTERVAL_MINUTES;
+    now.setUTCMinutes(now.getUTCMinutes() - totalMinutesToSubtract);
+
+    // Bulatkan ke bawah ke kelipatan RADAR_TIME_INTERVAL_MINUTES terdekat
+    const currentMinutes = now.getUTCMinutes();
+    const roundedMinutes = Math.floor(currentMinutes / RADAR_TIME_INTERVAL_MINUTES) * RADAR_TIME_INTERVAL_MINUTES;
+    now.setUTCMinutes(roundedMinutes, 0, 0); // Set detik dan milidetik ke 0
+
+    return now.toISOString().split('.')[0] + "Z"; // Format YYYY-MM-DDTHH:mm:ssZ
+}
+
+
+/**
+ * Fungsi untuk memperbarui layer Radar menggunakan data historis AccuWeather.
+ * @param {number} timeOffset - Jumlah interval yang akan dihitung mundur (0 = citra terbaru, 1 = 10 menit lalu, dst.)
+ */
+function updateRadarAccuweather(timeOffset = 0) {
+    try {
+        // 1. Dapatkan timestamp untuk data radar di masa lalu
+        const timestampString = getAccuweatherPastTimestamp(timeOffset);
+
+        // 2. Buat URL tile radar AccuWeather
+        const radarUrl = `${ACCUWEATHER_RADAR_API_BASE_URL}${timestampString}/{z}/{x}/{y}.png?apikey=${ACCUWEATHER_API_KEY}`;
+
+        // 3. Perbarui layer peta
+        if (radarLayer) {
+            radarLayer.setUrl(radarUrl);
+        } else {
+            radarLayer = L.tileLayer(radarUrl, {
+                attribution: 'Radar © <a href="https://www.accuweather.com/" target="_blank">AccuWeather</a>',
+                opacity: 0.8,
+                minZoom: 1,
+                maxZoom: 12
+            });
+            // radarLayer.addTo(map); 
+        }
+
+        // 4. Perbarui tampilan indikator waktu
+        const timeIndicator = document.getElementById('time-indicator');
+        if (timeIndicator) {
+            const utcTime = new Date(timestampString);
+            const localTime = new Date(utcTime);
+            const localTimeString = localTime.toLocaleTimeString('id-ID', {
+                hour: '2-digit',
+                minute: '2-digit',
+            });
+
+            const bulanIndonesia = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+            const bulan = bulanIndonesia[utcTime.getUTCMonth()];
+            
+            timeIndicator.innerHTML = `
+                <strong>${utcTime.getUTCDate()} ${bulan} ${utcTime.getUTCFullYear()}</strong><br>
+                <span style="color: #FFD700;">${utcTime.getUTCHours().toString().padStart(2, '0')}:${utcTime.getUTCMinutes().toString().padStart(2, '0')} UTC</span><br>
+                <span style="color: #00FF00;">${localTimeString} Waktu Setempat</span>
+            `;
+        }
+    } catch (error) {
+        console.error("Gagal membuat atau memperbarui URL radar AccuWeather:", error);
+        const timeIndicator = document.getElementById('time-indicator');
+        if (timeIndicator) {
+            timeIndicator.innerText = `Gagal memuat citra radar.`;
+        }
+    }
+}
+	
+// --- Konfigurasi Umum AccuWeather ---
+//const ACCUWEATHER_API_KEY = 'de13920f574d420984d3080b1fa6132b'; // GANTI DENGAN API KEY ANDA YANG VALID!
 const TIME_INTERVAL_MINUTES = 10; // Asumsi update citra setiap 10 menit
 
 // --- Konfigurasi Satellite IR AccuWeather ---
@@ -679,7 +794,7 @@ if (!document.getElementById('timestampInfoVIS')) {
 // Asumsikan 'map' adalah variabel global untuk Leaflet map Anda dan sudah diinisialisasi
 // Contoh: const map = L.map('mapid').setView([lat, lon], zoom);
 
-// updateRadar(); // Jika Anda punya fungsi ini, pastikan sudah didefinisikan
+// updateRadarAccuweather(); // Jika Anda punya fungsi ini, pastikan sudah didefinisikan
 
 // Panggil fungsi update untuk pertama kali
 updateIRSatellite();
@@ -687,11 +802,11 @@ updateWVSatellite();
 updateVISSatellite();
 
 // Set interval untuk pembaruan otomatis
-	updateRadar();
+	updateRadarAccuweather();
         updateIRSatellite();
 	updateWVSatellite();
 	updateVISSatellite();
-	setInterval(updateRadar, 600000);
+	setInterval(updateRadarAccuweather, 600000);
         setInterval(updateIRSatellite, 600000);
 	setInterval(updateWVSatellite, 600000); 
 	setInterval(updateVISSatellite, 600000); // 10 menit
@@ -770,7 +885,7 @@ function addTimeControls() {
         else timeLabel.textContent = `${step * 10} menit lalu`;}
 
     function updateLayers(timeOffset) {
-        updateRadar(timeOffset);
+        updateRadarAccuweather(timeOffset);
         updateIRSatellite(timeOffset);
 	updateWVSatellite(timeOffset);
 	updateVISSatellite(timeOffset);
@@ -1403,6 +1518,9 @@ function parseVaaForMapInfo(vaaFullText) {
 /**
  * 3. Membuat string SIGMET WV dari teks VAA. (VERSI SANGAT DEFensif)
  */
+/**
+ * 3. Membuat string SIGMET WV dari teks VAA. (VERSI SANGAT TELITI)
+ */
 function generateSigmet(vaaFullText) {
     // Bersihkan teks dari karakter carriage return (\r) yang sering jadi masalah
     const cleanText = vaaFullText.replace(/\r/g, '');
@@ -1410,66 +1528,66 @@ function generateSigmet(vaaFullText) {
     try {
         const extract = (regex, text = cleanText) => (text.match(regex) || [])[1]?.trim() || null;
 
-        // --- Ekstrak Info Global ---
-        const dtg = extract(/DTG:\s*(\d{8}\/\d{6}Z)/);
-        const volcano = extract(/VOLCANO:\s*([\w\s-]+?)\s+\d+/);
-        const position = extract(/PSN:\s*(N\d{4}\s*E\d{5})/);
-        const nxtAdvisoryTime = extract(/NXT ADVISORY:.*?(\d{6}Z)/);
+        // --- Ekstraksi dengan Regex yang Paling Presisi dan Teliti ---
+
+        // Cocokkan DTG, toleran terhadap format waktu 4 atau 6 digit
+        const dtg = extract(/DTG:\s*(\d{8}\/\d{4,6}Z)/i);
         
-        // --- Ekstraksi dengan Beberapa Pola Regex (Lebih Tangguh) ---
-        // Mencari blok observasi dengan beberapa kemungkinan kata kunci akhir
-        const obsBlockMatch = cleanText.match(/((?:OBS|EST) VA CLD:[\s\S]*?)(?=FCST VA CLD|RMK:|NXT ADVISORY:)/);
+        const volcano = extract(/VOLCANO:\s*([\w\s-]+?)\s+\d+/i);
+        
+        // Regex posisi dibuat untuk menangani ada atau tidaknya spasi secara eksplisit
+        const position = extract(/PSN:\s*(N\d{4})\s*(E\d{5})/i); 
+        const formattedPosition = position ? `${position[0]} ${position[1]}` : null; // Format ulang dengan spasi
+
+        // Regex NXT ADVISORY yang mengabaikan teks di antaranya
+        const nxtAdvisoryTime = extract(/NXT ADVISORY:[\s\S]*?(\d{6}Z)/i);
+
+        // Isolasi blok observasi untuk parsing yang lebih aman
+        const obsBlockMatch = cleanText.match(/((?:OBS|EST) VA CLD:[\s\S]*?)(?=FCST VA CLD|RMK:|NXT ADVISORY:)/i);
         const obsBlock = obsBlockMatch ? obsBlockMatch[1] : null;
 
-        // Jika blok observasi tidak ditemukan, langsung gagal. Ini adalah inti masalah.
         if (!obsBlock) {
             console.error("[SIGMET Generator] Gagal menemukan blok 'OBS VA CLD' utama.");
-            return "Error: Tidak dapat menemukan blok informasi observasi (OBS VA CLD) dalam teks VAA.";
+            return "Error: Blok informasi observasi (OBS VA CLD) tidak ditemukan.";
         }
         
-        // Ekstrak dari dalam obsBlock yang sudah kita isolasi
-        const obsTime = extract(/(?:OBS|EST) VA DTG:\s*\d{2}\/(\d{4}Z)/, obsBlock);
+        // Ekstrak dari dalam obsBlock yang sudah diisolasi
+        const obsTime = extract(/(?:OBS|EST)\s*VA\s*DTG:\s*\d{2}\/(\d{4}Z)/i, obsBlock);
         const flightLevel = extract(/SFC\/FL(\d{3})/, obsBlock);
         
-        // Coba beberapa pola untuk pergerakan
-        let movementMatch = obsBlock.match(/MOV\s+([\w\s]+?)\s+(\d+KT)/);
-        if (!movementMatch) {
-            movementMatch = obsBlock.match(/MOV\s+([\w\s]+?)\s+KT/); // Pola tanpa angka kecepatan
-        }
-        const movDir = movementMatch ? movementMatch[1].trim() : "NC"; // Default ke NC jika tidak ada
-        const movSpd = movementMatch ? (movementMatch[2] || "") : ""; // Kecepatan bisa kosong
+        const movementMatch = obsBlock.match(/MOV\s+([\w\s]+?)\s+(\d+KT)/i);
+        const movDir = movementMatch ? movementMatch[1].trim() : "NC";
+        const movSpd = movementMatch ? (movementMatch[2] || "") : "";
         
-        // Coba beberapa pola untuk koordinat
-        let coordsMatch = obsBlock.match(/SFC\/FL\d{3}\s*([\s\S]*?)(MOV|KT|$)/);
+        let coordsMatch = obsBlock.match(/SFC\/FL\d{3}\s*([\s\S]*?)(MOV|KT|$)/i);
         let coords = coordsMatch ? coordsMatch[1].replace(/\n/g, ' ').replace(/\s+/g, ' ').trim() : null;
 
         // --- Validasi Final ---
-        if (!dtg || !volcano || !position || !obsTime || !flightLevel || !coords) {
+        if (!dtg || !volcano || !formattedPosition || !obsTime || !flightLevel || !coords || !nxtAdvisoryTime) {
             console.error("[SIGMET Generator] Gagal parsing. Detail:", {
-                dtg, volcano, position, obsTime, flightLevel, movDir, movSpd, coords, nxtAdvisoryTime
+                dtg, volcano, position: formattedPosition, obsTime, flightLevel, movDir, movSpd, coords, nxtAdvisoryTime
             });
-            return "Error: Gagal mem-parsing komponen penting. Format VAA mungkin baru.";
+            return "Error: Gagal mem-parsing komponen penting. Format VAA mungkin baru atau tidak lengkap.";
         }
         
         // --- Pembersihan dan Perakitan (Aman) ---
         coords = coords.replace(/^-|-$|^\s*-\s*|\s*-\s*$/g, '').trim();
         const firstCoord = coords.split(' - ')[0];
-        if (firstCoord && firstCoord !== coords) { // Hindari duplikasi jika hanya ada 1 titik
+        if (firstCoord && firstCoord !== coords) {
             coords += ` - ${firstCoord}`;
         }
         
-        // Jika movDir atau movSpd tidak ada, gunakan 'NC' (No Change)
         const movementStr = (movDir && movSpd) ? `MOV ${movDir} ${movSpd}` : 'NC';
-        const finalNxtTime = nxtAdvisoryTime || dtg.split('/')[1]; // Fallback jika nxt advisory tidak ada
-
-        return `WVID21 WAAA ${dtg.replace('/', '')}\nWAAF SIGMET XX VALID ${dtg.replace('/', '')}/${finalNxtTime} WAAA-\nWAAF UJUNG PANDANG FIR VA ERUPTION MT ${volcano} PSN ${position}\nVA CLD OBS AT ${obsTime} WI ${coords}\nSFC/FL${flightLevel} ${movementStr}=`;
+        
+        const dtgTime = dtg.split('/')[1];
+        
+        return `WVID21 WAAA ${dtgTime}\nWAAF SIGMET XX VALID ${dtgTime}/${nxtAdvisoryTime} WAAA-\nWAAF UJUNG PANDANG FIR VA ERUPTION MT ${volcano} PSN ${formattedPosition}\nVA CLD OBS AT ${obsTime} WI ${coords}\nSFC/FL${flightLevel} ${movementStr}=`;
 
     } catch (error) {
         console.error("[SIGMET Generator] Terjadi error internal:", error);
         return `Terjadi error internal saat membuat SIGMET.\n\nDetail: ${error.message}`;
     }
 }
-
  /* 4. Fungsi utama untuk menampilkan notifikasi di peta.
  */
 function showVaaNotificationOnMap(vaaData) {
