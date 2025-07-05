@@ -1586,14 +1586,16 @@ function generateSigmet(vaaFullText) {
         }
         
         // Rakit berita SIGMET yang lengkap
-        return `WVID21 WAAA ${publicationTime}\nWAAF SIGMET XX VALID ${validStartTime}/${validEndTime} WAAA-\nWAAF UJUNG PANDANG FIR VA ERUPTION MT ${volcano} PSN ${formattedPosition}\nVA CLD OBS AT ${obsTime} WI ${coords}\nSFC/FL${flightLevel} ${movementStr}=`;
+        return `WVID21 WAAA ${publicationTime}\nWAAF SIGMET XX VALID ${validStartTime}/${validEndTime} WAAA-\nWAAF UJUNG PANDANG FIR VA ERUPTION MT ${volcano} PSN ${formattedPosition}\nVA CLD OBS AT ${obsTime} WI ${coords}\nSFC/FL${flightLevel} ${movementStr} NC=`;
 
     } catch (error) {
         console.error("[SIGMET Generator] Terjadi error internal:", error);
         return `Terjadi error internal saat membuat SIGMET.\n\nDetail: ${error.message}`;
     }
 }
-/* 4. Fungsi utama untuk menampilkan notifikasi di peta.
+/**
+ * 4. Fungsi utama untuk menampilkan notifikasi di peta.
+ * (VERSI DENGAN UNDUH PNG LANGSUNG DARI URL)
  */
 function showVaaNotificationOnMap(vaaData) {
     const mapInfo = parseVaaForMapInfo(vaaData.fullText);
@@ -1612,22 +1614,41 @@ function showVaaNotificationOnMap(vaaData) {
     const buttonContainer = document.createElement('div');
     buttonContainer.className = 'vaa-popup-buttons';
     
-    const downloadTxtBtn = document.createElement('button');
-    downloadTxtBtn.innerText = 'Unduh (.txt)';
-    downloadTxtBtn.onclick = () => { /* Logika unduh diisi di bawah */ };
-    buttonContainer.appendChild(downloadTxtBtn);
+    const downloadBtn = document.createElement('button');
+    downloadBtn.innerText = vaaData.imageUrl ? 'Unduh (Txt+Png)' : 'Unduh (.txt)';
+    buttonContainer.appendChild(downloadBtn);
 
-    if (vaaData.imageUrl) {
-        const downloadPngBtn = document.createElement('button');
-        downloadPngBtn.innerText = 'Unduh Peta (.png)';
-        buttonContainer.appendChild(downloadPngBtn);
-    }
-    
     const generateSigmetBtn = document.createElement('button');
     generateSigmetBtn.innerText = 'Buat SIGMET';
     generateSigmetBtn.className = 'sigmet-btn';
     buttonContainer.appendChild(generateSigmetBtn);
     
+    // --- Logika onclick untuk tombol "Unduh" yang DISEDERHANAKAN ---
+    downloadBtn.onclick = function() {
+        // Aksi 1: Unduh file .txt
+        const blob = new Blob([vaaData.fullText], { type: 'text/plain' });
+        const txtUrl = URL.createObjectURL(blob);
+        const txtLink = document.createElement('a');
+        txtLink.href = txtUrl;
+        txtLink.download = `VAA_${vaaData.advisoryNumber}.txt`;
+        txtLink.click();
+        URL.revokeObjectURL(txtUrl); // Bersihkan memori
+
+        // Aksi 2: Jika ada URL gambar, unduh langsung
+        if (vaaData.imageUrl) {
+            setTimeout(() => {
+                const pngLink = document.createElement('a');
+                pngLink.href = vaaData.imageUrl;
+                // Atribut 'download' akan menyarankan browser untuk mengunduh, bukan membuka di tab baru.
+                pngLink.download = `VAA_MAP_${vaaData.advisoryNumber}.png`;
+                pngLink.click();
+            }, 100);
+        }
+    };
+    
+    // Sisa kode fungsi ini tetap sama...
+    // ... (logika sigmet container, dll) ...
+
     const sigmetContainer = document.createElement('div');
     sigmetContainer.className = 'sigmet-output-container';
     sigmetContainer.style.display = 'none';
@@ -1662,24 +1683,7 @@ function showVaaNotificationOnMap(vaaData) {
         if (alertSound) { alertSound.pause(); alertSound.currentTime = 0; }
         vaAdvisoryLayer.clearLayers();
     });
-    
-    downloadTxtBtn.onclick = () => {
-        const blob = new Blob([vaaData.fullText], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url;
-        a.download = `VAA_${vaaData.advisoryNumber}.txt`;
-        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-    };
-    if (vaaData.imageUrl) {
-        buttonContainer.querySelector('button:nth-child(2)').onclick = () => {
-            const proxyUrl = `/api/fetch-image?url=${encodeURIComponent(vaaData.imageUrl)}`;
-            const a = document.createElement('a'); a.href = proxyUrl;
-            a.download = `VAA_MAP_${vaaData.advisoryNumber}.png`;
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        };
-    }
 }
-
 /**
  * 5. Fungsi Pengecek Utama yang berjalan periodik.
  */
