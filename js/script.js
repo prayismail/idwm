@@ -1470,7 +1470,7 @@ function generateSigmet(vaaFullText) {
     }
 }
 
- * 4. Fungsi utama untuk menampilkan notifikasi di peta.
+ /* 4. Fungsi utama untuk menampilkan notifikasi di peta.
  */
 function showVaaNotificationOnMap(vaaData) {
     const mapInfo = parseVaaForMapInfo(vaaData.fullText);
