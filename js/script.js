@@ -1404,32 +1404,58 @@ function parseVaaForMapInfo(vaaFullText) {
 /**
  * 3. Membuat string SIGMET WV dari teks VAA.
  */
+/**
+ * 3. Membuat string SIGMET WV dari teks VAA. (VERSI DIPERBAIKI)
+ */
 function generateSigmet(vaaFullText) {
     try {
-        const extract = (regex) => (vaaFullText.match(regex) || [])[1]?.trim() || null;
-        const dtg = extract(/DTG: \d{8}\/(\d{6})Z/);
-        const volcano = extract(/VOLCANO: ([\w\s-]+?)\s+\d+/);
-        const position = extract(/PSN: (N\d{4} E\d{5})/);
-        const obsTime = extract(/(?:OBS|EST) VA DTG: \d{2}\/(\d{4})Z/);
+        // ---- Regex yang Ditingkatkan ----
+        // \s* akan cocok dengan nol atau lebih spasi/karakter whitespace
+        const extract = (regex, text = vaaFullText) => (text.match(regex) || [])[1]?.trim() || null;
+        
+        const dtg = extract(/DTG:\s*(\d{8}\/\d{6}Z)/);
+        const volcano = extract(/VOLCANO:\s*([\w\s-]+?)\s+\d+/);
+        // Regex posisi dibuat lebih toleran terhadap spasi
+        const position = extract(/PSN:\s*(N\d{4}\s*E\d{5})/); 
+        const obsTime = extract(/(?:OBS|EST) VA DTG:\s*\d{2}\/(\d{4}Z)/);
         const flightLevel = extract(/SFC\/FL(\d{3})/);
-        const movementMatch = vaaFullText.match(/MOV (\w+\s?\w*?)\s(\d+KT)/);
-        const movDir = movementMatch ? movementMatch[1] : null;
-        const movSpd = movementMatch ? movementMatch[2] : null;
-        const coordsBlockMatch = vaaFullText.match(/(?:OBS|EST) VA CLD:.*?SFC\/FL\d{3}\s([\s\S]*?)MOV/);
-        let coords = coordsBlockMatch ? coordsBlockMatch[1].replace(/\n\s+/g, ' ').trim() : null;
-        const nxtAdvisoryTime = extract(/NXT ADVISORY:.*?(\d{6})Z/);
+        
+        // Regex untuk pergerakan dibuat lebih kuat
+        const movementMatch = vaaFullText.match(/MOV\s+([\w\s]+?)\s+(\d+KT)/);
+        const movDir = movementMatch ? movementMatch[1].trim() : null;
+        const movSpd = movementMatch ? movementMatch[2].trim() : null;
+        
+        // Regex untuk koordinat awan dibuat lebih tangguh
+        const coordsBlockMatch = vaaFullText.match(/(?:OBS|EST) VA CLD:.*?SFC\/FL\d{3}\s*([\s\S]*?)FCST|MOV/);
+        let coords = coordsBlockMatch ? coordsBlockMatch[1].replace(/\n|\r/g, ' ').replace(/\s+/g, ' ').trim() : null;
+
+        const nxtAdvisoryTime = extract(/NXT ADVISORY:.*?(\d{6}Z)/);
+
+        // --- Pengecekan Kegagalan yang Lebih Detail ---
         if (!dtg || !volcano || !position || !obsTime || !flightLevel || !movDir || !movSpd || !coords || !nxtAdvisoryTime) {
-            return "Error: Gagal mem-parsing teks VAA. Format mungkin tidak dikenali.";
+            console.error("[SIGMET Generator] Gagal parsing. Detail:", {
+                dtg, volcano, position, obsTime, flightLevel, movDir, movSpd, coords, nxtAdvisoryTime
+            });
+            return "Error: Gagal mem-parsing teks VAA. Komponen penting tidak ditemukan.";
         }
+        
+        // Menghapus tanda hubung '-' di awal atau akhir jika ada
+        coords = coords.replace(/^-|-$|^\s*-\s*|\s*-\s*$/g, '').trim();
+
+        // Aturan khusus: Ambil titik koordinat pertama dan tambahkan lagi di akhir
         const firstCoord = coords.split(' - ')[0];
-        coords += ` - ${firstCoord}`;
-        return `WVID21 WAAA ${dtg}\nWAAF SIGMET XX VALID ${dtg}/${nxtAdvisoryTime} WAAA-\nWAAF UJUNG PANDANG FIR VA ERUPTION MT ${volcano} PSN ${position}\nVA CLD OBS AT ${obsTime}Z WI ${coords}\nSFC/FL${flightLevel} MOV ${movDir} ${movSpd} NC=`;
+        if (coords && firstCoord) {
+            coords += ` - ${firstCoord}`;
+        }
+
+        // Rakit string SIGMET menggunakan template
+        return `WVID21 WAAA ${dtg.replace('/', '')}\nWAAF SIGMET XX VALID ${dtg.replace('/', '')}/${nxtAdvisoryTime} WAAA-\nWAAF UJUNG PANDANG FIR VA ERUPTION MT ${volcano} PSN ${position}\nVA CLD OBS AT ${obsTime} WI ${coords}\nSFC/FL${flightLevel} MOV ${movDir} ${movSpd} NC=`;
+
     } catch (error) {
-        console.error("[VAA] Error di generateSigmet:", error);
+        console.error("[SIGMET Generator] Terjadi error internal:", error);
         return "Terjadi error internal saat membuat SIGMET.";
     }
 }
-
 /**
  * 4. Fungsi utama untuk menampilkan notifikasi di peta.
  */
