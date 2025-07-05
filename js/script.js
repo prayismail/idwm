@@ -1494,24 +1494,40 @@ async function fetchLatestVAA() {
 /**
  * 2. Mengurai teks VAA untuk info peta (nama & posisi gunung).
  */
+/**
+ * 2. Mengurai teks VAA untuk info peta (nama & posisi gunung). (VERSI DIPERBAIKI)
+ */
 function parseVaaForMapInfo(vaaFullText) {
+    // Bersihkan teks dari karakter carriage return (\r)
+    const cleanText = vaaFullText.replace(/\r/g, '');
+
     try {
-        const volcanoMatch = vaaFullText.match(/VOLCANO: ([\w\s-]+?)\s+\d+/);
-        const psnMatch = vaaFullText.match(/PSN: (N|S)(\d{2})(\d{2})\s(E|W)(\d{3})(\d{2})/);
+        const volcanoMatch = cleanText.match(/VOLCANO:\s*([\w\s-]+?)\s+\d+/i);
+        
+        // Regex ini sekarang lebih toleran terhadap spasi antara bagian-bagian PSN
+        const psnMatch = cleanText.match(/PSN:\s*(S|N)(\d{2})(\d{2})\s*(E|W)(\d{3})(\d{2})/i);
+
         if (!volcanoMatch || !psnMatch) {
-            console.error("[VAA] Gagal parsing nama/posisi gunung dari teks VAA.");
+            console.error("[Map Info Parser] Gagal mem-parsing nama atau posisi gunung dari teks VAA.");
             return null;
         }
+
         const volcanoName = volcanoMatch[1].trim();
-        const latDir = psnMatch[1], latDeg = parseInt(psnMatch[2]), latMin = parseInt(psnMatch[3]);
-        let lat = latDeg + (latMin / 60);
-        if (latDir === 'S') lat = -lat;
-        const lonDir = psnMatch[4], lonDeg = parseInt(psnMatch[5]), lonMin = parseInt(psnMatch[6]);
-        let lon = lonDeg + (lonMin / 60);
-        if (lonDir === 'W') lon = -lon;
-        return { volcanoName, lat: lat.toFixed(4), lon: lon.toFixed(4) };
+        
+        // Konversi koordinat dari format Derajat-Menit ke Desimal (logika ini tetap sama)
+        const [, latDir, latDeg, latMin, lonDir, lonDeg, lonMin] = psnMatch;
+        let lat = parseInt(latDeg) + (parseInt(latMin) / 60);
+        if (latDir.toUpperCase() === 'S') lat = -lat;
+        let lon = parseInt(lonDeg) + (parseInt(lonMin) / 60);
+        if (lonDir.toUpperCase() === 'W') lon = -lon;
+        
+        return { 
+            volcanoName: volcanoName, 
+            lat: lat.toFixed(4),
+            lon: lon.toFixed(4) 
+        };
     } catch (error) {
-        console.error("[VAA] Error di parseVaaForMapInfo:", error);
+        console.error("[Map Info Parser] Error saat parsing VAA untuk info peta:", error);
         return null;
     }
 }
@@ -1557,8 +1573,7 @@ function generateSigmet(vaaFullText) {
 
         // --- Ekstraksi Komponen Lain (Tetap sama) ---
         const volcano = extract(/VOLCANO:\s*([\w\s-]+?)\s+\d+/i);
-        const psnMatch = extractGroup(/PSN:\s*(S|N)(\d{2})\d{2}\s*(E|W)(\d{3})\d{2}/i);
-        const formattedPosition = psnMatch.length > 4 ? `${psnMatch[1]}${psnMatch[2]} ${psnMatch[3]}${psnMatch[4]}` : null;
+        const position = extract(/PSN:\s*([NS]\d{4}\s*E\d{5})/i);
 
         const obsTime = extract(/(?:OBS|EST) VA DTG:\s*\d{2}\/(\d{4}Z)/i);
         const flightLevel = extract(/SFC\/FL(\d{3})/i);
@@ -1571,7 +1586,7 @@ function generateSigmet(vaaFullText) {
         let coords = coordsMatch ? coordsMatch[1].replace(/\n/g, ' ').replace(/\s+/g, ' ').trim() : null;
 
         // --- Validasi Final ---
-        if (!publicationTime || !validStartTime || !validEndTime || !volcano || !formattedPosition || !obsTime || !flightLevel || !coords) {
+        if (!publicationTime || !validStartTime || !validEndTime || !volcano || !position || !obsTime || !flightLevel || !coords) {
             console.error("[SIGMET Generator] Gagal parsing. Detail:", {
                 publicationTime, validStartTime, validEndTime, volcano, position: formattedPosition, obsTime, flightLevel, movementStr, coords
             });
@@ -1586,7 +1601,7 @@ function generateSigmet(vaaFullText) {
         }
         
         // Rakit berita SIGMET yang lengkap
-        return `WVID21 WAAA ${publicationTime}\nWAAF SIGMET XX VALID ${validStartTime}/${validEndTime} WAAA-\nWAAF UJUNG PANDANG FIR VA ERUPTION MT ${volcano} PSN ${formattedPosition}\nVA CLD OBS AT ${obsTime} WI ${coords}\nSFC/FL${flightLevel} ${movementStr} NC=`;
+        return `WVID21 WAAA ${publicationTime}\nWAAF SIGMET XX VALID ${validStartTime}/${validEndTime} WAAA-\nWAAF UJUNG PANDANG FIR VA ERUPTION MT ${volcano} PSN ${position}\nVA CLD OBS AT ${obsTime} WI ${coords}\nSFC/FL${flightLevel} ${movementStr} NC=`;
 
     } catch (error) {
         console.error("[SIGMET Generator] Terjadi error internal:", error);
