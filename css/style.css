@@ -324,13 +324,13 @@
             width: 20px;
             height: 150px;
             background: linear-gradient(to bottom, 
-  #0099FF 0%,   /* Biru muda (Hujan sangat ringan) */
-  #0033CC 15%,  /* Biru terang (Hujan ringan) */
-  #6350a3 35%,  /* Biru tua (Hujan sedang) */
-  #FF0000 55%,  /* Merah (Hujan sangat lebat) */
-  #FF4500 60%,  /* Oranye kemerahan */
-  #ffc559 75%,  /* Oranye */
-  #fffd05 100%  /* Kuning (Hujan ekstrem) */
+   #00C800 0%,     /* Hijau Terang (Hujan Ringan) */
+        #008000 25%,    /* Hijau Tua (Hujan Sedang) */
+        #FFFF00 50%,    /* Kuning (Hujan Lebat) */
+        #FF7F00 75%,    /* Oranye (Hujan Sangat Lebat) */
+        #FF0000 95%,    /* Merah (Hujan Ekstrem) */
+        #C80000 100%    /* Merah Tua (Puncak Ekstrem) */
+
 );            border-radius: 2px;
             border: 0px solid black;
             position: relative;
