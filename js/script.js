@@ -1531,8 +1531,9 @@ function parseVaaForMapInfo(vaaFullText) {
         return null;
     }
 }
-/**
- * 3. Membuat string SIGMET WV dari teks VAA. (VERSI HYBRID PALING CERDAS)
+
+    /**
+ * 3. Membuat string SIGMET WV dari teks VAA.
  */
 function generateSigmet(vaaFullText) {
     // Bersihkan teks dari karakter carriage return (\r) yang sering jadi masalah
@@ -1542,41 +1543,32 @@ function generateSigmet(vaaFullText) {
         const extract = (regex) => (cleanText.match(regex) || [])[1]?.trim() || null;
         const extractGroup = (regex) => (cleanText.match(regex) || []);
 
-        // --- PENDEKATAN PARSING HYBRID ---
+        // --- PENDEKATAN PARSING ---
         
-        // Prioritas 1: Coba cari baris "DTG:"
-        let dtgMatch = extractGroup(/DTG:\s*(\d{2})\d{4}\/(\d{4,6}Z)/i);
-
-        // Prioritas 2 (Fallback): Jika DTG tidak ada, ambil dari "EST/OBS VA DTG"
-        if (dtgMatch.length === 0) {
-            dtgMatch = extractGroup(/(?:EST|OBS) VA DTG:\s*(\d{2})\/(\d{4,6}Z)/i);
-        }
-
-        const dtgDay = dtgMatch[1] || null;
-        const dtgTime = dtgMatch[2] || null;
-        
-        // Waktu Header: Diambil dari baris pertama, tapi hanya sebagai fallback jika yg lain gagal
+        // 1. Ambil informasi dari Header (TANGGAL dan WAKTU)
         const headerMatch = extractGroup(/FVAU\d{2}\s*ADRM\s*(\d{2})(\d{2})(\d{2})/i);
-        const headerTime = headerMatch.length > 3 ? `${headerMatch[1]}${headerMatch[2]}${headerMatch[3]}` : null;
+        const headerDay = headerMatch[1] || null;
+        const headerHHMM = headerMatch[2] && headerMatch[3] ? `${headerMatch[2]}${headerMatch[3]}` : null;
         
-        // Gunakan headerTime sebagai waktu penerbitan yang paling konsisten
-        const publicationTime = headerTime;
+        // Waktu penerbitan untuk header SIGMET
+        const publicationTime = headerDay && headerHHMM ? `${headerDay}${headerHHMM}` : null;
         
-        // Waktu validitas mulai = waktu DTG
-        const validStartTime = dtgDay && dtgTime ? `${dtgDay}${dtgTime.slice(0, 4)}` : null;
+        // --- PERUBAHAN UTAMA: validStartTime sekarang juga dari header ---
+        const validStartTime = publicationTime;
 
-        // Waktu validitas akhir dari NXT ADVISORY
-        const nxtAdvisoryMatch = extractGroup(/NXT ADVISORY:[\s\S]*?(\d{2})\/(\d{4,6}Z)/i);
-        const nxtDay = nxtAdvisoryMatch[1] || dtgDay;
+        // 2. Ambil waktu validitas akhir dari NXT ADVISORY
+        const nxtAdvisoryMatch = extractGroup(/NXT ADVISORY:[\s\S]*?(\d{2})?\/?(\d{4,6}Z)/i);
+        // Jika tanggal di NXT tidak ada, gunakan tanggal dari header
+        const nxtDay = nxtAdvisoryMatch[1] || headerDay; 
         const nxtTime = nxtAdvisoryMatch[2] || null;
         const validEndTime = nxtDay && nxtTime ? `${nxtDay}${nxtTime.slice(0, 4)}` : null;
 
         // --- Ekstraksi Komponen Lain (Tetap sama) ---
         const volcano = extract(/VOLCANO:\s*([\w\s-]+?)\s+\d+/i);
         const position = extract(/PSN:\s*([NS]\d{4}\s*E\d{5})/i);
-
-        const obsTime = extract(/(?:OBS|EST) VA DTG:\s*\d{2}\/(\d{4}Z)/i);
+        const obsTime = extract(/(?:OBS|EST)\s*VA\s*DTG:\s*\d{2}\/(\d{4}Z)/i);
         const flightLevel = extract(/SFC\/FL(\d{3})/i);
+        
         const movementMatch = cleanText.match(/MOV\s+([\w\s]+?)\s+(\d+KT)/i);
         const movDir = movementMatch ? movementMatch[1].trim() : "NC";
         const movSpd = movementMatch ? (movementMatch[2] || "") : "";
@@ -1588,7 +1580,7 @@ function generateSigmet(vaaFullText) {
         // --- Validasi Final ---
         if (!publicationTime || !validStartTime || !validEndTime || !volcano || !position || !obsTime || !flightLevel || !coords) {
             console.error("[SIGMET Generator] Gagal parsing. Detail:", {
-                publicationTime, validStartTime, validEndTime, volcano, position: formattedPosition, obsTime, flightLevel, movementStr, coords
+                publicationTime, validStartTime, validEndTime, volcano, position, obsTime, flightLevel, movementStr, coords
             });
             return "Error: Gagal mem-parsing komponen penting. Format VAA mungkin tidak dikenali.";
         }
@@ -1600,7 +1592,7 @@ function generateSigmet(vaaFullText) {
             coords += ` - ${firstCoord}`;
         }
         
-        // Rakit berita SIGMET yang lengkap
+        // Rakit berita SIGMET
         return `WVID21 WAAA ${publicationTime}\nWAAF SIGMET XX VALID ${validStartTime}/${validEndTime} WAAA-\nWAAF UJUNG PANDANG FIR VA ERUPTION MT ${volcano} PSN ${position}\nVA CLD OBS AT ${obsTime} WI ${coords}\nSFC/FL${flightLevel} ${movementStr} NC=`;
 
     } catch (error) {
@@ -1637,27 +1629,38 @@ function showVaaNotificationOnMap(vaaData) {
     generateSigmetBtn.innerText = 'Buat SIGMET';
     generateSigmetBtn.className = 'sigmet-btn';
     buttonContainer.appendChild(generateSigmetBtn);
-    
-    // --- Logika onclick untuk tombol "Unduh" yang DISEDERHANAKAN ---
+    // --- LOGIKA ONCLICK BARU YANG LEBIH TANGGUH ---
     downloadBtn.onclick = function() {
-        // Aksi 1: Unduh file .txt
-        const blob = new Blob([vaaData.fullText], { type: 'text/plain' });
-        const txtUrl = URL.createObjectURL(blob);
-        const txtLink = document.createElement('a');
-        txtLink.href = txtUrl;
-        txtLink.download = `VAA_${vaaData.advisoryNumber}.txt`;
-        txtLink.click();
-        URL.revokeObjectURL(txtUrl); // Bersihkan memori
+        console.log("Tombol Unduh Gabungan diklik.");
+        
+        // Aksi 1: Unduh file .txt (ini biasanya selalu berhasil)
+        try {
+            const blob = new Blob([vaaData.fullText], { type: 'text/plain' });
+            const txtUrl = URL.createObjectURL(blob);
+            const txtLink = document.createElement('a');
+            txtLink.href = txtUrl;
+            txtLink.download = `VAA_${vaaData.advisoryNumber}.txt`;
+            document.body.appendChild(txtLink);
+            txtLink.click();
+            document.body.removeChild(txtLink);
+            URL.revokeObjectURL(txtUrl);
+            console.log("File .txt berhasil dipicu untuk diunduh.");
+        } catch (e) {
+            console.error("Gagal mengunduh file TXT:", e);
+            alert("Gagal mengunduh file teks.");
+        }
 
-        // Aksi 2: Jika ada URL gambar, unduh langsung
+        // Aksi 2: Jika ada URL gambar, buka di tab baru.
+        // Ini lebih andal daripada memicu unduhan kedua secara paksa.
         if (vaaData.imageUrl) {
-            setTimeout(() => {
-                const pngLink = document.createElement('a');
-                pngLink.href = vaaData.imageUrl;
-                // Atribut 'download' akan menyarankan browser untuk mengunduh, bukan membuka di tab baru.
-                pngLink.download = `VAA_MAP_${vaaData.advisoryNumber}.png`;
-                pngLink.click();
-            }, 100);
+            try {
+                // window.open() yang dipicu langsung oleh klik pengguna biasanya diizinkan.
+                window.open(vaaData.imageUrl, '_blank');
+                console.log("Gambar dibuka di tab baru.");
+            } catch (e) {
+                console.error("Gagal membuka gambar di tab baru:", e);
+                alert("Gagal membuka gambar. Pastikan pop-up diizinkan untuk situs ini.");
+            }
         }
     };
     
