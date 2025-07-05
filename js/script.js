@@ -1400,63 +1400,76 @@ function parseVaaForMapInfo(vaaFullText) {
         return null;
     }
 }
-
 /**
- * 3. Membuat string SIGMET WV dari teks VAA.
- */
-/**
- * 3. Membuat string SIGMET WV dari teks VAA. (VERSI DIPERBAIKI)
+ * 3. Membuat string SIGMET WV dari teks VAA. (VERSI SANGAT DEFensif)
  */
 function generateSigmet(vaaFullText) {
+    // Bersihkan teks dari karakter carriage return (\r) yang sering jadi masalah
+    const cleanText = vaaFullText.replace(/\r/g, '');
+
     try {
-        // ---- Regex yang Ditingkatkan ----
-        // \s* akan cocok dengan nol atau lebih spasi/karakter whitespace
-        const extract = (regex, text = vaaFullText) => (text.match(regex) || [])[1]?.trim() || null;
-        
+        const extract = (regex, text = cleanText) => (text.match(regex) || [])[1]?.trim() || null;
+
+        // --- Ekstrak Info Global ---
         const dtg = extract(/DTG:\s*(\d{8}\/\d{6}Z)/);
         const volcano = extract(/VOLCANO:\s*([\w\s-]+?)\s+\d+/);
-        // Regex posisi dibuat lebih toleran terhadap spasi
-        const position = extract(/PSN:\s*(N\d{4}\s*E\d{5})/); 
-        const obsTime = extract(/(?:OBS|EST) VA DTG:\s*\d{2}\/(\d{4}Z)/);
-        const flightLevel = extract(/SFC\/FL(\d{3})/);
-        
-        // Regex untuk pergerakan dibuat lebih kuat
-        const movementMatch = vaaFullText.match(/MOV\s+([\w\s]+?)\s+(\d+KT)/);
-        const movDir = movementMatch ? movementMatch[1].trim() : null;
-        const movSpd = movementMatch ? movementMatch[2].trim() : null;
-        
-        // Regex untuk koordinat awan dibuat lebih tangguh
-        const coordsBlockMatch = vaaFullText.match(/(?:OBS|EST) VA CLD:.*?SFC\/FL\d{3}\s*([\s\S]*?)FCST|MOV/);
-        let coords = coordsBlockMatch ? coordsBlockMatch[1].replace(/\n|\r/g, ' ').replace(/\s+/g, ' ').trim() : null;
-
+        const position = extract(/PSN:\s*(N\d{4}\s*E\d{5})/);
         const nxtAdvisoryTime = extract(/NXT ADVISORY:.*?(\d{6}Z)/);
+        
+        // --- Ekstraksi dengan Beberapa Pola Regex (Lebih Tangguh) ---
+        // Mencari blok observasi dengan beberapa kemungkinan kata kunci akhir
+        const obsBlockMatch = cleanText.match(/((?:OBS|EST) VA CLD:[\s\S]*?)(?=FCST VA CLD|RMK:|NXT ADVISORY:)/);
+        const obsBlock = obsBlockMatch ? obsBlockMatch[1] : null;
 
-        // --- Pengecekan Kegagalan yang Lebih Detail ---
-        if (!dtg || !volcano || !position || !obsTime || !flightLevel || !movDir || !movSpd || !coords || !nxtAdvisoryTime) {
+        // Jika blok observasi tidak ditemukan, langsung gagal. Ini adalah inti masalah.
+        if (!obsBlock) {
+            console.error("[SIGMET Generator] Gagal menemukan blok 'OBS VA CLD' utama.");
+            return "Error: Tidak dapat menemukan blok informasi observasi (OBS VA CLD) dalam teks VAA.";
+        }
+        
+        // Ekstrak dari dalam obsBlock yang sudah kita isolasi
+        const obsTime = extract(/(?:OBS|EST) VA DTG:\s*\d{2}\/(\d{4}Z)/, obsBlock);
+        const flightLevel = extract(/SFC\/FL(\d{3})/, obsBlock);
+        
+        // Coba beberapa pola untuk pergerakan
+        let movementMatch = obsBlock.match(/MOV\s+([\w\s]+?)\s+(\d+KT)/);
+        if (!movementMatch) {
+            movementMatch = obsBlock.match(/MOV\s+([\w\s]+?)\s+KT/); // Pola tanpa angka kecepatan
+        }
+        const movDir = movementMatch ? movementMatch[1].trim() : "NC"; // Default ke NC jika tidak ada
+        const movSpd = movementMatch ? (movementMatch[2] || "") : ""; // Kecepatan bisa kosong
+        
+        // Coba beberapa pola untuk koordinat
+        let coordsMatch = obsBlock.match(/SFC\/FL\d{3}\s*([\s\S]*?)(MOV|KT|$)/);
+        let coords = coordsMatch ? coordsMatch[1].replace(/\n/g, ' ').replace(/\s+/g, ' ').trim() : null;
+
+        // --- Validasi Final ---
+        if (!dtg || !volcano || !position || !obsTime || !flightLevel || !coords) {
             console.error("[SIGMET Generator] Gagal parsing. Detail:", {
                 dtg, volcano, position, obsTime, flightLevel, movDir, movSpd, coords, nxtAdvisoryTime
             });
-            return "Error: Gagal mem-parsing teks VAA. Komponen penting tidak ditemukan.";
+            return "Error: Gagal mem-parsing komponen penting. Format VAA mungkin baru.";
         }
         
-        // Menghapus tanda hubung '-' di awal atau akhir jika ada
+        // --- Pembersihan dan Perakitan (Aman) ---
         coords = coords.replace(/^-|-$|^\s*-\s*|\s*-\s*$/g, '').trim();
-
-        // Aturan khusus: Ambil titik koordinat pertama dan tambahkan lagi di akhir
         const firstCoord = coords.split(' - ')[0];
-        if (coords && firstCoord) {
+        if (firstCoord && firstCoord !== coords) { // Hindari duplikasi jika hanya ada 1 titik
             coords += ` - ${firstCoord}`;
         }
+        
+        // Jika movDir atau movSpd tidak ada, gunakan 'NC' (No Change)
+        const movementStr = (movDir && movSpd) ? `MOV ${movDir} ${movSpd}` : 'NC';
+        const finalNxtTime = nxtAdvisoryTime || dtg.split('/')[1]; // Fallback jika nxt advisory tidak ada
 
-        // Rakit string SIGMET menggunakan template
-        return `WVID21 WAAA ${dtg.replace('/', '')}\nWAAF SIGMET XX VALID ${dtg.replace('/', '')}/${nxtAdvisoryTime} WAAA-\nWAAF UJUNG PANDANG FIR VA ERUPTION MT ${volcano} PSN ${position}\nVA CLD OBS AT ${obsTime} WI ${coords}\nSFC/FL${flightLevel} MOV ${movDir} ${movSpd} NC=`;
+        return `WVID21 WAAA ${dtg.replace('/', '')}\nWAAF SIGMET XX VALID ${dtg.replace('/', '')}/${finalNxtTime} WAAA-\nWAAF UJUNG PANDANG FIR VA ERUPTION MT ${volcano} PSN ${position}\nVA CLD OBS AT ${obsTime} WI ${coords}\nSFC/FL${flightLevel} ${movementStr}=`;
 
     } catch (error) {
         console.error("[SIGMET Generator] Terjadi error internal:", error);
-        return "Terjadi error internal saat membuat SIGMET.";
+        return `Terjadi error internal saat membuat SIGMET.\n\nDetail: ${error.message}`;
     }
 }
-/**
+
  * 4. Fungsi utama untuk menampilkan notifikasi di peta.
  */
 function showVaaNotificationOnMap(vaaData) {
