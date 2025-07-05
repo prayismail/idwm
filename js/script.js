@@ -1516,10 +1516,7 @@ function parseVaaForMapInfo(vaaFullText) {
     }
 }
 /**
- * 3. Membuat string SIGMET WV dari teks VAA. (VERSI SANGAT DEFensif)
- */
-/**
- * 3. Membuat string SIGMET WV dari teks VAA. (VERSI SANGAT TELITI)
+ * 3. Membuat string SIGMET WV dari teks VAA. (VERSI FINAL DENGAN FORMAT TANGGAL YANG BENAR)
  */
 function generateSigmet(vaaFullText) {
     // Bersihkan teks dari karakter carriage return (\r) yang sering jadi masalah
@@ -1527,22 +1524,26 @@ function generateSigmet(vaaFullText) {
 
     try {
         const extract = (regex, text = cleanText) => (text.match(regex) || [])[1]?.trim() || null;
+        const extractGroup = (regex, text = cleanText) => (text.match(regex) || []);
 
         // --- Ekstraksi dengan Regex yang Paling Presisi dan Teliti ---
 
-        // Cocokkan DTG, toleran terhadap format waktu 4 atau 6 digit
-        const dtg = extract(/DTG:\s*(\d{8}\/\d{4,6}Z)/i);
-        
+        // Regex DTG sekarang menangkap TANGGAL dan WAKTU secara terpisah
+        const dtgMatch = extractGroup(/DTG:\s*(\d{2})\d{4}\/(\d{4,6}Z)/i);
+        const dtgDay = dtgMatch[1] || null;
+        const dtgTime = dtgMatch[2] || null;
+
         const volcano = extract(/VOLCANO:\s*([\w\s-]+?)\s+\d+/i);
         
-        // Regex posisi dibuat untuk menangani ada atau tidaknya spasi secara eksplisit
-        const position = extract(/PSN:\s*(N\d{4})\s*(E\d{5})/i); 
-        const formattedPosition = position ? `${position[0]} ${position[1]}` : null; // Format ulang dengan spasi
+        const psnMatch = extractGroup(/PSN:\s*(N\d{4})\s*(E\d{5})/i);
+        const formattedPosition = psnMatch[1] && psnMatch[2] ? `${psnMatch[1]} ${psnMatch[2]}` : null;
+        
+        // Regex NXT ADVISORY sekarang menangkap TANGGAL (jika ada) dan WAKTU
+        const nxtAdvisoryMatch = extractGroup(/NXT ADVISORY:[\s\S]*?(\d{2})?\/?(\d{6}Z)/i);
+        // Jika tanggal tidak ada di NXT, gunakan tanggal dari DTG
+        const nxtDay = nxtAdvisoryMatch[1] || dtgDay;
+        const nxtTime = nxtAdvisoryMatch[2] || null;
 
-        // Regex NXT ADVISORY yang mengabaikan teks di antaranya
-        const nxtAdvisoryTime = extract(/NXT ADVISORY:[\s\S]*?(\d{6}Z)/i);
-
-        // Isolasi blok observasi untuk parsing yang lebih aman
         const obsBlockMatch = cleanText.match(/((?:OBS|EST) VA CLD:[\s\S]*?)(?=FCST VA CLD|RMK:|NXT ADVISORY:)/i);
         const obsBlock = obsBlockMatch ? obsBlockMatch[1] : null;
 
@@ -1551,7 +1552,6 @@ function generateSigmet(vaaFullText) {
             return "Error: Blok informasi observasi (OBS VA CLD) tidak ditemukan.";
         }
         
-        // Ekstrak dari dalam obsBlock yang sudah diisolasi
         const obsTime = extract(/(?:OBS|EST)\s*VA\s*DTG:\s*\d{2}\/(\d{4}Z)/i, obsBlock);
         const flightLevel = extract(/SFC\/FL(\d{3})/, obsBlock);
         
@@ -1563,14 +1563,14 @@ function generateSigmet(vaaFullText) {
         let coords = coordsMatch ? coordsMatch[1].replace(/\n/g, ' ').replace(/\s+/g, ' ').trim() : null;
 
         // --- Validasi Final ---
-        if (!dtg || !volcano || !formattedPosition || !obsTime || !flightLevel || !coords || !nxtAdvisoryTime) {
+        if (!dtgDay || !dtgTime || !volcano || !formattedPosition || !obsTime || !flightLevel || !coords || !nxtDay || !nxtTime) {
             console.error("[SIGMET Generator] Gagal parsing. Detail:", {
-                dtg, volcano, position: formattedPosition, obsTime, flightLevel, movDir, movSpd, coords, nxtAdvisoryTime
+                dtgDay, dtgTime, volcano, position: formattedPosition, obsTime, flightLevel, movDir, movSpd, coords, nxtDay, nxtTime
             });
-            return "Error: Gagal mem-parsing komponen penting. Format VAA mungkin baru atau tidak lengkap.";
+            return "Error: Gagal mem-parsing komponen tanggal/waktu penting. Format VAA mungkin baru.";
         }
         
-        // --- Pembersihan dan Perakitan (Aman) ---
+        // --- Pembersihan dan Perakitan ---
         coords = coords.replace(/^-|-$|^\s*-\s*|\s*-\s*$/g, '').trim();
         const firstCoord = coords.split(' - ')[0];
         if (firstCoord && firstCoord !== coords) {
@@ -1578,17 +1578,20 @@ function generateSigmet(vaaFullText) {
         }
         
         const movementStr = (movDir && movSpd) ? `MOV ${movDir} ${movSpd}` : 'NC';
-        
-        const dtgTime = dtg.split('/')[1];
-        
-        return `WVID21 WAAA ${dtgTime}\nWAAF SIGMET XX VALID ${dtgTime}/${nxtAdvisoryTime} WAAA-\nWAAF UJUNG PANDANG FIR VA ERUPTION MT ${volcano} PSN ${formattedPosition}\nVA CLD OBS AT ${obsTime} WI ${coords}\nSFC/FL${flightLevel} ${movementStr}=`;
+
+        // Rakit string waktu yang benar (DDHHMM), hilangkan 'Z' di akhir.
+        const headerTime = `${dtgDay}${dtgTime.slice(0, 4)}`;
+        const validStartTime = `${dtgDay}${dtgTime.slice(0, 4)}`;
+        const validEndTime = `${nxtDay}${nxtTime.slice(0, 4)}`;
+
+        return `WVID21 WAAA ${headerTime}\nWAAF SIGMET XX VALID ${validStartTime}/${validEndTime} WAAA-\nWAAF UJUNG PANDANG FIR VA ERUPTION MT ${volcano} PSN ${formattedPosition}\nVA CLD OBS AT ${obsTime} WI ${coords}\nSFC/FL${flightLevel} ${movementStr}=`;
 
     } catch (error) {
         console.error("[SIGMET Generator] Terjadi error internal:", error);
         return `Terjadi error internal saat membuat SIGMET.\n\nDetail: ${error.message}`;
     }
 }
- /* 4. Fungsi utama untuk menampilkan notifikasi di peta.
+/* 4. Fungsi utama untuk menampilkan notifikasi di peta.
  */
 function showVaaNotificationOnMap(vaaData) {
     const mapInfo = parseVaaForMapInfo(vaaData.fullText);
