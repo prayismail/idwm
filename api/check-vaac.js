@@ -1,104 +1,110 @@
 // File: api/check-vaac.js
-// VERSI PALING ANDAL: Menggunakan iterasi manual untuk mencari file terbaru.
+// VERSI BARU: Mencari file .txt dan .png yang berpasangan di FTP.
 
 const ftp = require('basic-ftp');
 const { Writable } = require('stream');
 
-// Helper function untuk mengekstrak timestamp dari nama file. Tidak berubah.
+// Helper function untuk mengekstrak timestamp dari nama file .txt
 function getTimestampFromFilename(filename) {
     const match = filename.match(/\.(\d{12})\.txt$/);
     return match && match[1] ? parseInt(match[1], 10) : 0;
 }
 
 module.exports = async (req, res) => {
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', ['GET']);
-    return res.status(405).end(`Method ${req.method} Not Allowed`);
-  }
-
-  const client = new ftp.Client(30000);
-
-  try {
-    await client.access({ host: "ftp.bom.gov.au" });
-
-    const currentYear = new Date().getFullYear();
-    const directoryPath = `/anon/gen/vaac/${currentYear}`;
-    
-    await client.cd(directoryPath);
-
-    const list = await client.list();
-
-    const darwinFiles = list.filter(item => 
-        item.name.startsWith('IDY') && 
-        item.name.endsWith('.txt') &&
-        item.type === ftp.FileType.File
-    );
-
-    if (darwinFiles.length === 0) {
-        const message = `Tidak ada file advisory Darwin (IDY*.txt) ditemukan di direktori ${currentYear}.`;
-        return res.status(404).json({ error: message });
+    if (req.method !== 'GET') {
+        return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
     }
 
-    // --- LOGIKA BARU YANG PALING ANDAL ---
-    // Daripada sorting, kita akan iterasi untuk menemukan file dengan timestamp terbesar.
-    
-    // 1. Inisialisasi dengan file pertama sebagai yang "terbaru sementara".
-    let latestFile = darwinFiles[0];
-    let maxTimestamp = getTimestampFromFilename(latestFile.name);
+    const client = new ftp.Client(30000);
 
-    // 2. Loop melalui sisa file untuk mencari yang lebih baru.
-    for (let i = 1; i < darwinFiles.length; i++) {
-        const currentFile = darwinFiles[i];
-        const currentTimestamp = getTimestampFromFilename(currentFile.name);
+    try {
+        await client.access({ host: "ftp.bom.gov.au" });
+
+        const currentYear = new Date().getFullYear();
+        const directoryPath = `/anon/gen/vaac/${currentYear}`;
         
-        // 3. Jika file saat ini lebih baru, perbarui "terbaru sementara".
-        if (currentTimestamp > maxTimestamp) {
-            maxTimestamp = currentTimestamp;
-            latestFile = currentFile;
+        await client.cd(directoryPath);
+
+        const list = await client.list();
+
+        // Pisahkan file .txt dan .png
+        const txtFiles = new Set();
+        const pngFiles = new Map();
+
+        list.forEach(item => {
+            if (item.type === ftp.FileType.File) {
+                if (item.name.startsWith('IDY') && item.name.endsWith('.txt')) {
+                    txtFiles.add(item);
+                } else if (item.name.endsWith('.png')) {
+                    // Simpan nama file PNG dengan "kunci" yang sama dengan file TXT
+                    // Contoh: IDY28010.202507051050.png -> kuncinya adalah IDY28010.202507051050
+                    const key = item.name.replace('.png', '');
+                    pngFiles.set(key, item.name);
+                }
+            }
+        });
+
+        const darwinTxtFiles = Array.from(txtFiles);
+        if (darwinTxtFiles.length === 0) {
+            return res.status(404).json({ error: `Tidak ada file .txt ditemukan.` });
+        }
+
+        // Cari file .txt terbaru (logika ini tetap sama)
+        let latestFile = darwinTxtFiles[0];
+        let maxTimestamp = getTimestampFromFilename(latestFile.name);
+
+        for (let i = 1; i < darwinTxtFiles.length; i++) {
+            const currentFile = darwinTxtFiles[i];
+            const currentTimestamp = getTimestampFromFilename(currentFile.name);
+            if (currentTimestamp > maxTimestamp) {
+                maxTimestamp = currentTimestamp;
+                latestFile = currentFile;
+            }
+        }
+        
+        console.log(`[Proxy VAAC-FTP] File TXT terbaru: ${latestFile.name}`);
+        
+        // --- LOGIKA BARU: CARI FILE PNG YANG BERPASANGAN ---
+        const txtKey = latestFile.name.replace('.txt', '');
+        const matchingPngFilename = pngFiles.get(txtKey);
+        let imageUrl = null;
+
+        if (matchingPngFilename) {
+            // Jika ditemukan, buat URL publiknya
+            imageUrl = `http://www.bom.gov.au/aviation/volcanic-ash/advisories/${currentYear}/${matchingPngFilename}`;
+            console.log(`[Proxy VAAC-FTP] File PNG pasangan ditemukan: ${matchingPngFilename}`);
+        } else {
+            console.log(`[Proxy VAAC-FTP] Tidak ada file PNG yang cocok untuk ${txtKey}`);
+        }
+
+        // Unduh dan proses file .txt (logika ini tetap sama)
+        const writable = new Writable();
+        const chunks = [];
+        writable._write = (chunk, encoding, next) => { chunks.push(chunk); next(); };
+        await client.downloadTo(writable, latestFile.name);
+        const fullText = Buffer.concat(chunks).toString('utf-8');
+        
+        const match = fullText.match(/ADVISORY\s+NR:\s*(\d{4}\/\d+)/i);
+        const advisoryNumber = match ? match[1] : null;
+
+        res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate');
+        
+        // Kirim respons JSON yang sekarang berisi imageUrl jika ditemukan
+        res.status(200).json({
+          advisoryNumber: advisoryNumber,
+          fullText: fullText,
+          imageUrl: imageUrl, // <-- KUNCI PERUBAHAN
+        });
+
+    } catch (error) {
+        console.error('[Proxy VAAC-FTP] Kesalahan internal:', error);
+        res.status(500).json({
+          error: 'Kesalahan internal pada server proxy FTP.',
+          details: error.message
+        });
+    } finally {
+        if (!client.closed) {
+          client.close();
         }
     }
-    
-    console.log(`[Proxy VAAC-FTP] File terbaru terdeteksi (dengan iterasi): ${latestFile.name}`);
-    
-    // --- AKHIR LOGIKA BARU ---
-
-    const writable = new Writable();
-    const chunks = [];
-    writable._write = (chunk, encoding, next) => { chunks.push(chunk); next(); };
-
-    await client.downloadTo(writable, latestFile.name);
-    const fullText = Buffer.concat(chunks).toString('utf-8');
-    
-    const match = fullText.match(/ADVISORY\s+NR:\s*(\d{4}\/\d+)/i);
-    const advisoryNumber = match && match[1] ? match[1] : null;
-
-    if (!advisoryNumber) {
-        console.warn('[Proxy VAAC-FTP] Konten file diunduh, tetapi nomor advisory tidak dapat di-parse.');
-    }
-
-    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate');
-    console.log(`[Proxy VAAC-FTP] Berhasil mem-parse nomor advisory: ${advisoryNumber} dari file: ${latestFile.name}`);
-    
-    res.status(200).json({
-      advisoryNumber: advisoryNumber,
-      fullText: fullText,
-    });
-
-  } catch (error) {
-    console.error('[Proxy VAAC-FTP] Kesalahan internal:', error);
-    if (error.code === 550) {
-        return res.status(404).json({
-            error: `Direktori tahunan tidak ditemukan.`,
-            details: error.message
-        });
-    }
-    res.status(500).json({
-      error: 'Kesalahan internal pada server proxy FTP.',
-      details: error.message
-    });
-  } finally {
-    if (!client.closed) {
-      client.close();
-    }
-  }
 };
