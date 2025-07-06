@@ -613,7 +613,7 @@ function updateRadarAccuweather(timeOffset = 0) {
             radarLayer.setUrl(radarUrl);
         } else {
             radarLayer = L.tileLayer(radarUrl, {
-                attribution: 'Radar data &copy; Accuweather'',
+                attribution: 'Radar data &copy; Accuweather',
                 opacity: 0.8,
                 minZoom: 1,
                 maxZoom: 12
