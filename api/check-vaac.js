@@ -1,13 +1,14 @@
 // File: api/check-vaac.js
-// VERSI BARU: Mencari file .txt dan .png yang berpasangan di FTP.
+// VERSI FINAL: Mencocokkan file .txt dan .png berdasarkan TIMESTAMP.
 
 const ftp = require('basic-ftp');
 const { Writable } = require('stream');
 
-// Helper function untuk mengekstrak timestamp dari nama file .txt
-function getTimestampFromFilename(filename) {
-    const match = filename.match(/\.(\d{12})\.txt$/);
-    return match && match[1] ? parseInt(match[1], 10) : 0;
+// Helper function untuk mengekstrak timestamp dari NAMA FILE APAPUN.
+function getTimestampFromAnyFilename(filename) {
+    // Regex ini mencari pola .YYYYMMDDHHMM.
+    const match = filename.match(/\.(\d{12})\./);
+    return match ? match[1] : null; // Kembalikan string timestamp atau null
 }
 
 module.exports = async (req, res) => {
@@ -27,57 +28,50 @@ module.exports = async (req, res) => {
 
         const list = await client.list();
 
-        // Pisahkan file .txt dan .png
-        const txtFiles = new Set();
-        const pngFiles = new Map();
+        // --- LOGIKA BARU: BERFOKUS PADA TIMESTAMP ---
 
-        list.forEach(item => {
-            if (item.type === ftp.FileType.File) {
-                if (item.name.startsWith('IDY') && item.name.endsWith('.txt')) {
-                    txtFiles.add(item);
-                } else if (item.name.endsWith('.png')) {
-                    // Simpan nama file PNG dengan "kunci" yang sama dengan file TXT
-                    // Contoh: IDY28010.202507051050.png -> kuncinya adalah IDY28010.202507051050
-                    const key = item.name.replace('.png', '');
-                    pngFiles.set(key, item.name);
-                }
-            }
-        });
-
-        const darwinTxtFiles = Array.from(txtFiles);
+        // 1. Cari file .txt terbaru (logika ini tetap sama, tapi kita simpan timestamp-nya)
+        const darwinTxtFiles = list.filter(item => item.name.startsWith('IDY') && item.name.endsWith('.txt') && item.type === ftp.FileType.File);
         if (darwinTxtFiles.length === 0) {
             return res.status(404).json({ error: `Tidak ada file .txt ditemukan.` });
         }
+        
+        let latestFile = null;
+        let latestTimestamp = '0'; // Gunakan string untuk perbandingan
 
-        // Cari file .txt terbaru (logika ini tetap sama)
-        let latestFile = darwinTxtFiles[0];
-        let maxTimestamp = getTimestampFromFilename(latestFile.name);
-
-        for (let i = 1; i < darwinTxtFiles.length; i++) {
-            const currentFile = darwinTxtFiles[i];
-            const currentTimestamp = getTimestampFromFilename(currentFile.name);
-            if (currentTimestamp > maxTimestamp) {
-                maxTimestamp = currentTimestamp;
-                latestFile = currentFile;
+        darwinTxtFiles.forEach(file => {
+            const timestamp = getTimestampFromAnyFilename(file.name);
+            if (timestamp && timestamp > latestTimestamp) {
+                latestTimestamp = timestamp;
+                latestFile = file;
             }
+        });
+
+        if (!latestFile) {
+             return res.status(404).json({ error: `Tidak ada file .txt valid yang ditemukan.` });
         }
         
-        console.log(`[Proxy VAAC-FTP] File TXT terbaru: ${latestFile.name}`);
+        console.log(`[Proxy VAAC-FTP] File TXT terbaru (timestamp ${latestTimestamp}): ${latestFile.name}`);
         
-        // --- LOGIKA BARU: CARI FILE PNG YANG BERPASANGAN ---
-        const txtKey = latestFile.name.replace('.txt', '');
-        const matchingPngFilename = pngFiles.get(txtKey);
+        // 2. Cari file .png dengan TIMESTAMP YANG SAMA
+        const matchingPngFile = list.find(item => {
+            if (item.name.endsWith('.png')) {
+                const pngTimestamp = getTimestampFromAnyFilename(item.name);
+                // Cek apakah timestamp-nya sama persis dengan timestamp file txt terbaru
+                return pngTimestamp === latestTimestamp;
+            }
+            return false;
+        });
+        
         let imageUrl = null;
-
-        if (matchingPngFilename) {
-            // Jika ditemukan, buat URL publiknya
-            imageUrl = `http://www.bom.gov.au/aviation/volcanic-ash/advisories/${currentYear}/${matchingPngFilename}`;
-            console.log(`[Proxy VAAC-FTP] File PNG pasangan ditemukan: ${matchingPngFilename}`);
+        if (matchingPngFile) {
+            imageUrl = `http://www.bom.gov.au/aviation/volcanic-ash/advisories/${currentYear}/${matchingPngFile.name}`;
+            console.log(`[Proxy VAAC-FTP] File PNG pasangan ditemukan berdasarkan timestamp: ${matchingPngFile.name}`);
         } else {
-            console.log(`[Proxy VAAC-FTP] Tidak ada file PNG yang cocok untuk ${txtKey}`);
+            console.log(`[Proxy VAAC-FTP] Tidak ada file PNG yang cocok untuk timestamp ${latestTimestamp}`);
         }
 
-        // Unduh dan proses file .txt (logika ini tetap sama)
+        // --- Sisa kode tetap sama ---
         const writable = new Writable();
         const chunks = [];
         writable._write = (chunk, encoding, next) => { chunks.push(chunk); next(); };
@@ -89,11 +83,10 @@ module.exports = async (req, res) => {
 
         res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate');
         
-        // Kirim respons JSON yang sekarang berisi imageUrl jika ditemukan
         res.status(200).json({
           advisoryNumber: advisoryNumber,
           fullText: fullText,
-          imageUrl: imageUrl, // <-- KUNCI PERUBAHAN
+          imageUrl: imageUrl,
         });
 
     } catch (error) {
