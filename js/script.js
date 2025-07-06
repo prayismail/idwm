@@ -1602,103 +1602,127 @@ function generateSigmet(vaaFullText) {
 }
 /**
  * 4. Fungsi utama untuk menampilkan notifikasi di peta.
- * (VERSI DENGAN UNDUH PNG LANGSUNG DARI URL)
+ * (VERSI FINAL LENGKAP)
  */
 function showVaaNotificationOnMap(vaaData) {
+    // Verifikasi data yang diterima dari backend untuk debugging
+    console.log("[VAA] Data diterima oleh Frontend:", vaaData);
+
     const mapInfo = parseVaaForMapInfo(vaaData.fullText);
     if (!mapInfo) {
         alert("Gagal memproses lokasi gunung dari VAA terbaru. Cek console untuk detail.");
         return;
     }
+
+    // Bersihkan notifikasi lama dan siapkan elemen
     vaAdvisoryLayer.clearLayers();
     const alertSound = document.getElementById('vaa-alert-sound');
     const volcanoIcon = L.divIcon({ className: 'blinking-volcano-marker', iconSize: [24, 24], iconAnchor: [12, 22] });
     const volcanoMarker = L.marker([mapInfo.lat, mapInfo.lon], { icon: volcanoIcon });
     
+    // --- MEMBANGUN KONTEN POP-UP SECARA DINAMIS ---
+    
+    // 1. Buat container utama untuk semua konten di dalam pop-up
     const popupContainer = document.createElement('div');
     popupContainer.innerHTML = `<b>🚨 VA Advisory Baru! 🚨</b><br><b>Gunung:</b> ${mapInfo.volcanoName}<br><b>Posisi:</b> ${mapInfo.lat}, ${mapInfo.lon}`;
     
+    // 2. Buat container untuk tombol-tombol aksi
     const buttonContainer = document.createElement('div');
     buttonContainer.className = 'vaa-popup-buttons';
     
+    // Tombol "Unduh" gabungan
     const downloadBtn = document.createElement('button');
-    downloadBtn.innerText = vaaData.imageUrl ? 'Unduh (Txt+Png)' : 'Unduh (.txt)';
+    downloadBtn.innerText = vaaData.imageBase64 ? 'Unduh (Txt+Png)' : 'Unduh (.txt)';
     buttonContainer.appendChild(downloadBtn);
 
+    // Tombol "Buat SIGMET"
     const generateSigmetBtn = document.createElement('button');
     generateSigmetBtn.innerText = 'Buat SIGMET';
     generateSigmetBtn.className = 'sigmet-btn';
     buttonContainer.appendChild(generateSigmetBtn);
-    // --- LOGIKA ONCLICK BARU YANG LEBIH TANGGUH ---
+    
+    // 3. Atur logika onclick untuk tombol "Unduh"
     downloadBtn.onclick = function() {
-        console.log("Tombol Unduh Gabungan diklik.");
+        console.log("[VAA] Tombol Unduh Gabungan diklik.");
         
-        // Aksi 1: Unduh file .txt (ini biasanya selalu berhasil)
+        // Aksi 1: Selalu unduh file .txt
         try {
             const blob = new Blob([vaaData.fullText], { type: 'text/plain' });
             const txtUrl = URL.createObjectURL(blob);
             const txtLink = document.createElement('a');
             txtLink.href = txtUrl;
             txtLink.download = `VAA_${vaaData.advisoryNumber}.txt`;
-            document.body.appendChild(txtLink);
             txtLink.click();
-            document.body.removeChild(txtLink);
             URL.revokeObjectURL(txtUrl);
-            console.log("File .txt berhasil dipicu untuk diunduh.");
         } catch (e) {
-            console.error("Gagal mengunduh file TXT:", e);
-            alert("Gagal mengunduh file teks.");
+            console.error("[VAA] Gagal mengunduh file TXT:", e);
         }
 
-        // Aksi 2: Jika ada URL gambar, buka di tab baru.
-        // Ini lebih andal daripada memicu unduhan kedua secara paksa.
-        if (vaaData.imageUrl) {
-            try {
-                // window.open() yang dipicu langsung oleh klik pengguna biasanya diizinkan.
-                window.open(vaaData.imageUrl, '_blank');
-                console.log("Gambar dibuka di tab baru.");
-            } catch (e) {
-                console.error("Gagal membuka gambar di tab baru:", e);
-                alert("Gagal membuka gambar. Pastikan pop-up diizinkan untuk situs ini.");
-            }
+        // Aksi 2: Jika ada data Base64, unduh juga file .png
+        if (vaaData.imageBase64) {
+            setTimeout(() => {
+                try {
+                    const pngLink = document.createElement('a');
+                    pngLink.href = vaaData.imageBase64;
+                    pngLink.download = `VAA_MAP_${vaaData.advisoryNumber}.png`;
+                    pngLink.click();
+                } catch (e) {
+                    console.error("[VAA] Gagal mengunduh file PNG dari Base64:", e);
+                }
+            }, 100);
         }
     };
     
-    // Sisa kode fungsi ini tetap sama...
-    // ... (logika sigmet container, dll) ...
-
+    // 4. Buat container untuk output SIGMET (awalnya tersembunyi)
     const sigmetContainer = document.createElement('div');
     sigmetContainer.className = 'sigmet-output-container';
     sigmetContainer.style.display = 'none';
     sigmetContainer.innerHTML = `<textarea readonly rows="8"></textarea><button>Salin Teks SIGMET</button>`;
 
+    // 5. Atur logika onclick untuk tombol "Buat SIGMET"
     generateSigmetBtn.onclick = () => {
-        sigmetContainer.querySelector('textarea').value = generateSigmet(vaaData.fullText);
+        const sigmetText = generateSigmet(vaaData.fullText);
+        const textarea = sigmetContainer.querySelector('textarea');
+        textarea.value = sigmetText;
         sigmetContainer.style.display = 'block';
         generateSigmetBtn.style.display = 'none';
         volcanoMarker.getPopup().update();
     };
+    
+    // 6. Atur logika onclick untuk tombol "Salin Teks SIGMET"
     sigmetContainer.querySelector('button').onclick = () => {
-        navigator.clipboard.writeText(sigmetContainer.querySelector('textarea').value).then(() => {
+        const textarea = sigmetContainer.querySelector('textarea');
+        navigator.clipboard.writeText(textarea.value).then(() => {
             const btn = sigmetContainer.querySelector('button');
             btn.innerText = 'Tersalin!';
             setTimeout(() => { btn.innerText = 'Salin Teks SIGMET'; }, 2000);
         });
     };
 
+    // 7. Gabungkan semua elemen ke dalam container pop-up utama
     popupContainer.appendChild(buttonContainer);
     popupContainer.appendChild(sigmetContainer);
 
+    // --- SELESAI MEMBUAT KONTEN POP-UP ---
+
+    // 8. Ikat pop-up ke marker, tampilkan, dan mulai alarm
     volcanoMarker.bindPopup(popupContainer, { minWidth: 280 });
     vaAdvisoryLayer.addLayer(volcanoMarker);
     vaAdvisoryLayer.addTo(map);
 
     map.panTo([mapInfo.lat, mapInfo.lon]);
     volcanoMarker.openPopup();
-    if (alertSound) alertSound.play().catch(e => console.warn("Autoplay suara diblokir.", e));
+    if (alertSound) {
+        alertSound.play().catch(e => console.warn("[VAA] Autoplay suara diblokir oleh browser.", e));
+    }
 
+    // 9. Atur event saat pop-up ditutup untuk menghentikan alarm
     volcanoMarker.on('popupclose', () => {
-        if (alertSound) { alertSound.pause(); alertSound.currentTime = 0; }
+        console.log("[VAA] Pop-up ditutup, alarm dihentikan.");
+        if (alertSound) {
+            alertSound.pause();
+            alertSound.currentTime = 0;
+        }
         vaAdvisoryLayer.clearLayers();
     });
 }
