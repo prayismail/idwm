@@ -613,7 +613,7 @@ function updateRadarAccuweather(timeOffset = 0) {
             radarLayer.setUrl(radarUrl);
         } else {
             radarLayer = L.tileLayer(radarUrl, {
-                attribution: 'Radar © <a href="https://www.accuweather.com/" target="_blank">AccuWeather</a>',
+                attribution: 'Radar data &copy; Accuweather'',
                 opacity: 0.8,
                 minZoom: 1,
                 maxZoom: 12
@@ -686,7 +686,7 @@ function updateIRSatellite(timeOffsetIntervals = 0) {
 
         if (!IRsatelliteLayer) {
             IRsatelliteLayer = L.tileLayer(satelliteUrl, {
-                attribution: 'Satellite IR © <a href="https://www.accuweather.com/" target="_blank">AccuWeather</a>',
+                attribution: 'Satellite data &copy; Accuweather',
                 opacity: 0.6,
                 minZoom: 1,
             });
@@ -719,7 +719,7 @@ function updateWVSatellite(timeOffsetIntervals = 0) {
 
         if (!WVsatelliteLayer) {
             WVsatelliteLayer = L.tileLayer(satelliteUrl, {
-                attribution: 'Satellite WV © <a href="https://www.accuweather.com/" target="_blank">AccuWeather</a>',
+                attribution: 'Satellite data &copy; Accuweather',
                 opacity: 0.6,
                 minZoom: 1,
             });
@@ -751,7 +751,7 @@ function updateVISSatellite(timeOffsetIntervals = 0) {
 
         if (!VISsatelliteLayer) {
             VISsatelliteLayer = L.tileLayer(satelliteUrl, {
-                attribution: 'Satellite VIS © <a href="https://www.accuweather.com/" target="_blank">AccuWeather</a>',
+                attribution: 'Satellite data &copy; Accuweather',
                 opacity: 0.6,
                 minZoom: 1,
             });
