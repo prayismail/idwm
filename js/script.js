@@ -1606,7 +1606,7 @@ function generateSigmet(vaaFullText) {
  */
 function showVaaNotificationOnMap(vaaData) {
     // Verifikasi data yang diterima dari backend untuk debugging
-    console.log("[VAA] Data diterima oleh Frontend:", vaaData);
+    console.log("[VAA] Data diterima oleh Frontend");
 
     const mapInfo = parseVaaForMapInfo(vaaData.fullText);
     if (!mapInfo) {
