@@ -1219,20 +1219,19 @@ function showAWOS(code) {
         }
 
         // Ambil Data SIGMET
-      // --- Helper Function 2: Parser utama (STRATEGI BARU YANG PALING ANDAL) ---
+           // --- Helper Function 2: Parser utama (DIROMBAK TOTAL DENGAN REGEX YANG LEBIH BAIK) ---
 function parseMultiPolygonSigmet(rawText) {
     const polygons = [];
-    // Gabungkan menjadi satu baris untuk kemudahan parsing
+    // Gabungkan menjadi satu baris untuk memudahkan parsing
     const singleLineText = rawText.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
-   
-    const sigmetPartRegex = /WI\s+((?:[NS]\d+\s*E\d+\s*(?:-\s*)?)+).*?((?:SFC\/|TOP\s+)FL\d{3})/g;
+    const sigmetPartRegex = /(?:WI|AND OBS AT \d{4}Z WI)\s+(.*?)\s*((?:SFC\/|TOP\s+)FL\d{3})/g;
     
     let match;
     // Loop melalui SEMUA kecocokan yang ditemukan oleh regex
     while ((match = sigmetPartRegex.exec(singleLineText)) !== null) {
         // Ekstrak data dari grup yang ditangkap regex.
         const coordString = match[1]; // Grup 1: String koordinat yang bersih
-        const levelString = match[2]; // Grup 2: String level yang bersih
+        const levelString = match[2]; // Grup 2: String level (e.g., "SFC/FL090" atau "TOP FL500")
 
         // Ubah string koordinat menjadi array angka.
         const coordinates = parseCoordString(coordString);
@@ -1245,33 +1244,9 @@ function parseMultiPolygonSigmet(rawText) {
         }
     }
     
-    // Fallback jika ada kata "AND"
-    // Terkadang parser utama bisa terlewat jika ada "AND OBS"
-    // Jadi kita akan coba split berdasarkan itu juga
-    if (singleLineText.includes(" AND OBS AT ")) {
-        const potentialBlocks = singleLineText.split(" AND OBS AT ");
-        potentialBlocks.forEach(block => {
-            // Kita ulangi regex yang sama pada blok yang lebih kecil
-            const subMatch = block.match(/WI\s+((?:[NS]\d+\s*E\d+\s*(?:-\s*)?)+).*?((?:SFC\/|TOP\s+)FL\d{3})/);
-            if (subMatch) {
-                const coordString = subMatch[1];
-                const levelString = subMatch[2];
-                const coordinates = parseCoordString(coordString);
-                
-                // Cek agar tidak menambahkan poligon duplikat
-                const isAlreadyAdded = polygons.some(p => p.level === levelString);
-                if (coordinates.length > 1 && !isAlreadyAdded) {
-                    polygons.push({
-                        coords: coordinates,
-                        level: levelString
-                    });
-                }
-            }
-        });
-    }
-
     return polygons;
 }
+
 
 // Helper Function 1: parseCoordString (Tidak perlu diubah)
 function parseCoordString(coordStr) {
