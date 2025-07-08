@@ -1240,11 +1240,12 @@ function parseCoordString(coordStr) {
     return coords;
 }
 
-
-// --- Helper Function 2: Parser utama (DENGAN LOGIKA PENUTUPAN POLIGON) ---
+// --- Helper Function 2: Parser utama (DENGAN LOGIKA PENUTUPAN POLIGON YANG PINTAR) ---
 function parseMultiPolygonSigmet(rawText) {
     const polygons = [];
     const singleLineText = rawText.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
+    
+    // Regex ini sudah terbukti andal untuk menemukan semua jenis poligon
     const sigmetPartRegex = /(?:EMBD TS OBS WI|VA CLD OBS AT \d{4}Z WI|AND OBS AT \d{4}Z WI)\s+((?:[NS]\d+\s*E\d+\s*(?:-\s*)?)+).*?((?:SFC\/|TOP\s+)FL\d{3})/gi;
 
     let match;
@@ -1255,10 +1256,17 @@ function parseMultiPolygonSigmet(rawText) {
         const coordinates = parseCoordString(coordString);
         
         if (coordinates.length > 1) {
-            // --- INI PERBAIKAN KRUSIAL UNTUK PLOTTING ---
-            // Menutup poligon dengan menambahkan koordinat pertama ke akhir array.
-            // Ini akan mengubah garis menjadi bentuk poligon yang tertutup.
-            coordinates.push(coordinates[0]);
+            // --- INI ADALAH PERBAIKAN KRUSIAL YANG BARU ---
+            // Cek apakah poligon sudah tertutup atau belum.
+            const firstPoint = coordinates[0];
+            const lastPoint = coordinates[coordinates.length - 1];
+
+            // Bandingkan latitude dan longitude dari titik pertama dan terakhir.
+            // Hanya tambahkan titik penutup JIKA mereka tidak sama.
+            if (firstPoint[0] !== lastPoint[0] || firstPoint[1] !== lastPoint[1]) {
+                console.log("Menutup poligon untuk:", levelString); // Untuk debugging
+                coordinates.push(firstPoint);
+            }
 
             polygons.push({
                 coords: coordinates,
@@ -1268,7 +1276,6 @@ function parseMultiPolygonSigmet(rawText) {
     }
     return polygons;
 }
-
 
 // --- Fungsi Utama fetchSIGMET (DENGAN PERBAIKAN FORMATTING TEKS) ---
 function fetchSIGMET(icao) {
