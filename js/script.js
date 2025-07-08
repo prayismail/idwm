@@ -1305,7 +1305,7 @@ function parseMultiPolygonSigmet(rawText) {
  */
 function fetchSIGMET(icao) {
     // Anda bisa mengganti URL ini kembali ke API lokal Anda (/api/sigmet) jika sudah siap.
-    let url = "https://api.allorigins.win/raw?url=https://aviationweather.gov/api/data/isigmet?format=json&level=3000";
+    let url = "/api/sigmet";
     
     fetch(url)
         .then(response => {
