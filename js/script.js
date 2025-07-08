@@ -1543,57 +1543,98 @@ function generateSigmet(vaaFullText) {
         const extract = (regex) => (cleanText.match(regex) || [])[1]?.trim() || null;
         const extractGroup = (regex) => (cleanText.match(regex) || []);
 
-        // --- PENDEKATAN PARSING ---
+        // --- Bagian 1: Ekstraksi Informasi Umum (Header, Waktu, Gunung) ---
+        // (Logika ini sebagian besar tetap sama karena sudah bekerja dengan baik)
         
-        // 1. Ambil informasi dari Header (TANGGAL dan WAKTU)
         const headerMatch = extractGroup(/FVAU\d{2}\s*ADRM\s*(\d{2})(\d{2})(\d{2})/i);
         const headerDay = headerMatch[1] || null;
         const headerHHMM = headerMatch[2] && headerMatch[3] ? `${headerMatch[2]}${headerMatch[3]}` : null;
-        
-        // Waktu penerbitan untuk header SIGMET
         const publicationTime = headerDay && headerHHMM ? `${headerDay}${headerHHMM}` : null;
-        
-        // --- PERUBAHAN UTAMA: validStartTime sekarang juga dari header ---
         const validStartTime = publicationTime;
 
-        // 2. Ambil waktu validitas akhir dari NXT ADVISORY
         const nxtAdvisoryMatch = extractGroup(/NXT ADVISORY:[\s\S]*?(\d{2})?\/?(\d{4,6}Z)/i);
-        // Jika tanggal di NXT tidak ada, gunakan tanggal dari header
         const nxtDay = nxtAdvisoryMatch[1] || headerDay; 
-        const nxtTime = nxtAdvisoryMatch[2] || null;
-        const validEndTime = nxtDay && nxtTime ? `${nxtDay}${nxtTime.slice(0, 4)}` : null;
-
-        // --- Ekstraksi Komponen Lain (Tetap sama) ---
+        const nxtTime = nxtAdvisoryMatch[2]?.match(/(\d{4})Z/)?.[1] || null; // Ambil 4 digit pertama dari waktu
+        const validEndTime = nxtDay && nxtTime ? `${nxtDay}${nxtTime}` : null;
+        
         const volcano = extract(/VOLCANO:\s*([\w\s-]+?)\s+\d+/i);
         const position = extract(/PSN:\s*([NS]\d{4}\s*E\d{5})/i);
         const obsTime = extract(/(?:OBS|EST)\s*VA\s*DTG:\s*\d{2}\/(\d{4}Z)/i);
-        const flightLevel = extract(/SFC\/FL(\d{3})/i);
-        
-        const movementMatch = cleanText.match(/MOV\s+([\w\s]+?)\s+(\d+KT)/i);
-        const movDir = movementMatch ? movementMatch[1].trim() : "NC";
-        const movSpd = movementMatch ? (movementMatch[2] || "") : "";
-        const movementStr = (movDir && movSpd) ? `MOV ${movDir} ${movSpd}` : 'NC';
-        
-        const coordsMatch = cleanText.match(/(?:OBS|EST) VA CLD:.*?SFC\/FL\d{3}\s*([\s\S]*?)(?=FCST VA CLD|RMK:|MOV|NXT ADVISORY:)/i);
-        let coords = coordsMatch ? coordsMatch[1].replace(/\n/g, ' ').replace(/\s+/g, ' ').trim() : null;
 
-        // --- Validasi Final ---
-        if (!publicationTime || !validStartTime || !validEndTime || !volcano || !position || !obsTime || !flightLevel || !coords) {
-            console.error("[SIGMET Generator] Gagal parsing. Detail:", {
-                publicationTime, validStartTime, validEndTime, volcano, position, obsTime, flightLevel, movementStr, coords
-            });
-            return "Error: Gagal mem-parsing komponen penting. Format VAA mungkin tidak dikenali.";
+        // --- Validasi Informasi Umum ---
+        if (!publicationTime || !validStartTime || !validEndTime || !volcano || !position || !obsTime) {
+            console.error("[SIGMET Generator] Gagal parsing informasi umum.", { publicationTime, validStartTime, validEndTime, volcano, position, obsTime });
+            return "Error: Gagal mem-parsing header atau informasi umum VAA.";
+        }
+
+        // --- Bagian 2: Logika Baru untuk Parsing Multipoligon ---
+        
+        // 2.1. Ambil seluruh blok "EST VA CLD"
+        const ashCloudBlockMatch = cleanText.match(/(?:OBS|EST) VA CLD:([\s\S]*?)(?=FCST VA CLD|RMK:|NXT ADVISORY:)/i);
+        if (!ashCloudBlockMatch) {
+            return "Error: Tidak dapat menemukan blok 'EST VA CLD' pada VAA.";
+        }
+        const ashCloudBlock = ashCloudBlockMatch[1];
+        
+        // 2.2. Pisahkan blok menjadi beberapa bagian berdasarkan "SFC/FL"
+        // Ini adalah trik kuncinya. Setiap poligon diawali dengan SFC/FL.
+        const cloudChunks = ashCloudBlock.split(/SFC\/FL/).filter(chunk => chunk.trim() !== '');
+
+        if (cloudChunks.length === 0) {
+            return "Error: Blok 'EST VA CLD' ditemukan, tetapi tidak ada deskripsi awan abu (SFC/FL).";
         }
         
-        // --- Pembersihan dan Perakitan ---
-        coords = coords.replace(/^-|-$|^\s*-\s*|\s*-\s*$/g, '').trim();
-        const firstCoord = coords.split(' - ')[0];
-        if (firstCoord && firstCoord !== coords) {
-            coords += ` - ${firstCoord}`;
+        // 2.3. Proses setiap bagian (chunk) untuk mengekstrak detailnya
+        const parsedClouds = cloudChunks.map(chunk => {
+            // Regex untuk memecah setiap chunk menjadi: Ketinggian, Koordinat, dan Pergerakan
+            const chunkRegex = /^(\d{3})\s*([\s\S]*?)(?:MOV\s+([\w\/]+)\s+([\d\s]+KT))?$/i;
+            const match = chunk.match(chunkRegex);
+
+            if (!match) return null; // Jika format chunk aneh, lewati
+
+            const flightLevel = match[1].trim();
+            let coords = match[2].replace(/\n/g, ' ').replace(/\s+/g, ' ').replace(/-\s*$/, '').trim();
+            const movDir = match[3]?.trim() || "NC"; // Default ke NC jika tidak ada pergerakan
+            const movSpd = match[4]?.trim() || "";
+            
+            // Rakit string pergerakan
+            const movementStr = (movDir !== "NC" && movSpd) ? `MOV ${movDir} ${movSpd}` : 'STNR'; // Atau MOV NC jika lebih disukai
+
+            // Menutup poligon (menambahkan koordinat pertama ke akhir)
+            const firstCoord = coords.split(' - ')[0];
+            if (firstCoord && !coords.endsWith(firstCoord)) {
+                coords += ` - ${firstCoord}`;
+            }
+
+            return {
+                flightLevel,
+                coords,
+                movementStr
+            };
+        }).filter(Boolean); // Hapus hasil null jika ada chunk yang gagal di-parse
+
+        if (parsedClouds.length === 0) {
+            return "Error: Gagal mem-parsing detail awan abu dari blok 'EST VA CLD'.";
         }
         
-        // Rakit berita SIGMET
-        return `WVID21 WAAA ${publicationTime}\nWAAF SIGMET XX VALID ${validStartTime}/${validEndTime} WAAA-\nWAAF UJUNG PANDANG FIR VA ERUPTION MT ${volcano} PSN ${position}\nVA CLD OBS AT ${obsTime} WI ${coords}\nSFC/FL${flightLevel} ${movementStr} NC=`;
+        // --- Bagian 3: Merakit String SIGMET Final ---
+
+        // 3.1 Buat bagian header SIGMET
+        const sigmetHeader = `WVID21 WAAA ${publicationTime}\nWAAF SIGMET XX VALID ${validStartTime}/${validEndTime} WAAA-\nWAAF UJUNG PANDANG FIR VA ERUPTION MT ${volcano} PSN ${position}\n`;
+
+        // 3.2 Rakit bagian deskripsi awan abu secara dinamis
+        const phenomenonDescription = parsedClouds.map((cloud, index) => {
+            // Awan pertama diawali dengan "VA CLD OBS AT...", sisanya "AND OBS AT..."
+            const prefix = (index === 0) 
+                ? `VA CLD OBS AT ${obsTime} WI ` 
+                : `AND OBS AT ${obsTime} WI `;
+
+            return `${prefix}${cloud.coords}\nSFC/FL${cloud.flightLevel} ${cloud.movementStr} NC`;
+
+        }).join(' ');
+
+        // 3.3 Gabungkan semuanya dan akhiri dengan '='
+        return `${sigmetHeader}${phenomenonDescription}=`;
 
     } catch (error) {
         console.error("[SIGMET Generator] Terjadi error internal:", error);
