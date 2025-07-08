@@ -1543,9 +1543,7 @@ function generateSigmet(vaaFullText) {
         const extract = (regex) => (cleanText.match(regex) || [])[1]?.trim() || null;
         const extractGroup = (regex) => (cleanText.match(regex) || []);
 
-        // --- Bagian 1: Ekstraksi Informasi Umum (Header, Waktu, Gunung) ---
-        // (Logika ini sebagian besar tetap sama karena sudah bekerja dengan baik)
-        
+        // --- Bagian 1: Ekstraksi Informasi Umum (Tidak berubah) ---
         const headerMatch = extractGroup(/FVAU\d{2}\s*ADRM\s*(\d{2})(\d{2})(\d{2})/i);
         const headerDay = headerMatch[1] || null;
         const headerHHMM = headerMatch[2] && headerMatch[3] ? `${headerMatch[2]}${headerMatch[3]}` : null;
@@ -1554,53 +1552,49 @@ function generateSigmet(vaaFullText) {
 
         const nxtAdvisoryMatch = extractGroup(/NXT ADVISORY:[\s\S]*?(\d{2})?\/?(\d{4,6}Z)/i);
         const nxtDay = nxtAdvisoryMatch[1] || headerDay; 
-        const nxtTime = nxtAdvisoryMatch[2]?.match(/(\d{4})Z/)?.[1] || null; // Ambil 4 digit pertama dari waktu
+        const nxtTime = nxtAdvisoryMatch[2]?.match(/(\d{4})Z/)?.[1] || null;
         const validEndTime = nxtDay && nxtTime ? `${nxtDay}${nxtTime}` : null;
         
         const volcano = extract(/VOLCANO:\s*([\w\s-]+?)\s+\d+/i);
         const position = extract(/PSN:\s*([NS]\d{4}\s*E\d{5})/i);
         const obsTime = extract(/(?:OBS|EST)\s*VA\s*DTG:\s*\d{2}\/(\d{4}Z)/i);
 
-        // --- Validasi Informasi Umum ---
         if (!publicationTime || !validStartTime || !validEndTime || !volcano || !position || !obsTime) {
-            console.error("[SIGMET Generator] Gagal parsing informasi umum.", { publicationTime, validStartTime, validEndTime, volcano, position, obsTime });
+            console.error("[SIGMET Generator] Gagal parsing informasi umum.");
             return "Error: Gagal mem-parsing header atau informasi umum VAA.";
         }
 
-        // --- Bagian 2: Logika Baru untuk Parsing Multipoligon ---
-        
-        // 2.1. Ambil seluruh blok "EST VA CLD"
+        // --- Bagian 2: Logika Parsing Multipoligon yang Disempurnakan ---
         const ashCloudBlockMatch = cleanText.match(/(?:OBS|EST) VA CLD:([\s\S]*?)(?=FCST VA CLD|RMK:|NXT ADVISORY:)/i);
         if (!ashCloudBlockMatch) {
             return "Error: Tidak dapat menemukan blok 'EST VA CLD' pada VAA.";
         }
-        const ashCloudBlock = ashCloudBlockMatch[1];
         
-        // 2.2. Pisahkan blok menjadi beberapa bagian berdasarkan "SFC/FL"
-        // Ini adalah trik kuncinya. Setiap poligon diawali dengan SFC/FL.
+        const ashCloudBlock = ashCloudBlockMatch[1];
         const cloudChunks = ashCloudBlock.split(/SFC\/FL/).filter(chunk => chunk.trim() !== '');
 
         if (cloudChunks.length === 0) {
             return "Error: Blok 'EST VA CLD' ditemukan, tetapi tidak ada deskripsi awan abu (SFC/FL).";
         }
         
-        // 2.3. Proses setiap bagian (chunk) untuk mengekstrak detailnya
         const parsedClouds = cloudChunks.map(chunk => {
-            // Regex untuk memecah setiap chunk menjadi: Ketinggian, Koordinat, dan Pergerakan
-            const chunkRegex = /^(\d{3})\s*([\s\S]*?)(?:MOV\s+([\w\/]+)\s+([\d\s]+KT))?$/i;
-            const match = chunk.match(chunkRegex);
-
-            if (!match) return null; // Jika format chunk aneh, lewati
-
-            const flightLevel = match[1].trim();
-            let coords = match[2].replace(/\n/g, ' ').replace(/\s+/g, ' ').replace(/-\s*$/, '').trim();
-            const movDir = match[3]?.trim() || "NC"; // Default ke NC jika tidak ada pergerakan
-            const movSpd = match[4]?.trim() || "";
+            const chunkContent = chunk.trim();
             
-            // Rakit string pergerakan
-            const movementStr = (movDir !== "NC" && movSpd) ? `MOV ${movDir} ${movSpd}` : 'STNR'; // Atau MOV NC jika lebih disukai
+            // Pendekatan baru: Pisahkan berdasarkan 'MOV' untuk memisahkan koordinat dan pergerakan
+            const movParts = chunkContent.split(/\s+MOV\s+/i);
+            const flAndCoordsPart = movParts[0].trim();
+            
+            // Rakit kembali string pergerakan jika ada
+            const movementStr = movParts.length > 1 ? `MOV ${movParts.slice(1).join(' MOV ')}`.trim() : 'STNR';
 
-            // Menutup poligon (menambahkan koordinat pertama ke akhir)
+            // Ekstrak Flight Level dan koordinat dari bagian pertama
+            const flMatch = flAndCoordsPart.match(/^(\d{3})\s*/);
+            if (!flMatch) return null; // Format chunk tidak valid
+
+            const flightLevel = flMatch[1];
+            let coords = flAndCoordsPart.substring(flMatch[0].length).replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+
+            // Menutup poligon dengan menambahkan koordinat pertama ke akhir
             const firstCoord = coords.split(' - ')[0];
             if (firstCoord && !coords.endsWith(firstCoord)) {
                 coords += ` - ${firstCoord}`;
@@ -1611,30 +1605,30 @@ function generateSigmet(vaaFullText) {
                 coords,
                 movementStr
             };
-        }).filter(Boolean); // Hapus hasil null jika ada chunk yang gagal di-parse
+        }).filter(Boolean); // Hapus hasil null
 
         if (parsedClouds.length === 0) {
             return "Error: Gagal mem-parsing detail awan abu dari blok 'EST VA CLD'.";
         }
         
-        // --- Bagian 3: Merakit String SIGMET Final ---
-
-        // 3.1 Buat bagian header SIGMET
+        // --- Bagian 3: Merakit String SIGMET Final dengan Format yang Benar ---
         const sigmetHeader = `WVID21 WAAA ${publicationTime}\nWAAF SIGMET XX VALID ${validStartTime}/${validEndTime} WAAA-\nWAAF UJUNG PANDANG FIR VA ERUPTION MT ${volcano} PSN ${position}\n`;
 
-        // 3.2 Rakit bagian deskripsi awan abu secara dinamis
         const phenomenonDescription = parsedClouds.map((cloud, index) => {
-            // Awan pertama diawali dengan "VA CLD OBS AT...", sisanya "AND OBS AT..."
+            // Awalan (prefix) yang benar untuk setiap segmen
             const prefix = (index === 0) 
                 ? `VA CLD OBS AT ${obsTime} WI ` 
                 : `AND OBS AT ${obsTime} WI `;
 
-            return `${prefix}${cloud.coords}\nSFC/FL${cloud.flightLevel} ${cloud.movementStr} NC`;
+            // Rakit setiap segmen dengan format yang benar
+            // [PREFIX] [KOORDINAT]
+            // SFC/[FL] [PERGERAKAN]
+            return `${prefix}${cloud.coords}\nSFC/FL${cloud.flightLevel} ${cloud.movementStr}`;
 
-        }).join(' ');
+        }).join(' '); // Gabungkan setiap segmen dengan spasi
 
-        // 3.3 Gabungkan semuanya dan akhiri dengan '='
-        return `${sigmetHeader}${phenomenonDescription}=`;
+        // Gabungkan semuanya dan tambahkan 'NC=' di AKHIR
+        return `${sigmetHeader}${phenomenonDescription} NC=`;
 
     } catch (error) {
         console.error("[SIGMET Generator] Terjadi error internal:", error);
