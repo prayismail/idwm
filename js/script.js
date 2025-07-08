@@ -1219,36 +1219,7 @@ function showAWOS(code) {
         }
 
         // Ambil Data SIGMET
-          // --- Helper Function 2: Parser utama (VERSI FINAL YANG PALING ANDAL) ---
-function parseMultiPolygonSigmet(rawText) {
-    const polygons = [];
-    // Gabungkan menjadi satu baris untuk kemudahan parsing dan normalkan spasi
-    const singleLineText = rawText.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
-    
-    const sigmetPartRegex = /(?:EMBD TS OBS WI|VA CLD OBS AT \d{4}Z WI|AND OBS AT \d{4}Z WI)\s+((?:[NS]\d+\s*E\d+\s*(?:-\s*)?)+).*?((?:SFC\/|TOP\s+)FL\d{3})/gi;
-
-    let match;
-    // Loop melalui SEMUA kecocokan yang ditemukan oleh regex
-    while ((match = sigmetPartRegex.exec(singleLineText)) !== null) {
-        // Ekstrak data dari grup yang ditangkap regex.
-        const coordString = match[1]; // Grup 1: String koordinat yang bersih
-        const levelString = match[2]; // Grup 2: String level yang bersih
-
-        // Ubah string koordinat menjadi array angka.
-        const coordinates = parseCoordString(coordString);
-        
-        if (coordinates.length > 1) {
-            polygons.push({
-                coords: coordinates,
-                level: levelString // Simpan format level yang asli
-            });
-        }
-    }
-    
-    return polygons;
-}
-
-// Helper Function 1: parseCoordString (Sudah Benar)
+          // --- Helper Function 1: parseCoordString (Tidak berubah, sudah andal) ---
 function parseCoordString(coordStr) {
     const coordRegex = /([NS])(\d+)\s*([EW])(\d+)/g;
     let coords = [];
@@ -1269,7 +1240,37 @@ function parseCoordString(coordStr) {
     return coords;
 }
 
-// Fungsi Utama fetchSIGMET (Sudah Benar)
+
+// --- Helper Function 2: Parser utama (DENGAN LOGIKA PENUTUPAN POLIGON) ---
+function parseMultiPolygonSigmet(rawText) {
+    const polygons = [];
+    const singleLineText = rawText.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
+    const sigmetPartRegex = /(?:EMBD TS OBS WI|VA CLD OBS AT \d{4}Z WI|AND OBS AT \d{4}Z WI)\s+((?:[NS]\d+\s*E\d+\s*(?:-\s*)?)+).*?((?:SFC\/|TOP\s+)FL\d{3})/gi;
+
+    let match;
+    while ((match = sigmetPartRegex.exec(singleLineText)) !== null) {
+        const coordString = match[1];
+        const levelString = match[2];
+        
+        const coordinates = parseCoordString(coordString);
+        
+        if (coordinates.length > 1) {
+            // --- INI PERBAIKAN KRUSIAL UNTUK PLOTTING ---
+            // Menutup poligon dengan menambahkan koordinat pertama ke akhir array.
+            // Ini akan mengubah garis menjadi bentuk poligon yang tertutup.
+            coordinates.push(coordinates[0]);
+
+            polygons.push({
+                coords: coordinates,
+                level: levelString
+            });
+        }
+    }
+    return polygons;
+}
+
+
+// --- Fungsi Utama fetchSIGMET (DENGAN PERBAIKAN FORMATTING TEKS) ---
 function fetchSIGMET(icao) {
     let url = "/api/sigmet"; 
     
@@ -1295,8 +1296,12 @@ function fetchSIGMET(icao) {
                 }
                 
                 const color = getSigmetColor(sigmet.hazard);
-                const sigmetId = sigmet.sigmetId ? ` ${sigmet.sigmetId}` : ''; 
-                const formattedSigmetHtml = formatSigmetText(sigmet.rawSigmet); // Asumsikan Anda punya fungsi ini
+                const sigmetId = sigmet.sigmetId ? ` ${sigmet.sigmetId}` : '';
+                
+                // --- INI PERBAIKAN KRUSIAL UNTUK TAMPILAN TEKS ---
+                // Ubah semua baris baru menjadi spasi untuk membuat satu paragraf yang rapi.
+                // Browser akan otomatis melakukan word-wrap.
+                const formattedSigmetHtml = sigmet.rawSigmet.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
 
                 parsedPolygons.forEach(polygonData => {
                     const popupContent = `
@@ -1328,7 +1333,8 @@ function fetchSIGMET(icao) {
         .catch(error => console.error("Error mengambil atau memproses data SIGMET:", error));
 }
 
-// Fungsi getSigmetColor (Sudah Benar)
+
+// --- Fungsi getSigmetColor (Tidak berubah) ---
 function getSigmetColor(hazard) {
     switch(hazard) {
         case 'VA': return '#0000FF';
@@ -1337,20 +1343,6 @@ function getSigmetColor(hazard) {
         case 'ICE': return '#00BFFF';
         default: return 'gray';
     }
-}
-
-// Fungsi formatSigmetText (Sudah Benar)
-function formatSigmetText(rawText) {
-    const splitPatterns = [
-        'WAAF SIGMET', 'VALID', 'WAAF UJUNG PANDANG FIR', 'VA ERUPTION', 'EMBD TS OBS',
-        'OBS AT', 'FCST AT', 'MOV', 'NC=', 'WKN=', 'INTSF='
-    ];
-    let processedText = rawText.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
-    splitPatterns.forEach(pattern => {
-        const regex = new RegExp(`\\s(${pattern})`, 'gi');
-        processedText = processedText.replace(regex, '@@@$1');
-    });
-    return processedText.split('@@@').map(line => line.trim()).join('<br>');
 }
 var vaAdvisoryLayer = L.layerGroup();
         var baseMaps = {
