@@ -1219,27 +1219,35 @@ function showAWOS(code) {
         }
 
         // Ambil Data SIGMET
-          // --- Helper Function 1: parseCoordString (Tidak berubah, sudah andal) ---
+          // --- Helper Function 1: parseCoordString  ---
 function parseCoordString(coordStr) {
-    const coordRegex = /([NS])(\d+)\s*([EW])(\d+)/g;
+    // Regex ini sekarang mengizinkan spasi di dalam grup angka ([\d\s]+)
+    const coordRegex = /([NS])([\d\s]+)\s*([EW])([\d\s]+)/g;
     let coords = [];
     let match;
     const cleanCoordStr = coordStr.replace(/-/g, ' '); 
 
     while ((match = coordRegex.exec(cleanCoordStr)) !== null) {
-        let latStr = match[2];
-        let lonStr = match[4];
+        
+        // --- INI ADALAH PERBAIKAN KRUSIAL ---
+        // Hapus semua spasi dari string angka yang ditangkap sebelum di-parse.
+       
+        let latStr = match[2].replace(/\s/g, '');
+        let lonStr = match[4].replace(/\s/g, '');
+        // ------------------------------------
+
         const latDeg = parseInt(latStr.substring(0, 2), 10);
         const latMin = latStr.length > 2 ? parseInt(latStr.substring(2), 10) : 0;
         let lat = (latDeg + latMin / 60) * (match[1] === 'S' ? -1 : 1);
+
         const lonDeg = parseInt(lonStr.substring(0, 3), 10);
         const lonMin = lonStr.length > 3 ? parseInt(lonStr.substring(3), 10) : 0;
         let lon = (lonDeg + lonMin / 60) * (match[3] === 'W' ? -1 : 1);
+        
         coords.push([parseFloat(lat.toFixed(4)), parseFloat(lon.toFixed(4))]);
     }
     return coords;
 }
-
 // --- Helper Function 2: Parser utama (DENGAN LOGIKA PENUTUPAN POLIGON YANG PINTAR) ---
 function parseMultiPolygonSigmet(rawText) {
     const polygons = [];
