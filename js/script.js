@@ -1219,22 +1219,19 @@ function showAWOS(code) {
         }
 
         // Ambil Data SIGMET
-          // --- Helper Function 1: parseCoordString  ---
+          // --- Helper Function 1: parseCoordString ---
 function parseCoordString(coordStr) {
-    // Regex ini sekarang mengizinkan spasi di dalam grup angka ([\d\s]+)
-    const coordRegex = /([NS])([\d\s]+)\s*([EW])([\d\s]+)/g;
+    
+    const coordRegex = /([NS])\s*([\d\s]+)\s*([EW])\s*([\d\s]+)/g;
     let coords = [];
     let match;
     const cleanCoordStr = coordStr.replace(/-/g, ' '); 
 
     while ((match = coordRegex.exec(cleanCoordStr)) !== null) {
-        
-        // --- INI ADALAH PERBAIKAN KRUSIAL ---
         // Hapus semua spasi dari string angka yang ditangkap sebelum di-parse.
-       
+        // Ini akan mengubah "126 47" menjadi "12647".
         let latStr = match[2].replace(/\s/g, '');
         let lonStr = match[4].replace(/\s/g, '');
-        // ------------------------------------
 
         const latDeg = parseInt(latStr.substring(0, 2), 10);
         const latMin = latStr.length > 2 ? parseInt(latStr.substring(2), 10) : 0;
