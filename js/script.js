@@ -1219,40 +1219,128 @@ function showAWOS(code) {
         }
 
         // Ambil Data SIGMET
-        function fetchSIGMET(icao) {
-            //let url = "https://api.allorigins.win/raw?url=https://aviationweather.gov/api/data/isigmet?format=json&level=3000";
-	let url = "/api/sigmet";
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    // Hapus SIGMET lama
-                    map.eachLayer(layer => {
-                        if (layer instanceof L.Polygon) {
-                            map.removeLayer(layer);
-                        }
-                    });
+        // --- Helper Function 1: Mengubah string koordinat menjadi array [lat, lon] ---
+// Fungsi ini akan mengubah "S0835 E12249" menjadi [-8.5833, 122.8167]
+function parseCoordString(coordStr) {
+    const coordRegex = /([NS])(\d{2})(\d{2})?\s*([EW])(\d{3})(\d{2})?/g;
+    let coords = [];
+    let match;
 
-                    let sigmets = data.filter(sigmet => sigmet.icaoId === icao);
-                    sigmets.forEach(sigmet => {
-                        let coords = sigmet.coords.map(coord => [coord.lat, coord.lon]);
-                        let color = getSigmetColor(sigmet.hazard);
-                        L.polygon(coords, { color: color }).addTo(map)
-                            .bindPopup(`<b>SIGMET:</b> ${sigmet.rawSigmet}`);
-                    });
-                })
-                .catch(error => console.error("Error mengambil data SIGMET:", error));
+    while ((match = coordRegex.exec(coordStr)) !== null) {
+        const latSign = match[1] === 'S' ? -1 : 1;
+        const latDeg = parseInt(match[2], 10);
+        const latMin = match[3] ? parseInt(match[3], 10) : 0;
+        let lat = latSign * (latDeg + latMin / 60);
+
+        const lonSign = match[4] === 'W' ? -1 : 1;
+        const lonDeg = parseInt(match[5], 10);
+        const lonMin = match[6] ? parseInt(match[6], 10) : 0;
+        let lon = lonSign * (lonDeg + lonMin / 60);
+        
+        // Pembulatan untuk kebersihan data
+        coords.push([parseFloat(lat.toFixed(4)), parseFloat(lon.toFixed(4))]);
+    }
+    return coords;
+}
+
+
+// --- Helper Function 2: Parser utama untuk mengekstrak semua poligon dari teks SIGMET ---
+// Fungsi ini akan mengambil teks mentah SIGMET dan mengembalikan array objek poligon
+function parseMultiPolygonSigmet(rawText) {
+    const polygons = [];
+    
+    // Regex ini adalah kuncinya. Ia mencari pola berulang:
+    // ...WI [koordinat] SFC/FL[level]...
+    // Menggunakan flag 'g' (global) untuk menemukan semua kecocokan, bukan hanya yang pertama.
+    const sigmetPartRegex = /WI\s+((?:[NS]\d{2,4}\s*E\d{3,5}\s*(?:-\s*)?)+)\s*SFC\/FL(\d{3})/g;
+    
+    let match;
+    while ((match = sigmetPartRegex.exec(rawText)) !== null) {
+        const coordString = match[1]; // String mentah koordinat (e.g., "S0835 E12249 - S0839 E12208...")
+        const flightLevel = match[2]; // String flight level (e.g., "090")
+        
+        const coordinates = parseCoordString(coordString);
+        
+        if (coordinates.length > 0) {
+            polygons.push({
+                coords: coordinates,
+                flightLevel: flightLevel
+            });
         }
+    }
+    
+    return polygons;
+}
 
-        // Warna SIGMET Berdasarkan Bahaya
-        function getSigmetColor(hazard) {
-            switch (hazard) {
-                case "VA": return "red";
-                case "TB": return "blue";
-                case "IC": return "green";
-                case "TS": return "yellow";
-                default: return "purple";
+
+// --- Fungsi Utama yang Dimodifikasi ---
+function fetchSIGMET(icao) {
+    let url = "/api/sigmet"; // Menggunakan URL API Anda
+    
+    fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
-        }
+            return response.json();
+        })
+        .then(data => {
+            // Hapus layer poligon SIGMET lama dari peta
+            map.eachLayer(layer => {
+                // Beri identitas khusus pada layer SIGMET agar tidak menghapus poligon lain
+                if (layer.options && layer.options.isSigmetPolygon) {
+                    map.removeLayer(layer);
+                }
+            });
+
+            const sigmetsForIcao = data.filter(sigmet => sigmet.icaoId === icao);
+            
+            if (sigmetsForIcao.length === 0) {
+                console.log(`Tidak ada SIGMET aktif untuk ${icao}`);
+                return;
+            }
+
+            sigmetsForIcao.forEach(sigmet => {
+                // Gunakan parser baru kita untuk mendapatkan SEMUA poligon dari teks mentah
+                const parsedPolygons = parseMultiPolygonSigmet(sigmet.rawSigmet);
+                
+                if (parsedPolygons.length === 0) {
+                    console.warn("SIGMET ditemukan, tetapi tidak ada poligon yang bisa di-parse:", sigmet.rawSigmet);
+                    return;
+                }
+                
+                const color = getSigmetColor(sigmet.hazard); // Asumsikan Anda punya fungsi ini
+
+                // Lakukan loop pada hasil parsing dan plot setiap poligon
+                parsedPolygons.forEach(polygonData => {
+                    L.polygon(polygonData.coords, { 
+                        color: color,
+                        fillColor: color,
+                        fillOpacity: 0.2,
+                        isSigmetPolygon: true // Penanda khusus untuk memudahkan penghapusan
+                    }).addTo(map)
+                      .bindPopup(`
+                          <b>SIGMET: ${sigmet.hazard} (${sigmet.sigmetId})</b><br>
+                          <b>Polygon untuk Level: SFC/FL${polygonData.flightLevel}</b>
+                          <hr>
+                          <pre style="white-space: pre-wrap; word-wrap: break-word;">${sigmet.rawSigmet}</pre>
+                      `);
+                });
+            });
+        })
+        .catch(error => console.error("Error mengambil atau memproses data SIGMET:", error));
+}
+
+// Anda juga perlu fungsi getSigmetColor, contoh:
+function getSigmetColor(hazard) {
+    switch(hazard) {
+        case 'VA': return 'purple'; // Abu vulkanik
+        case 'TS': return 'red'; // Badai petir
+        case 'TURB': return 'orange'; // Turbulensi
+        case 'ICE': return 'blue'; // Icing
+        default: return 'gray';
+    }
+}
 var vaAdvisoryLayer = L.layerGroup();
         var baseMaps = {
             "Peta OSM": osmLayer,
