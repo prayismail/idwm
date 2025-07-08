@@ -1219,20 +1219,31 @@ function showAWOS(code) {
         }
 
         // Ambil Data SIGMET
-          // --- Helper Function 1: parseCoordString ---
+        // =========================================================================
+// BAGIAN 1: FUNGSI-FUNGSI PARSER (PEMBANTU)
+// Ini adalah "mesin" yang bekerja di belakang layar untuk memproses teks SIGMET.
+// =========================================================================
+
+/**
+ * Mengubah string koordinat mentah menjadi array numerik yang bisa dibaca Leaflet.
+ * Dibuat tahan banting terhadap spasi di dalam angka atau setelah huruf arah.
+ * @param {string} coordStr - String koordinat, e.g., "S0302 E12647 - S 0453 E12721"
+ * @returns {Array<[number, number]>} Array koordinat, e.g., [[-3.03, 126.78], ...]
+ */
 function parseCoordString(coordStr) {
-    
+    // Regex ini mengizinkan spasi opsional (\s*) setelah huruf N/S/E/W.
     const coordRegex = /([NS])\s*([\d\s]+)\s*([EW])\s*([\d\s]+)/g;
     let coords = [];
     let match;
+    // Bersihkan tanda hubung untuk mempermudah regex.
     const cleanCoordStr = coordStr.replace(/-/g, ' '); 
 
     while ((match = coordRegex.exec(cleanCoordStr)) !== null) {
-        // Hapus semua spasi dari string angka yang ditangkap sebelum di-parse.
-        // Ini akan mengubah "126 47" menjadi "12647".
+        // Hapus spasi dari dalam angka (e.g., "126 47" -> "12647")
         let latStr = match[2].replace(/\s/g, '');
         let lonStr = match[4].replace(/\s/g, '');
 
+        // Konversi ke derajat desimal
         const latDeg = parseInt(latStr.substring(0, 2), 10);
         const latMin = latStr.length > 2 ? parseInt(latStr.substring(2), 10) : 0;
         let lat = (latDeg + latMin / 60) * (match[1] === 'S' ? -1 : 1);
@@ -1245,13 +1256,18 @@ function parseCoordString(coordStr) {
     }
     return coords;
 }
-// --- Helper Function 2: Parser utama (DENGAN LOGIKA PENUTUPAN POLIGON YANG PINTAR) ---
+
+/**
+ * Mengekstrak semua poligon (lengkap dengan koordinat dan level) dari teks SIGMET mentah.
+ * @param {string} rawText - Teks SIGMET lengkap.
+ * @returns {Array<object>} Array objek poligon, e.g., [{ coords: [...], level: "SFC/FL090" }, ...]
+ */
 function parseMultiPolygonSigmet(rawText) {
     const polygons = [];
     const singleLineText = rawText.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
     
-    // Regex ini sudah terbukti andal untuk menemukan semua jenis poligon
-    const sigmetPartRegex = /(?:EMBD TS OBS WI|VA CLD OBS AT \d{4}Z WI|AND OBS AT \d{4}Z WI)\s+((?:[NS]\d+\s*E\d+\s*(?:-\s*)?)+).*?((?:SFC\/|TOP\s+)FL\d{3})/gi;
+    // Regex andal yang mencari semua jenis awalan poligon.
+    const sigmetPartRegex = /(?:EMBD TS OBS WI|VA CLD OBS AT \d{4}Z WI|AND OBS AT \d{4}Z WI)\s+((?:[NS]\s*\d+\s*E\s*\d+\s*(?:-\s*)?)+).*?((?:SFC\/|TOP\s+)FL\d{3})/gi;
 
     let match;
     while ((match = sigmetPartRegex.exec(singleLineText)) !== null) {
@@ -1261,15 +1277,10 @@ function parseMultiPolygonSigmet(rawText) {
         const coordinates = parseCoordString(coordString);
         
         if (coordinates.length > 1) {
-            // --- INI ADALAH PERBAIKAN KRUSIAL YANG BARU ---
-            // Cek apakah poligon sudah tertutup atau belum.
+            // Logika pintar: Tutup poligon HANYA jika belum tertutup.
             const firstPoint = coordinates[0];
             const lastPoint = coordinates[coordinates.length - 1];
-
-            // Bandingkan latitude dan longitude dari titik pertama dan terakhir.
-            // Hanya tambahkan titik penutup JIKA mereka tidak sama.
             if (firstPoint[0] !== lastPoint[0] || firstPoint[1] !== lastPoint[1]) {
-                console.log("Menutup poligon untuk:", levelString); // Untuk debugging
                 coordinates.push(firstPoint);
             }
 
@@ -1282,9 +1293,19 @@ function parseMultiPolygonSigmet(rawText) {
     return polygons;
 }
 
-// --- Fungsi Utama fetchSIGMET (DENGAN PERBAIKAN FORMATTING TEKS) ---
+
+// =========================================================================
+// BAGIAN 2: FUNGSI UTAMA FETCH DAN PLOTTING
+// Ini adalah kode lama Anda yang sudah dimodifikasi untuk menggunakan parser baru.
+// =========================================================================
+
+/**
+ * Mengambil data SIGMET, mem-parsing, dan mem-plot semua poligon ke peta.
+ * @param {string} icao - Kode ICAO dari FIR, e.g., "WAAF".
+ */
 function fetchSIGMET(icao) {
-    let url = "/api/sigmet"; 
+    // Anda bisa mengganti URL ini kembali ke API lokal Anda (/api/sigmet) jika sudah siap.
+    let url = "https://api.allorigins.win/raw?url=https://aviationweather.gov/api/data/isigmet?format=json&level=3000";
     
     fetch(url)
         .then(response => {
@@ -1292,29 +1313,33 @@ function fetchSIGMET(icao) {
             return response.json();
         })
         .then(data => {
+            // Hapus SIGMET lama dari peta.
             map.eachLayer(layer => {
-                if (layer.options && layer.options.isSigmetPolygon) map.removeLayer(layer);
+                if (layer.options && layer.options.isSigmetPolygon) {
+                    map.removeLayer(layer);
+                }
             });
 
+            // Filter SIGMET untuk FIR yang relevan.
             const sigmetsForIcao = data.filter(sigmet => sigmet.icaoId === icao);
             if (sigmetsForIcao.length === 0) return;
 
+            // Loop melalui setiap SIGMET yang ditemukan.
             sigmetsForIcao.forEach(sigmet => {
+                // --- INI PERUBAHAN UTAMA DARI KODE LAMA ANDA ---
+                // Kita tidak lagi menggunakan `sigmet.coords`. Kita panggil parser kita.
                 const parsedPolygons = parseMultiPolygonSigmet(sigmet.rawSigmet);
                 
                 if (parsedPolygons.length === 0) {
                     console.warn("SIGMET ditemukan, tetapi tidak ada poligon yang bisa di-parse:", sigmet.rawSigmet);
-                    return;
+                    return; // Lanjut ke SIGMET berikutnya.
                 }
                 
                 const color = getSigmetColor(sigmet.hazard);
                 const sigmetId = sigmet.sigmetId ? ` ${sigmet.sigmetId}` : '';
-                
-                // --- INI PERBAIKAN KRUSIAL UNTUK TAMPILAN TEKS ---
-                // Ubah semua baris baru menjadi spasi untuk membuat satu paragraf yang rapi.
-                // Browser akan otomatis melakukan word-wrap.
                 const formattedSigmetHtml = sigmet.rawSigmet.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
 
+                // Loop melalui setiap poligon yang berhasil di-parse dari satu SIGMET.
                 parsedPolygons.forEach(polygonData => {
                     const popupContent = `
                         <div class="sigmet-popup-header" style="background-color: ${color};">
@@ -1331,11 +1356,12 @@ function fetchSIGMET(icao) {
                         </div>
                     `;
 
+                    // Plot poligon ke peta.
                     L.polygon(polygonData.coords, { 
                         color: color,
                         fillColor: color,
                         fillOpacity: 0.2,
-                        isSigmetPolygon: true
+                        isSigmetPolygon: true // Penanda untuk memudahkan penghapusan
                     })
                     .addTo(map)
                     .bindPopup(popupContent, { className: 'custom-sigmet-popup' });
@@ -1346,16 +1372,21 @@ function fetchSIGMET(icao) {
 }
 
 
-// --- Fungsi getSigmetColor (Tidak berubah) ---
+// =========================================================================
+// BAGIAN 3: FUNGSI UTILITAS DAN STYLING
+// =========================================================================
+
+// Fungsi untuk mendapatkan warna berdasarkan jenis hazard.
 function getSigmetColor(hazard) {
     switch(hazard) {
-        case 'VA': return '#0000FF';
-        case 'TS': return '#FF0000';
-        case 'TURB': return '#FFA500';
-        case 'ICE': return '#00BFFF';
+        case 'VA': return '#0000FF'; // Biru
+        case 'TS': return '#FF0000'; // Merah
+        case 'TURB': return '#FFA500'; // Oranye
+        case 'ICE': return '#00BFFF'; // Biru muda
         default: return 'gray';
     }
 }
+
 var vaAdvisoryLayer = L.layerGroup();
         var baseMaps = {
             "Peta OSM": osmLayer,
