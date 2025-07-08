@@ -1219,7 +1219,7 @@ function showAWOS(code) {
         }
 
         // Ambil Data SIGMET
-        // Helper Function 1: parseCoordString (Tidak berubah, sudah baik)
+        // Helper Function 1: parseCoordString (Tidak berubah, sudah andal)
 function parseCoordString(coordStr) {
     const coordRegex = /([NS])(\d+)\s*([EW])(\d+)/g;
     let coords = [];
@@ -1240,47 +1240,34 @@ function parseCoordString(coordStr) {
     return coords;
 }
 
-// --- Helper Function 2: Parser utama (DIROMBAK TOTAL UNTUK MULTIPOLIGON) ---
+// --- Helper Function 2: Parser utama (DIROMBAK TOTAL DENGAN REGEX BARU) ---
 function parseMultiPolygonSigmet(rawText) {
     const polygons = [];
     // Gabungkan menjadi satu baris untuk memudahkan parsing
     const singleLineText = rawText.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
-
-    // --- INI KUNCI PERBAIKAN MULTIPOLIGON ---
-    // Regex ini akan mencari SEMUA blok yang diawali dengan "WI"
-    // dan membaginya. Kata "WI" menjadi pemisah (delimiter) antar poligon.
-    const blocks = singleLineText.split(/WI\s/);
+    const sigmetPartRegex = /WI\s+((?:[NS]\d+\s*E\d+\s*(?:-\s*)?)+)\s*((?:SFC\/|TOP\s+)FL\d{3})/g;
     
-    // Blok pertama biasanya header (sebelum "WI" pertama), jadi kita buang.
-    if (blocks.length > 1) {
-        blocks.slice(1).forEach(block => {
-            // Untuk setiap blok, kita cari koordinat dan levelnya.
-            // (.*?)                    : (Grup 1) Tangkap semua sebagai koordinat (non-greedy).
-            // (SFC\/FL\d+|TOP FL\d+)   : (Grup 2) Tangkap format level (SFC/FLxxx atau TOP FLxxx).
-            const partRegex = /(.*?)(SFC\/FL\d+|TOP FL\d+)/;
-            const match = block.match(partRegex);
-            
-            if (match) {
-                const coordString = match[1];
-                const levelString = match[2]; // e.g., "SFC/FL090" atau "TOP FL510"
-                
-                const coordinates = parseCoordString(coordString);
-                
-                if (coordinates.length > 1) {
-                    polygons.push({
-                        coords: coordinates,
-                        level: levelString // Simpan format level yang asli
-                    });
-                }
-            }
-        });
+    let match;
+    // Loop melalui SEMUA kecocokan yang ditemukan oleh regex
+    while ((match = sigmetPartRegex.exec(singleLineText)) !== null) {
+        const coordString = match[1]; // Grup 1: String koordinat
+        const levelString = match[2]; // Grup 2: String level (e.g., "SFC/FL090")
+
+        const coordinates = parseCoordString(coordString);
+        
+        if (coordinates.length > 1) {
+            polygons.push({
+                coords: coordinates,
+                level: levelString // Simpan format level yang asli
+            });
+        }
     }
     
     return polygons;
 }
 
 
-// --- Fungsi Utama yang Dimodifikasi untuk Popup dan Styling ---
+// --- Fungsi Utama dengan perbaikan pada Popup ---
 function fetchSIGMET(icao) {
     let url = "/api/sigmet"; 
     
@@ -1291,13 +1278,10 @@ function fetchSIGMET(icao) {
         })
         .then(data => {
             map.eachLayer(layer => {
-                if (layer.options && layer.options.isSigmetPolygon) {
-                    map.removeLayer(layer);
-                }
+                if (layer.options && layer.options.isSigmetPolygon) map.removeLayer(layer);
             });
 
             const sigmetsForIcao = data.filter(sigmet => sigmet.icaoId === icao);
-            
             if (sigmetsForIcao.length === 0) return;
 
             sigmetsForIcao.forEach(sigmet => {
@@ -1309,14 +1293,13 @@ function fetchSIGMET(icao) {
                 }
                 
                 const color = getSigmetColor(sigmet.hazard);
-                // Perbaiki ID SIGMET, jika null/undefined, gunakan string kosong.
-                const sigmetId = sigmet.sigmetId || ''; 
+                // Perbaiki ID SIGMET: jika tidak ada, gunakan string kosong.
+                const sigmetId = sigmet.sigmetId ? ` ${sigmet.sigmetId}` : ''; 
 
                 parsedPolygons.forEach(polygonData => {
-                    // Buat konten HTML untuk popup
                     const popupContent = `
                         <div class="sigmet-popup-header" style="background-color: ${color};">
-                            ${sigmet.hazard} SIGMET ${sigmetId}
+                            ${sigmet.hazard} SIGMET${sigmetId}
                         </div>
                         <div class="sigmet-popup-body">
                             <div class="sigmet-level-info">
@@ -1336,26 +1319,24 @@ function fetchSIGMET(icao) {
                         isSigmetPolygon: true
                     })
                     .addTo(map)
-                    .bindPopup(popupContent, {
-                        // Opsi untuk memberikan class custom pada container popup
-                        className: 'custom-sigmet-popup' 
-                    });
+                    .bindPopup(popupContent, { className: 'custom-sigmet-popup' });
                 });
             });
         })
         .catch(error => console.error("Error mengambil atau memproses data SIGMET:", error));
 }
 
-// Fungsi getSigmetColor
+// Fungsi getSigmetColor (Menyesuaikan warna VA menjadi biru seperti di screenshot Anda)
 function getSigmetColor(hazard) {
     switch(hazard) {
-        case 'VA': return 'blue';
-        case 'TS': return 'red';
-        case 'TURB': return 'orange';
-        case 'ICE': return 'purple';
+        case 'VA': return '#0000FF'; // Biru untuk Volcanic Ash
+        case 'TS': return '#FF0000'; // Merah untuk Thunderstorm
+        case 'TURB': return '#FFA500'; // Oranye untuk Turbulensi
+        case 'ICE': return '#00BFFF'; // Biru muda untuk Icing
         default: return 'gray';
     }
 }
+
 var vaAdvisoryLayer = L.layerGroup();
         var baseMaps = {
             "Peta OSM": osmLayer,
