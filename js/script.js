@@ -1564,7 +1564,7 @@ function generateSigmet(vaaFullText) {
             return "Error: Gagal mem-parsing header atau informasi umum VAA.";
         }
 
-        // --- Bagian 2: Logika Parsing Multipoligon yang Disempurnakan ---
+        // --- Bagian 2: Logika Parsing Multipoligon (Tidak berubah, sudah solid) ---
         const ashCloudBlockMatch = cleanText.match(/(?:OBS|EST) VA CLD:([\s\S]*?)(?=FCST VA CLD|RMK:|NXT ADVISORY:)/i);
         if (!ashCloudBlockMatch) {
             return "Error: Tidak dapat menemukan blok 'EST VA CLD' pada VAA.";
@@ -1579,56 +1579,47 @@ function generateSigmet(vaaFullText) {
         
         const parsedClouds = cloudChunks.map(chunk => {
             const chunkContent = chunk.trim();
-            
-            // Pendekatan baru: Pisahkan berdasarkan 'MOV' untuk memisahkan koordinat dan pergerakan
             const movParts = chunkContent.split(/\s+MOV\s+/i);
             const flAndCoordsPart = movParts[0].trim();
-            
-            // Rakit kembali string pergerakan jika ada
             const movementStr = movParts.length > 1 ? `MOV ${movParts.slice(1).join(' MOV ')}`.trim() : 'STNR';
-
-            // Ekstrak Flight Level dan koordinat dari bagian pertama
             const flMatch = flAndCoordsPart.match(/^(\d{3})\s*/);
-            if (!flMatch) return null; // Format chunk tidak valid
-
+            if (!flMatch) return null;
             const flightLevel = flMatch[1];
             let coords = flAndCoordsPart.substring(flMatch[0].length).replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
-
-            // Menutup poligon dengan menambahkan koordinat pertama ke akhir
             const firstCoord = coords.split(' - ')[0];
             if (firstCoord && !coords.endsWith(firstCoord)) {
                 coords += ` - ${firstCoord}`;
             }
-
-            return {
-                flightLevel,
-                coords,
-                movementStr
-            };
-        }).filter(Boolean); // Hapus hasil null
+            return { flightLevel, coords, movementStr };
+        }).filter(Boolean);
 
         if (parsedClouds.length === 0) {
             return "Error: Gagal mem-parsing detail awan abu dari blok 'EST VA CLD'.";
         }
         
-        // --- Bagian 3: Merakit String SIGMET Final dengan Format yang Benar ---
+        // --- Bagian 3: Merakit String SIGMET dengan Logika INTENSITY yang Benar ---
         const sigmetHeader = `WVID21 WAAA ${publicationTime}\nWAAF SIGMET XX VALID ${validStartTime}/${validEndTime} WAAA-\nWAAF UJUNG PANDANG FIR VA ERUPTION MT ${volcano} PSN ${position}\n`;
 
+        // Rakit deskripsi fenomena dengan logika baru
         const phenomenonDescription = parsedClouds.map((cloud, index) => {
-            // Awalan (prefix) yang benar untuk setiap segmen
             const prefix = (index === 0) 
                 ? `VA CLD OBS AT ${obsTime} WI ` 
                 : `AND OBS AT ${obsTime} WI `;
 
-            // Rakit setiap segmen dengan format yang benar
-            // [PREFIX] [KOORDINAT]
-            // SFC/[FL] [PERGERAKAN]
-            return `${prefix}${cloud.coords}\nSFC/FL${cloud.flightLevel} ${cloud.movementStr}`;
+            // Bangun segmen lengkap untuk satu awan abu
+            const segment = `${prefix}${cloud.coords}\nSFC/FL${cloud.flightLevel} ${cloud.movementStr}`;
+            
+            // Tambahkan "NC" setelah setiap segmen.
+            // Jika ini segmen terakhir, tambahkan "=" setelah "NC".
+            if (index === parsedClouds.length - 1) {
+                return `${segment} NC=`; // Untuk segmen terakhir
+            } else {
+                return `${segment} NC`; // Untuk semua segmen lainnya
+            }
+        }).join(' '); // Gabungkan semua segmen yang telah jadi dengan spasi
 
-        }).join(' '); // Gabungkan setiap segmen dengan spasi
-
-        // Gabungkan semuanya dan tambahkan 'NC=' di AKHIR
-        return `${sigmetHeader}${phenomenonDescription} NC=`;
+        // Gabungkan header dengan deskripsi yang sudah final
+        return `${sigmetHeader}${phenomenonDescription}`;
 
     } catch (error) {
         console.error("[SIGMET Generator] Terjadi error internal:", error);
