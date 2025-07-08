@@ -1219,7 +1219,7 @@ function showAWOS(code) {
         }
 
         // Ambil Data SIGMET
-        // Helper Function 1: parseCoordString (Tetap sama, sudah cukup baik)
+        // Helper Function 1: parseCoordString (Tidak berubah, sudah baik)
 function parseCoordString(coordStr) {
     const coordRegex = /([NS])(\d+)\s*([EW])(\d+)/g;
     let coords = [];
@@ -1240,51 +1240,47 @@ function parseCoordString(coordStr) {
     return coords;
 }
 
-
-// --- Helper Function 2: Parser utama (DIROMBAK TOTAL DENGAN REGEX BARU) ---
+// --- Helper Function 2: Parser utama (DIROMBAK TOTAL UNTUK MULTIPOLIGON) ---
 function parseMultiPolygonSigmet(rawText) {
     const polygons = [];
-    
-    // 1. Bersihkan teks: gabungkan menjadi satu baris dan normalkan spasi.
-    // Ini sangat PENTING untuk membuat regex bekerja secara konsisten.
+    // Gabungkan menjadi satu baris untuk memudahkan parsing
     const singleLineText = rawText.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
 
-    // 2. Regex baru yang lebih kuat dan fleksibel.
-    // Penjelasan:
-    //   WI\s+                  : Cari kata kunci "WI" diikuti spasi. Ini adalah jangkar kita.
-    //   ( .*? )                : (Grup 1) Ambil semua karakter (non-greedy) sebagai string koordinat.
-    //   \s*                    : Spasi antara koordinat dan level.
-    //   (?:SFC\/|TOP\s+)FL     : Cari "SFC/FL" ATAU "TOP FL". Non-capturing group.
-    //   (\d{3,})               : (Grup 2) Ambil 3 digit atau lebih sebagai nomor Flight Level.
-    //   /g                     : Flag 'global' untuk menemukan SEMUA kecocokan dalam teks.
-    const sigmetPartRegex = /WI\s+(.*?)\s*(?:SFC\/|TOP\s+)FL(\d{3,})/g;
-
-    let match;
-    // 3. Loop melalui setiap kecocokan yang ditemukan oleh regex.
-    while ((match = sigmetPartRegex.exec(singleLineText)) !== null) {
-        
-        // 4. Ekstrak data dari grup yang ditangkap regex.
-        const coordString = match[1]; // Grup 1: String koordinat
-        const flightLevel = match[2]; // Grup 2: Nomor Flight Level
-
-        // 5. Ubah string koordinat menjadi array angka.
-        const coordinates = parseCoordString(coordString);
-        
-        // 6. Validasi sederhana dan tambahkan ke hasil jika valid.
-        if (coordinates.length > 1) { // Poligon harus punya lebih dari 1 titik
-            polygons.push({
-                coords: coordinates,
-                flightLevel: flightLevel
-            });
-        }
+    // --- INI KUNCI PERBAIKAN MULTIPOLIGON ---
+    // Regex ini akan mencari SEMUA blok yang diawali dengan "WI"
+    // dan membaginya. Kata "WI" menjadi pemisah (delimiter) antar poligon.
+    const blocks = singleLineText.split(/WI\s/);
+    
+    // Blok pertama biasanya header (sebelum "WI" pertama), jadi kita buang.
+    if (blocks.length > 1) {
+        blocks.slice(1).forEach(block => {
+            // Untuk setiap blok, kita cari koordinat dan levelnya.
+            // (.*?)                    : (Grup 1) Tangkap semua sebagai koordinat (non-greedy).
+            // (SFC\/FL\d+|TOP FL\d+)   : (Grup 2) Tangkap format level (SFC/FLxxx atau TOP FLxxx).
+            const partRegex = /(.*?)(SFC\/FL\d+|TOP FL\d+)/;
+            const match = block.match(partRegex);
+            
+            if (match) {
+                const coordString = match[1];
+                const levelString = match[2]; // e.g., "SFC/FL090" atau "TOP FL510"
+                
+                const coordinates = parseCoordString(coordString);
+                
+                if (coordinates.length > 1) {
+                    polygons.push({
+                        coords: coordinates,
+                        level: levelString // Simpan format level yang asli
+                    });
+                }
+            }
+        });
     }
     
     return polygons;
 }
 
 
-// --- Fungsi Utama fetchSIGMET (Tidak perlu diubah) ---
-// Logika di sini sudah benar, masalahnya murni di dalam parser.
+// --- Fungsi Utama yang Dimodifikasi untuk Popup dan Styling ---
 function fetchSIGMET(icao) {
     let url = "/api/sigmet"; 
     
@@ -1302,47 +1298,61 @@ function fetchSIGMET(icao) {
 
             const sigmetsForIcao = data.filter(sigmet => sigmet.icaoId === icao);
             
-            if (sigmetsForIcao.length === 0) {
-                return;
-            }
+            if (sigmetsForIcao.length === 0) return;
 
             sigmetsForIcao.forEach(sigmet => {
                 const parsedPolygons = parseMultiPolygonSigmet(sigmet.rawSigmet);
                 
                 if (parsedPolygons.length === 0) {
-                    // Pesan ini sekarang akan jauh lebih jarang muncul.
                     console.warn("SIGMET ditemukan, tetapi tidak ada poligon yang bisa di-parse:", sigmet.rawSigmet);
                     return;
                 }
                 
                 const color = getSigmetColor(sigmet.hazard);
+                // Perbaiki ID SIGMET, jika null/undefined, gunakan string kosong.
+                const sigmetId = sigmet.sigmetId || ''; 
 
                 parsedPolygons.forEach(polygonData => {
+                    // Buat konten HTML untuk popup
+                    const popupContent = `
+                        <div class="sigmet-popup-header" style="background-color: ${color};">
+                            ${sigmet.hazard} SIGMET ${sigmetId}
+                        </div>
+                        <div class="sigmet-popup-body">
+                            <div class="sigmet-level-info">
+                                <strong>Level:</strong> ${polygonData.level}
+                            </div>
+                            <hr>
+                            <div class="sigmet-raw-text">
+                                ${sigmet.rawSigmet.replace(/\n/g, '<br>')}
+                            </div>
+                        </div>
+                    `;
+
                     L.polygon(polygonData.coords, { 
                         color: color,
                         fillColor: color,
                         fillOpacity: 0.2,
                         isSigmetPolygon: true
-                    }).addTo(map)
-                      .bindPopup(`
-                          <b>SIGMET: ${sigmet.hazard} (${sigmet.sigmetId})</b><br>
-                          <b>Polygon untuk Level: ${polygonData.flightLevel.startsWith('TOP') ? '' : 'SFC/'}FL${polygonData.flightLevel}</b>
-                          <hr>
-                          <pre style="white-space: pre-wrap; word-wrap: break-word;">${sigmet.rawSigmet}</pre>
-                      `);
+                    })
+                    .addTo(map)
+                    .bindPopup(popupContent, {
+                        // Opsi untuk memberikan class custom pada container popup
+                        className: 'custom-sigmet-popup' 
+                    });
                 });
             });
         })
         .catch(error => console.error("Error mengambil atau memproses data SIGMET:", error));
 }
 
-// Anda juga perlu fungsi getSigmetColor
+// Fungsi getSigmetColor
 function getSigmetColor(hazard) {
     switch(hazard) {
-        case 'VA': return 'purple';
+        case 'VA': return 'blue';
         case 'TS': return 'red';
         case 'TURB': return 'orange';
-        case 'ICE': return 'blue';
+        case 'ICE': return 'purple';
         default: return 'gray';
     }
 }
