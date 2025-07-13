@@ -422,12 +422,12 @@ cropImageButton.addEventListener('click', () => {
         var topoMap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: 'Base map &copy; <a href="https://opentopomap.org/">OpenTopoMap</a> contributors' });
         var lulcMap = L.tileLayer.wms("/api/lulc-wms", {layers: 'WORLDCOVER_2021_MAP', format: 'image/png', transparent: true, attribution: 'Base map &copy; ESA WorldCover 2021' });
         var radarLayer = L.tileLayer('', { opacity: 0.8, attribution: 'Radar data &copy; Accuweather' }); 
-        var IRsatelliteLayer = L.tileLayer('', { opacity: 0.6, attribution: 'Satellite data &copy; Accuweather' }); 
+        var IRsatelliteLayer = L.tileLayer('', { opacity: 0.7, attribution: 'Satellite data &copy; Accuweather' }); 
 	var WVsatelliteLayer = L.tileLayer('', { opacity: 0.6, attribution: 'Satellite data &copy; Accuweather' });
         var imageUrl = 'https://satelit.bmkg.go.id/IMAGE/HIMA/H08_RD_Indonesia.png';
         // Batas wilayah gambar satelit yang telah disesuaikan
         var imageBounds = [[-15, 90], [15, 150]];
-        var VSsatelliteLayer = L.imageOverlay(imageUrl, imageBounds, { opacity: 0.7, attribution: 'Satellite data &copy; BMKG'});
+        var VSsatelliteLayer = L.imageOverlay(imageUrl, imageBounds, { opacity: 0.8, attribution: 'Satellite data &copy; BMKG'});
 	var olrUrl = "https://ncics.org/pub/mjo/v2/map/olr.cfs.all.indonesia.1.png";
 	var zonalWindUrl = "https://ncics.org/pub/mjo/v2/map/uwnd850.cfs.all.indonesia.1.png";
 	var TropicalLayer= L.layerGroup().addLayer(L.tileLayer("",{attribution:"Tropical waves data &copy NCICS</a>"}) );
