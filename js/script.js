@@ -1928,7 +1928,7 @@ document.addEventListener('DOMContentLoaded', function() {
             isFirstCheck = true;
             checkForNewVAA();
             if (vaaCheckerInterval) clearInterval(vaaCheckerInterval);
-            vaaCheckerInterval = setInterval(checkForNewVAA, 60000);
+            vaaCheckerInterval = setInterval(checkForNewVAA, 10000);
         }
     });
 
