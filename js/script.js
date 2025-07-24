@@ -806,10 +806,10 @@ updateVISSatellite();
         updateIRSatellite();
 	updateWVSatellite();
 	updateVISSatellite();
-	setInterval(updateRadarAccuweather, 600000);
-        setInterval(updateIRSatellite, 600000);
-	setInterval(updateWVSatellite, 600000); 
-	setInterval(updateVISSatellite, 600000); // 10 menit
+	setInterval(updateRadarAccuweather, 300000);
+        setInterval(updateIRSatellite, 300000);
+	setInterval(updateWVSatellite, 300000); 
+	setInterval(updateVISSatellite, 300000); // 10 menit jadi 5 menit aja
 // Fungsi untuk memperbarui overlay Visible Sat bmkg
 function updateVSsatellite() {
 var timestamp = new Date().getTime();
@@ -882,7 +882,7 @@ function addTimeControls() {
     function updateTimeLabel() {
         let step = 12 - parseInt(timeSlider.value);
         if (step === 0) timeLabel.textContent = "Saat Ini";
-        else timeLabel.textContent = `${step * 10} menit lalu`;}
+        else timeLabel.textContent = `${step * 5} menit lalu`;}
 
     function updateLayers(timeOffset) {
         updateRadarAccuweather(timeOffset);
