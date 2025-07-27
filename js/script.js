@@ -1218,7 +1218,7 @@ function showAWOS(code) {
                 .catch(error => console.error("Gagal mengambil data METAR", error));
         }
 
-        // Ambil Data SIGMET
+       // Ambil Data SIGMET
 // =========================================================================
 // BAGIAN 1: FUNGSI-FUNGSI PARSER (PEMBANTU)
 // =========================================================================
@@ -1261,14 +1261,17 @@ function parseMultiPolygonSigmet(rawText) {
     const singleLineText = rawText.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
 
     // ================== PERUBAHAN UTAMA DI SINI ==================
-    // Kembali ke "greedy" (+), tapi hapus ".*?" yang ambigu.
-    // Sekarang regex secara spesifik mencari blok koordinat, diikuti oleh spasi, lalu diikuti oleh blok level.
-    // Ini adalah pendekatan yang paling stabil untuk format data Anda.
-    const sigmetPartRegex = /(?:VA CLD OBS AT \d{4}Z WI|EMBD TS OBS WI|(?:SEV|MOD)?\s+(?:TURB|ICE)\s+(?:OBS|FCST)?\s+WI)\s+((?:[NS]\s*\d+\s*[EW]\s*\d+\s*(?:-\s*)?)+)\s+((?:TOP\s+)?FL\d+|SFC\/FL\d+|FL\d+\/\d+)/gi;
+    // Regex disederhanakan secara drastis untuk keandalan maksimum.
+    // Ia tidak lagi mencoba mem-parse struktur koordinat.
+    // Ia hanya menangkap SEMUA teks (secara malas: .*?) antara "WI" dan informasi Level.
+    // Ini membuat parsing berhasil bahkan jika ada spasi di dalam angka koordinat.
+    const sigmetPartRegex = /(?:VA CLD OBS AT \d{4}Z WI|EMBD TS OBS WI|(?:SEV|MOD)?\s+(?:TURB|ICE)\s+(?:OBS|FCST)?\s+WI)\s+(.*?)\s+((?:TOP\s+)?FL\d+|SFC\/FL\d+|FL\d+\/\d+)/gi;
     // =============================================================
 
     let match;
     while ((match = sigmetPartRegex.exec(singleLineText)) !== null) {
+        // match[1] sekarang adalah string koordinat mentah yang akan diproses oleh parseCoordString.
+        // match[2] adalah string level.
         const coordString = match[1];
         const levelString = match[2];
 
