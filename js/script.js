@@ -1261,11 +1261,10 @@ function parseMultiPolygonSigmet(rawText) {
     const singleLineText = rawText.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
 
     // ================== PERUBAHAN UTAMA DI SINI ==================
-    // Bagian penangkapan koordinat (match[1]) diubah dari "greedy" (+) menjadi "lazy" (+?).
-    // Ini mencegah regex "memakan" terlalu banyak teks dan merusak poligon TURB dan ICE.
-    // Regex lama: ((?:...)+)
-    // Regex baru: ((?:...)+?) <-- perhatikan '?' di akhir
-    const sigmetPartRegex = /(?:VA CLD OBS AT \d{4}Z WI|EMBD TS OBS WI|(?:SEV|MOD)?\s+(?:TURB|ICE)\s+(?:OBS|FCST)?\s+WI)\s+((?:[NS]\s*\d+\s*[EW]\s*\d+\s*(?:-\s*)?)+?).*?\s((?:TOP\s+)?FL\d+|SFC\/FL\d+|FL\d+\/\d+)/gi;
+    // Kembali ke "greedy" (+), tapi hapus ".*?" yang ambigu.
+    // Sekarang regex secara spesifik mencari blok koordinat, diikuti oleh spasi, lalu diikuti oleh blok level.
+    // Ini adalah pendekatan yang paling stabil untuk format data Anda.
+    const sigmetPartRegex = /(?:VA CLD OBS AT \d{4}Z WI|EMBD TS OBS WI|(?:SEV|MOD)?\s+(?:TURB|ICE)\s+(?:OBS|FCST)?\s+WI)\s+((?:[NS]\s*\d+\s*[EW]\s*\d+\s*(?:-\s*)?)+)\s+((?:TOP\s+)?FL\d+|SFC\/FL\d+|FL\d+\/\d+)/gi;
     // =============================================================
 
     let match;
