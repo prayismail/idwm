@@ -1217,8 +1217,7 @@ function showAWOS(code) {
                 })
                 .catch(error => console.error("Gagal mengambil data METAR", error));
         }
-
-       // Ambil Data SIGMET
+// Ambil Data SIGMET
 // =========================================================================
 // BAGIAN 1: FUNGSI-FUNGSI PARSER (PEMBANTU)
 // =========================================================================
@@ -1254,24 +1253,20 @@ function parseCoordString(coordStr) {
 /**
  * Mengekstrak semua poligon (lengkap dengan koordinat dan level) dari teks SIGMET mentah.
  * @param {string} rawText - Teks SIGMET lengkap.
- * @returns {Array<object>} Array objek poligon, e.g., [{ coords: [...], level: "TOP FL530" }, ...]
+ * @returns {Array<object>} Array objek poligon, e.g., [{ coords: [...], level: "FL190/230" }, ...]
  */
 function parseMultiPolygonSigmet(rawText) {
     const polygons = [];
     const singleLineText = rawText.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
 
     // ================== PERUBAHAN UTAMA DI SINI ==================
-    // Regex disederhanakan secara drastis untuk keandalan maksimum.
-    // Ia tidak lagi mencoba mem-parse struktur koordinat.
-    // Ia hanya menangkap SEMUA teks (secara malas: .*?) antara "WI" dan informasi Level.
-    // Ini membuat parsing berhasil bahkan jika ada spasi di dalam angka koordinat.
-    const sigmetPartRegex = /(?:VA CLD OBS AT \d{4}Z WI|EMBD TS OBS WI|(?:SEV|MOD)?\s+(?:TURB|ICE)\s+(?:OBS|FCST)?\s+WI)\s+(.*?)\s+((?:TOP\s+)?FL\d+|SFC\/FL\d+|FL\d+\/\d+)/gi;
+    // Urutan alternatif di dalam grup penangkapan Level (match[2]) dibalik.
+    // Pola yang paling spesifik (dengan '/') sekarang dicek terlebih dahulu.
+    const sigmetPartRegex = /(?:VA CLD OBS AT \d{4}Z WI|EMBD TS OBS WI|(?:SEV|MOD)?\s+(?:TURB|ICE)\s+(?:OBS|FCST)?\s+WI)\s+(.*?)\s+(SFC\/FL\d+|FL\d+\/\d+|(?:TOP\s+)?FL\d+)/gi;
     // =============================================================
 
     let match;
     while ((match = sigmetPartRegex.exec(singleLineText)) !== null) {
-        // match[1] sekarang adalah string koordinat mentah yang akan diproses oleh parseCoordString.
-        // match[2] adalah string level.
         const coordString = match[1];
         const levelString = match[2];
 
@@ -1380,6 +1375,7 @@ function getSigmetColor(hazard) {
         default: return 'gray';
     }
 }
+      
 var vaAdvisoryLayer = L.layerGroup();
         var baseMaps = {
             "Peta OSM": osmLayer,
