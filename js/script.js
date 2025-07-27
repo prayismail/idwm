@@ -1225,24 +1225,19 @@ function showAWOS(code) {
 
 /**
  * Mengubah string koordinat mentah menjadi array numerik yang bisa dibaca Leaflet.
- * Dibuat tahan banting terhadap spasi di dalam angka atau setelah huruf arah.
  * @param {string} coordStr - String koordinat, e.g., "S0302 E12647 - S 0453 E12721"
  * @returns {Array<[number, number]>} Array koordinat, e.g., [[-3.03, 126.78], ...]
  */
 function parseCoordString(coordStr) {
-    // Regex ini mengizinkan spasi opsional (\s*) setelah huruf N/S/E/W dan di dalam angka.
     const coordRegex = /([NS])\s*([\d\s]+)\s*([EW])\s*([\d\s]+)/g;
     let coords = [];
     let match;
-    // Bersihkan tanda hubung untuk mempermudah regex.
     const cleanCoordStr = coordStr.replace(/-/g, ' ');
 
     while ((match = coordRegex.exec(cleanCoordStr)) !== null) {
-        // Hapus semua spasi dari dalam string angka (e.g., "126 47" -> "12647")
         let latStr = match[2].replace(/\s/g, '');
         let lonStr = match[4].replace(/\s/g, '');
 
-        // Konversi ke derajat desimal
         const latDeg = parseInt(latStr.substring(0, 2), 10);
         const latMin = latStr.length > 2 ? parseInt(latStr.substring(2), 10) : 0;
         let lat = (latDeg + latMin / 60) * (match[1] === 'S' ? -1 : 1);
@@ -1259,18 +1254,18 @@ function parseCoordString(coordStr) {
 /**
  * Mengekstrak semua poligon (lengkap dengan koordinat dan level) dari teks SIGMET mentah.
  * @param {string} rawText - Teks SIGMET lengkap.
- * @returns {Array<object>} Array objek poligon, e.g., [{ coords: [...], level: "SFC/FL090" }, ...]
+ * @returns {Array<object>} Array objek poligon, e.g., [{ coords: [...], level: "TOP FL530" }, ...]
  */
 function parseMultiPolygonSigmet(rawText) {
     const polygons = [];
-    // Ganti newline dan spasi berlebih menjadi satu spasi untuk mempermudah parsing.
     const singleLineText = rawText.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
 
     // ================== PERUBAHAN UTAMA DI SINI ==================
-    // Regex ini diperbarui secara spesifik untuk menangani contoh data yang Anda berikan.
-    // 1. Pola untuk VA, TS, TURB, ICE dibuat lebih fleksibel.
-    // 2. Pola untuk Level (match[2]) diperbarui untuk menangkap format seperti SFC/FL060 dan FL090/110.
-    const sigmetPartRegex = /(?:VA CLD OBS AT \d{4}Z WI|EMBD TS OBS WI|(?:SEV|MOD)?\s+(?:TURB|ICE)\s+(?:OBS|FCST)?\s+WI)\s+((?:[NS]\s*\d+\s*[EW]\s*\d+\s*(?:-\s*)?)+).*?((?:SFC|FL)[\d\/]+)/gi;
+    // Bagian penangkapan koordinat (match[1]) diubah dari "greedy" (+) menjadi "lazy" (+?).
+    // Ini mencegah regex "memakan" terlalu banyak teks dan merusak poligon TURB dan ICE.
+    // Regex lama: ((?:...)+)
+    // Regex baru: ((?:...)+?) <-- perhatikan '?' di akhir
+    const sigmetPartRegex = /(?:VA CLD OBS AT \d{4}Z WI|EMBD TS OBS WI|(?:SEV|MOD)?\s+(?:TURB|ICE)\s+(?:OBS|FCST)?\s+WI)\s+((?:[NS]\s*\d+\s*[EW]\s*\d+\s*(?:-\s*)?)+?).*?\s((?:TOP\s+)?FL\d+|SFC\/FL\d+|FL\d+\/\d+)/gi;
     // =============================================================
 
     let match;
@@ -1281,7 +1276,6 @@ function parseMultiPolygonSigmet(rawText) {
         const coordinates = parseCoordString(coordString);
 
         if (coordinates.length > 1) {
-            // Tutup poligon jika titik awal dan akhir tidak sama.
             const firstPoint = coordinates[0];
             const lastPoint = coordinates[coordinates.length - 1];
             if (firstPoint[0] !== lastPoint[0] || firstPoint[1] !== lastPoint[1]) {
@@ -1290,12 +1284,11 @@ function parseMultiPolygonSigmet(rawText) {
 
             polygons.push({
                 coords: coordinates,
-                level: levelString.trim() // Menghapus spasi ekstra dari string level
+                level: levelString.trim()
             });
         }
     }
     
-    // Log ini akan muncul jika ada SIGMET yang masih tidak bisa diparse
     if (polygons.length === 0) {
         console.warn("SIGMET ditemukan, tetapi tidak ada poligon yang bisa di-parse:", singleLineText);
     }
@@ -1312,7 +1305,7 @@ function parseMultiPolygonSigmet(rawText) {
  * @param {string} icao - Kode ICAO dari FIR, e.g., "WAAF".
  */
 function fetchSIGMET(icao) {
-    let url = "/api/sigmet"; // Ganti ke URL API Anda jika perlu
+    let url = "/api/sigmet";
 
     fetch(url)
         .then(response => {
@@ -1320,32 +1313,26 @@ function fetchSIGMET(icao) {
             return response.json();
         })
         .then(data => {
-            // Hapus layer SIGMET lama dari peta
             map.eachLayer(layer => {
                 if (layer.options && layer.options.isSigmetPolygon) {
                     map.removeLayer(layer);
                 }
             });
 
-            // Filter SIGMET untuk FIR yang relevan.
             const sigmetsForIcao = data.filter(sigmet => sigmet.icaoId === icao);
             if (sigmetsForIcao.length === 0) return;
 
-            // Loop melalui setiap SIGMET yang ditemukan.
             sigmetsForIcao.forEach(sigmet => {
-                // Panggil parser kita yang sudah diperbarui.
                 const parsedPolygons = parseMultiPolygonSigmet(sigmet.rawSigmet);
                 
                 if (parsedPolygons.length === 0) {
-                    // Pesan ini sekarang akan lebih jarang muncul.
-                    return; // Lanjut ke SIGMET berikutnya.
+                    return;
                 }
                 
                 const color = getSigmetColor(sigmet.hazard);
                 const sigmetId = sigmet.sigmetId ? ` ${sigmet.sigmetId}` : '';
                 const formattedSigmetHtml = sigmet.rawSigmet.replace(/\n|\r/g, '<br>');
 
-                // Loop melalui setiap poligon yang berhasil di-parse dari satu SIGMET.
                 parsedPolygons.forEach(polygonData => {
                     const popupContent = `
                         <div class="sigmet-popup-header" style="background-color: ${color};">
@@ -1362,12 +1349,11 @@ function fetchSIGMET(icao) {
                         </div>
                     `;
 
-                    // Plot poligon ke peta.
                     L.polygon(polygonData.coords, { 
                         color: color,
                         fillColor: color,
                         fillOpacity: 0.2,
-                        isSigmetPolygon: true // Penanda untuk memudahkan penghapusan
+                        isSigmetPolygon: true
                     })
                     .addTo(map)
                     .bindPopup(popupContent, { className: 'custom-sigmet-popup' });
