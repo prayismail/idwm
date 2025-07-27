@@ -1219,11 +1219,10 @@ function showAWOS(code) {
         }
 
         // Ambil Data SIGMET
-        // =========================================================================
+// =========================================================================
 // BAGIAN 1: FUNGSI-FUNGSI PARSER (PEMBANTU)
 // Ini adalah "mesin" yang bekerja di belakang layar untuk memproses teks SIGMET.
 // =========================================================================
-
 /**
  * Mengubah string koordinat mentah menjadi array numerik yang bisa dibaca Leaflet.
  * Dibuat tahan banting terhadap spasi di dalam angka atau setelah huruf arah.
@@ -1236,7 +1235,7 @@ function parseCoordString(coordStr) {
     let coords = [];
     let match;
     // Bersihkan tanda hubung untuk mempermudah regex.
-    const cleanCoordStr = coordStr.replace(/-/g, ' '); 
+    const cleanCoordStr = coordStr.replace(/-/g, ' ');
 
     while ((match = coordRegex.exec(cleanCoordStr)) !== null) {
         // Hapus spasi dari dalam angka (e.g., "126 47" -> "12647")
@@ -1251,7 +1250,7 @@ function parseCoordString(coordStr) {
         const lonDeg = parseInt(lonStr.substring(0, 3), 10);
         const lonMin = lonStr.length > 3 ? parseInt(lonStr.substring(3), 10) : 0;
         let lon = (lonDeg + lonMin / 60) * (match[3] === 'W' ? -1 : 1);
-        
+
         coords.push([parseFloat(lat.toFixed(4)), parseFloat(lon.toFixed(4))]);
     }
     return coords;
@@ -1265,17 +1264,20 @@ function parseCoordString(coordStr) {
 function parseMultiPolygonSigmet(rawText) {
     const polygons = [];
     const singleLineText = rawText.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
-    
-    // Regex andal yang mencari semua jenis awalan poligon.
-    const sigmetPartRegex = /(?:EMBD TS OBS WI|VA CLD OBS AT \d{4}Z WI|AND OBS AT \d{4}Z WI)\s+((?:[NS]\s*\d+\s*E\s*\d+\s*(?:-\s*)?)+).*?((?:SFC\/|TOP\s+)FL\d{3})/gi;
 
+    // ================== PERUBAHAN UTAMA DI SINI ==================
+    // Regex diperbarui untuk mencakup pola TURB dan ICE.
+    // Pola yang ditambahkan: SEV TURB OBS WI | SEV ICE OBS WI
+    const sigmetPartRegex = /(?:EMBD TS OBS WI|VA CLD OBS AT \d{4}Z WI|AND OBS AT \d{4}Z WI|SEV TURB OBS WI|SEV ICE OBS WI)\s+((?:[NS]\s*\d+\sE\s\d+\s*(?:-\s*)?)+).*?((?:SFC\/|TOP\s+)FL\d{3})/gi;
+    // =============================================================
+    
     let match;
     while ((match = sigmetPartRegex.exec(singleLineText)) !== null) {
         const coordString = match[1];
         const levelString = match[2];
-        
+
         const coordinates = parseCoordString(coordString);
-        
+
         if (coordinates.length > 1) {
             // Logika pintar: Tutup poligon HANYA jika belum tertutup.
             const firstPoint = coordinates[0];
@@ -1296,9 +1298,8 @@ function parseMultiPolygonSigmet(rawText) {
 
 // =========================================================================
 // BAGIAN 2: FUNGSI UTAMA FETCH DAN PLOTTING
-// Ini adalah kode lama Anda yang sudah dimodifikasi untuk menggunakan parser baru.
+// Tidak ada perubahan di bagian ini.
 // =========================================================================
-
 /**
  * Mengambil data SIGMET, mem-parsing, dan mem-plot semua poligon ke peta.
  * @param {string} icao - Kode ICAO dari FIR, e.g., "WAAF".
@@ -1306,7 +1307,7 @@ function parseMultiPolygonSigmet(rawText) {
 function fetchSIGMET(icao) {
     // Anda bisa mengganti URL ini kembali ke API lokal Anda (/api/sigmet) jika sudah siap.
     let url = "/api/sigmet";
-    
+
     fetch(url)
         .then(response => {
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -1326,8 +1327,7 @@ function fetchSIGMET(icao) {
 
             // Loop melalui setiap SIGMET yang ditemukan.
             sigmetsForIcao.forEach(sigmet => {
-                // --- INI PERUBAHAN UTAMA DARI KODE LAMA ANDA ---
-                // Kita tidak lagi menggunakan `sigmet.coords`. Kita panggil parser kita.
+                // Kita panggil parser kita yang sudah diperbarui.
                 const parsedPolygons = parseMultiPolygonSigmet(sigmet.rawSigmet);
                 
                 if (parsedPolygons.length === 0) {
@@ -1371,22 +1371,20 @@ function fetchSIGMET(icao) {
         .catch(error => console.error("Error mengambil atau memproses data SIGMET:", error));
 }
 
-
 // =========================================================================
 // BAGIAN 3: FUNGSI UTILITAS DAN STYLING
+// Tidak ada perubahan di bagian ini.
 // =========================================================================
-
 // Fungsi untuk mendapatkan warna berdasarkan jenis hazard.
 function getSigmetColor(hazard) {
     switch(hazard) {
-        case 'VA': return '#0000FF'; // Biru
-        case 'TS': return '#FF0000'; // Merah
+        case 'VA': return '#0000FF';   // Biru
+        case 'TS': return '#FF0000';   // Merah
         case 'TURB': return '#FFA500'; // Oranye
-        case 'ICE': return '#00BFFF'; // Biru muda
+        case 'ICE': return '#00BFFF';  // Biru muda
         default: return 'gray';
     }
 }
-
 var vaAdvisoryLayer = L.layerGroup();
         var baseMaps = {
             "Peta OSM": osmLayer,
