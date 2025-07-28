@@ -1224,7 +1224,7 @@ function showAWOS(code) {
 
 /**
  * Mengubah string koordinat mentah menjadi array numerik yang bisa dibaca Leaflet.
- * @param {string} coordStr - String koordinat, e.g., "S0302 E12647 - S 0453 E12721"
+ * @param {string} coordStr - String koordinat, e.g., "S0302 E12647 - S0453 E12721"
  * @returns {Array<[number, number]>} Array koordinat, e.g., [[-3.03, 126.78], ...]
  */
 function parseCoordString(coordStr) {
@@ -1250,6 +1250,7 @@ function parseCoordString(coordStr) {
     return coords;
 }
 
+
 /**
  * Mengekstrak semua poligon (lengkap dengan koordinat dan level) dari teks SIGMET mentah.
  * @param {string} rawText - Teks SIGMET lengkap.
@@ -1260,9 +1261,9 @@ function parseMultiPolygonSigmet(rawText) {
     const singleLineText = rawText.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
 
     // ================== PERUBAHAN UTAMA DI SINI ==================
-    // Urutan alternatif di dalam grup penangkapan Level (match[2]) dibalik.
-    // Pola yang paling spesifik (dengan '/') sekarang dicek terlebih dahulu.
-    const sigmetPartRegex = /(?:VA CLD OBS AT \d{4}Z WI|EMBD TS OBS WI|(?:SEV|MOD)?\s+(?:TURB|ICE)\s+(?:OBS|FCST)?\s+WI)\s+(.*?)\s+(SFC\/FL\d+|FL\d+\/\d+|(?:TOP\s+)?FL\d+)/gi;
+    // Menambahkan grup opsional (?:\s+AT\s+\d{4}Z)? untuk menangani SIGMET
+    // yang memiliki informasi waktu (misal: "FCST AT 0910Z WI").
+    const sigmetPartRegex = /(?:VA CLD OBS AT \d{4}Z WI|EMBD TS OBS WI|(?:SEV|MOD)?\s+(?:TURB|ICE)\s+(?:OBS|FCST)?(?:\s+AT\s+\d{4}Z)?\s+WI)\s+(.*?)\s+(SFC\/FL\d+|FL\d+\/\d+|(?:TOP\s+)?FL\d+)/gi;
     // =============================================================
 
     let match;
@@ -1285,14 +1286,13 @@ function parseMultiPolygonSigmet(rawText) {
             });
         }
     }
-    
+
     if (polygons.length === 0) {
         console.warn("SIGMET ditemukan, tetapi tidak ada poligon yang bisa di-parse:", singleLineText);
     }
-    
+
     return polygons;
 }
-
 
 // =========================================================================
 // BAGIAN 2: FUNGSI UTAMA FETCH DAN PLOTTING (Tidak ada perubahan)
@@ -1374,8 +1374,7 @@ function getSigmetColor(hazard) {
         case 'ICE': return '#00BFFF';  // Biru muda
         default: return 'gray';
     }
-}
-      
+}      
 var vaAdvisoryLayer = L.layerGroup();
         var baseMaps = {
             "Peta OSM": osmLayer,
