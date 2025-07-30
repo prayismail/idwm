@@ -1228,6 +1228,7 @@ function showAWOS(code) {
  * @returns {Array<[number, number]>} Array koordinat, e.g., [[-3.03, 126.78], ...]
  */
 function parseCoordString(coordStr) {
+    // Regex ini hanya akan cocok dengan format koordinat standar (N/S ddd E/W dddd)
     const coordRegex = /([NS])\s*([\d\s]+)\s*([EW])\s*([\d\s]+)/g;
     let coords = [];
     let match;
@@ -1250,7 +1251,6 @@ function parseCoordString(coordStr) {
     return coords;
 }
 
-
 /**
  * Mengekstrak semua poligon (lengkap dengan koordinat dan level) dari teks SIGMET mentah.
  * @param {string} rawText - Teks SIGMET lengkap.
@@ -1261,34 +1261,42 @@ function parseMultiPolygonSigmet(rawText) {
     const singleLineText = rawText.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
 
     // ================== PERUBAHAN UTAMA DI SINI ==================
-    // Menambahkan grup opsional (?:\s+AT\s+\d{4}Z)? untuk menangani SIGMET
-    // yang memiliki informasi waktu (misal: "FCST AT 0910Z WI").
-    const sigmetPartRegex = /(?:VA CLD OBS AT \d{4}Z WI|EMBD TS OBS WI|(?:SEV|MOD)?\s+(?:TURB|ICE)\s+(?:OBS|FCST)?(?:\s+AT\s+\d{4}Z)?\s+WI)\s+(.*?)\s+(SFC\/FL\d+|FL\d+\/\d+|(?:TOP\s+)?FL\d+)/gi;
+    // Regex diperbarui untuk menangani variasi format yang lebih luas.
+    // 1. (?:...)? ditambahkan untuk menangani waktu FCST AT ZULU opsional.
+    // 2. Regex untuk Level dibuat lebih fleksibel untuk menangani spasi
+    //    opsional, misal: "FL330/390" dan "F L330 / 390".
+    const sigmetPartRegex = /(?:VA CLD OBS AT \d{4}Z WI|EMBD TS OBS WI|(?:SEV|MOD)?\s+(?:TURB|ICE)\s+(?:OBS|FCST)?(?:\s+AT\s+\d{4}Z)?\s+WI)\s+(.*?)\s+(SFC\s*\/\s*F\s*L\d+|F\s*L\d+\s*\/\s*(?:F\s*L)?\d+|(?:TOP\s+)?F\s*L\d+)/gi;
     // =============================================================
 
     let match;
     while ((match = sigmetPartRegex.exec(singleLineText)) !== null) {
+        // match[1] akan berisi string koordinat atau deskripsi area
+        // match[2] akan berisi string level
         const coordString = match[1];
         const levelString = match[2];
 
+        // Coba parse string koordinat. Jika gagal (misal: area deskriptif),
+        // akan mengembalikan array kosong.
         const coordinates = parseCoordString(coordString);
 
+        // Hanya proses lebih lanjut jika kita berhasil mendapatkan koordinat poligon yang valid.
         if (coordinates.length > 1) {
             const firstPoint = coordinates[0];
             const lastPoint = coordinates[coordinates.length - 1];
+            // Pastikan poligon tertutup untuk rendering yang benar
             if (firstPoint[0] !== lastPoint[0] || firstPoint[1] !== lastPoint[1]) {
                 coordinates.push(firstPoint);
             }
 
             polygons.push({
                 coords: coordinates,
-                level: levelString.trim()
+                level: levelString.trim().replace(/\s/g, '') // Bersihkan spasi dari string level
             });
         }
     }
 
     if (polygons.length === 0) {
-        console.warn("SIGMET ditemukan, tetapi tidak ada poligon yang bisa di-parse:", singleLineText);
+        console.warn("SIGMET ditemukan, tetapi tidak ada poligon yang bisa di-parse (kemungkinan karena area deskriptif seperti 'N OF...'):", singleLineText);
     }
 
     return polygons;
@@ -1323,7 +1331,7 @@ function fetchSIGMET(icao) {
                 const parsedPolygons = parseMultiPolygonSigmet(sigmet.rawSigmet);
                 
                 if (parsedPolygons.length === 0) {
-                    return;
+                    return; // Lewati SIGMET yang tidak bisa di-parse
                 }
                 
                 const color = getSigmetColor(sigmet.hazard);
