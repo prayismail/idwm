@@ -1389,7 +1389,7 @@ function getSigmetColor(hazard) {
         case 'ICE': return '#00BFFF';  // Biru muda
         default: return 'gray';
     }
-}    
+}
 var vaAdvisoryLayer = L.layerGroup();
         var baseMaps = {
             "Peta OSM": osmLayer,
