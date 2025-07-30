@@ -1228,7 +1228,6 @@ function showAWOS(code) {
  * @returns {Array<[number, number]>} Array koordinat, e.g., [[-3.03, 126.78], ...]
  */
 function parseCoordString(coordStr) {
-    // Regex ini hanya akan cocok dengan format koordinat standar (N/S ddd E/W dddd)
     const coordRegex = /([NS])\s*([\d\s]+)\s*([EW])\s*([\d\s]+)/g;
     let coords = [];
     let match;
@@ -1261,36 +1260,29 @@ function parseMultiPolygonSigmet(rawText) {
     const singleLineText = rawText.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
 
     // ================== PERUBAHAN UTAMA DI SINI ==================
-    // Regex diperbarui untuk menangani variasi format yang lebih luas.
-    // 1. (?:...)? ditambahkan untuk menangani waktu FCST AT ZULU opsional.
-    // 2. Regex untuk Level dibuat lebih fleksibel untuk menangani spasi
-    //    opsional, misal: "FL330/390" dan "F L330 / 390".
-    const sigmetPartRegex = /(?:VA CLD OBS AT \d{4}Z WI|EMBD TS OBS WI|(?:SEV|MOD)?\s+(?:TURB|ICE)\s+(?:OBS|FCST)?(?:\s+AT\s+\d{4}Z)?\s+WI)\s+(.*?)\s+(SFC\s*\/\s*F\s*L\d+|F\s*L\d+\s*\/\s*(?:F\s*L)?\d+|(?:TOP\s+)?F\s*L\d+)/gi;
+    // Mengubah spasi yang diperlukan (\s+) menjadi spasi opsional (\s*)
+    // antara grup koordinat (match[1]) dan grup level (match[2]).
+    // Ini untuk menangani kasus di mana tidak ada spasi antara koordinat terakhir dan FL.
+    const sigmetPartRegex = /(?:VA CLD OBS AT \d{4}Z WI|EMBD TS OBS WI|(?:SEV|MOD)?\s+(?:TURB|ICE)\s+(?:OBS|FCST)?(?:\s+AT\s+\d{4}Z)?\s+WI)\s+(.*?)\s*(SFC\s*\/\s*F\s*L\d+|F\s*L\d+\s*\/\s*(?:F\s*L)?\d+|(?:TOP\s+)?F\s*L\d+)/gi;
     // =============================================================
 
     let match;
     while ((match = sigmetPartRegex.exec(singleLineText)) !== null) {
-        // match[1] akan berisi string koordinat atau deskripsi area
-        // match[2] akan berisi string level
-        const coordString = match[1];
+        const coordString = match[1].trim();
         const levelString = match[2];
 
-        // Coba parse string koordinat. Jika gagal (misal: area deskriptif),
-        // akan mengembalikan array kosong.
         const coordinates = parseCoordString(coordString);
 
-        // Hanya proses lebih lanjut jika kita berhasil mendapatkan koordinat poligon yang valid.
         if (coordinates.length > 1) {
             const firstPoint = coordinates[0];
             const lastPoint = coordinates[coordinates.length - 1];
-            // Pastikan poligon tertutup untuk rendering yang benar
             if (firstPoint[0] !== lastPoint[0] || firstPoint[1] !== lastPoint[1]) {
                 coordinates.push(firstPoint);
             }
 
             polygons.push({
                 coords: coordinates,
-                level: levelString.trim().replace(/\s/g, '') // Bersihkan spasi dari string level
+                level: levelString.trim().replace(/\s/g, '')
             });
         }
     }
@@ -1331,7 +1323,7 @@ function fetchSIGMET(icao) {
                 const parsedPolygons = parseMultiPolygonSigmet(sigmet.rawSigmet);
                 
                 if (parsedPolygons.length === 0) {
-                    return; // Lewati SIGMET yang tidak bisa di-parse
+                    return;
                 }
                 
                 const color = getSigmetColor(sigmet.hazard);
@@ -1382,7 +1374,7 @@ function getSigmetColor(hazard) {
         case 'ICE': return '#00BFFF';  // Biru muda
         default: return 'gray';
     }
-}      
+}     
 var vaAdvisoryLayer = L.layerGroup();
         var baseMaps = {
             "Peta OSM": osmLayer,
