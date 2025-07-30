@@ -1296,7 +1296,7 @@ function parseMultiPolygonSigmet(rawText) {
 
             polygons.push({
                 coords: coordinates,
-                level: levelString.trim().replace(/\s/g, '')
+                level: levelString.trim().replace(/\s/g, ' ')
             });
         }
     }
