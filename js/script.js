@@ -1223,32 +1223,47 @@ function showAWOS(code) {
 // =========================================================================
 
 /**
- * Mengubah string koordinat mentah menjadi array numerik yang bisa dibaca Leaflet.
+ * [REVISI TOTAL] Mengubah string koordinat mentah menjadi array numerik yang bisa dibaca Leaflet.
+ * Fungsi ini sekarang memecah string berdasarkan tanda hubung '-' untuk mem-parsing setiap
+ * titik koordinat secara individual, membuatnya jauh lebih andal.
+ *
  * @param {string} coordStr - String koordinat, e.g., "S0302 E12647 - S0453 E12721"
  * @returns {Array<[number, number]>} Array koordinat, e.g., [[-3.03, 126.78], ...]
  */
 function parseCoordString(coordStr) {
-    const coordRegex = /([NS])\s*([\d\s]+)\s*([EW])\s*([\d\s]+)/g;
-    let coords = [];
-    let match;
-    const cleanCoordStr = coordStr.replace(/-/g, ' ');
+    const coords = [];
+    // Memecah string utama menjadi bagian-bagian berdasarkan pemisah '-'.
+    const pairs = coordStr.trim().split(/\s*-\s*/);
 
-    while ((match = coordRegex.exec(cleanCoordStr)) !== null) {
-        let latStr = match[2].replace(/\s/g, '');
-        let lonStr = match[4].replace(/\s/g, '');
+    // Regex sederhana untuk mem-parsing SATU pasang koordinat.
+    const pairRegex = /([NS])\s*([\d\s]+)\s*([EW])\s*([\d\s]+)/;
 
-        const latDeg = parseInt(latStr.substring(0, 2), 10);
-        const latMin = latStr.length > 2 ? parseInt(latStr.substring(2), 10) : 0;
-        let lat = (latDeg + latMin / 60) * (match[1] === 'S' ? -1 : 1);
+    for (const pair of pairs) {
+        if (!pair) continue; // Melewati jika ada string kosong hasil split
 
-        const lonDeg = parseInt(lonStr.substring(0, 3), 10);
-        const lonMin = lonStr.length > 3 ? parseInt(lonStr.substring(3), 10) : 0;
-        let lon = (lonDeg + lonMin / 60) * (match[3] === 'W' ? -1 : 1);
+        const match = pair.match(pairRegex);
 
-        coords.push([parseFloat(lat.toFixed(4)), parseFloat(lon.toFixed(4))]);
+        if (match) {
+            let latStr = match[2].replace(/\s/g, ''); // Menghapus spasi dari angka (misal: '03 02' -> '0302')
+            let lonStr = match[4].replace(/\s/g, '');
+
+            const latDeg = parseInt(latStr.substring(0, 2), 10);
+            const latMin = latStr.length > 2 ? parseInt(latStr.substring(2), 10) : 0;
+            let lat = (latDeg + latMin / 60) * (match[1] === 'S' ? -1 : 1);
+
+            const lonDeg = parseInt(lonStr.substring(0, 3), 10);
+            const lonMin = lonStr.length > 3 ? parseInt(lonStr.substring(3), 10) : 0;
+            let lon = (lonDeg + lonMin / 60) * (match[3] === 'W' ? -1 : 1);
+
+            // Memastikan hasil kalkulasi adalah angka yang valid sebelum menambahkannya ke array
+            if (!isNaN(lat) && !isNaN(lon)) {
+                coords.push([parseFloat(lat.toFixed(4)), parseFloat(lon.toFixed(4))]);
+            }
+        }
     }
     return coords;
 }
+
 
 /**
  * Mengekstrak semua poligon (lengkap dengan koordinat dan level) dari teks SIGMET mentah.
@@ -1259,23 +1274,22 @@ function parseMultiPolygonSigmet(rawText) {
     const polygons = [];
     const singleLineText = rawText.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
 
-    // ================== PERUBAHAN UTAMA DI SINI ==================
-    // Mengubah spasi yang diperlukan (\s+) menjadi spasi opsional (\s*)
-    // antara grup koordinat (match[1]) dan grup level (match[2]).
-    // Ini untuk menangani kasus di mana tidak ada spasi antara koordinat terakhir dan FL.
+    // Regex ini dirancang untuk menangkap blok informasi SIGMET.
+    // Perubahan kunci: spasi antara koordinat (match[1]) dan level (match[2]) dibuat opsional (\s*).
     const sigmetPartRegex = /(?:VA CLD OBS AT \d{4}Z WI|EMBD TS OBS WI|(?:SEV|MOD)?\s+(?:TURB|ICE)\s+(?:OBS|FCST)?(?:\s+AT\s+\d{4}Z)?\s+WI)\s+(.*?)\s*(SFC\s*\/\s*F\s*L\d+|F\s*L\d+\s*\/\s*(?:F\s*L)?\d+|(?:TOP\s+)?F\s*L\d+)/gi;
-    // =============================================================
 
     let match;
     while ((match = sigmetPartRegex.exec(singleLineText)) !== null) {
         const coordString = match[1].trim();
         const levelString = match[2];
 
+        // Memanggil fungsi parseCoordString yang sudah diperbaiki.
         const coordinates = parseCoordString(coordString);
 
         if (coordinates.length > 1) {
             const firstPoint = coordinates[0];
             const lastPoint = coordinates[coordinates.length - 1];
+            // Menutup poligon jika belum tertutup
             if (firstPoint[0] !== lastPoint[0] || firstPoint[1] !== lastPoint[1]) {
                 coordinates.push(firstPoint);
             }
@@ -1288,7 +1302,8 @@ function parseMultiPolygonSigmet(rawText) {
     }
 
     if (polygons.length === 0) {
-        console.warn("SIGMET ditemukan, tetapi tidak ada poligon yang bisa di-parse (kemungkinan karena area deskriptif seperti 'N OF...'):", singleLineText);
+        // Peringatan ini akan tetap muncul untuk SIGMET deskriptif (seperti N OF...), dan ini normal.
+        console.warn("SIGMET ditemukan, tetapi tidak ada poligon yang bisa di-parse (kemungkinan karena area deskriptif):", singleLineText);
     }
 
     return polygons;
@@ -1374,7 +1389,7 @@ function getSigmetColor(hazard) {
         case 'ICE': return '#00BFFF';  // Biru muda
         default: return 'gray';
     }
-}     
+}    
 var vaAdvisoryLayer = L.layerGroup();
         var baseMaps = {
             "Peta OSM": osmLayer,
