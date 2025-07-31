@@ -8,7 +8,7 @@
 // Untuk Node.js 18+, `fetch` sudah global.
 
 export default async function handler(req, res) {
-  const targetUrl = 'https://aviationweather.gov/api/data/isigmet?format=json&level=3000';
+  const targetUrl = 'https://aviationweather.gov/api/data/isigmet?format=json';
 
   // Hanya izinkan metode GET untuk endpoint ini
   if (req.method !== 'GET') {
