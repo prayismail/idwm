@@ -216,6 +216,29 @@
     Browser Anda tidak mendukung elemen audio.
 </audio>	
       <script src="js/script.js"></script> <!-- Panggil JavaScript -->                           
+<div id="fl-selector-container" class="custom-control-container leaflet-control hidden">
+    <select id="fl-selector"></select>
+</div>
+
+<div id="turbulence-legend" class="custom-control-container leaflet-control hidden">
+    <h4>Turbulence (EDR)</h4>
+    <div class="legend-scale">
+        <div class="legend-color" style="background-color: #ffffff;"></div><div class="legend-color" style="background-color: #ffffff;"></div><div class="legend-color" style="background-color: #adff2f;"></div><div class="legend-color" style="background-color: #ffff00;"></div><div class="legend-color" style="background-color: #ffcc00;"></div><div class="legend-color" style="background-color: #ffa500;"></div><div class="legend-color" style="background-color: #ff0000;"></div><div class="legend-color" style="background-color: #c80000;"></div><div class="legend-color" style="background-color: #8b0000;"></div><div class="legend-color" style="background-color: #4b0000;"></div>
+    </div>
+    <div class="legend-labels"><span>10</span><span>20</span><span>40</span><span>60</span><span>80</span><span>100</span></div>
+    <div class="legend-units">(m²/³ s⁻¹ x 100)</div>
+</div>
+
+<div id="time-slider-container" class="custom-control-container leaflet-control hidden">
+    <div id="time-display"></div>
+    <div class="slider-controls">
+        <button id="slider-prev" class="slider-arrow">◄</button>
+        <div class="slider-main"><input type="range" id="time-slider" step="1" value="0"><div id="slider-ticks"></div></div>
+        <button id="slider-next" class="slider-arrow">►</button>
+    </div>
+</div>
+
     
 </body>
 </html>
+
