@@ -673,9 +673,9 @@
         /* ======================================================= */
        {                     
             #fl-selector-container { top: auto; bottom: 165px; left: 50%; transform: translateX(-50%); width: 90vw; }
-            #fl-selector { width: 80%; }
+            #fl-selector { width: 90%; }
             #turbulence-legend { bottom: 70px; width: 90vw; padding: 5px; }
-            #turbulence-legend .legend-scale, #turbulence-legend .legend-labels { width: 80%; }
+            #turbulence-legend .legend-scale, #turbulence-legend .legend-labels { width: 100%; }
             #turbulence-legend .legend-color { flex-grow: 1; width: auto; height: 20px; }
             #turbulence-legend .legend-labels span:nth-child(1) { left: 20%; }
             #turbulence-legend .legend-labels span:nth-child(2) { left: 30%; }
@@ -684,7 +684,7 @@
             #turbulence-legend .legend-labels span:nth-child(5) { left: 80%; }
             #turbulence-legend .legend-labels span:nth-child(6) { left: 100%; }
 
-            #time-slider-container { width: 90vw; bottom: 50px; padding: 8px; }
+            #time-slider-container { width: 90vw; bottom: 10px; padding: 8px; }
             #time-display, #slider-ticks span { font-size: 9px; }
 
             /* PERBAIKAN SLIDER MELUAP */
