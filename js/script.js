@@ -1385,6 +1385,153 @@ function getSigmetColor(hazard) {
         default: return 'gray';
     }
 }
+// Variabel state dan elemen UI
+    const flSelectorContainer = document.getElementById('fl-selector-container');
+    const flSelector = document.getElementById('fl-selector');
+    const legend = document.getElementById('turbulence-legend');
+    const sliderContainer = document.getElementById('time-slider-container');
+    const timeSlider = document.getElementById('time-slider');
+    const timeDisplay = document.getElementById('time-display');
+    const sliderTicks = document.getElementById('slider-ticks');
+    const prevButton = document.getElementById('slider-prev');
+    const nextButton = document.getElementById('slider-next');
+    
+    const imageBound2 = [[-90, -180], [90, 180]];
+    const forecastHours = ['06', '09', '12', '15', '18', '21', '24', '27', '30', '33', '36', '39', '42', '45', '48'];
+    const flightLevels = [
+        { name: "Turb FL450/148mb", code: "148" }, { name: "Turb FL390/197mb", code: "197" },
+        { name: "Turb FL340/250mb", code: "250" }, { name: "Turb FL300/301mb", code: "301" },
+        { name: "Turb FL270/344mb", code: "344" }, { name: "Turb FL240/393mb", code: "393" },
+        { name: "Turb FL180/506mb", code: "506" }, { name: "Turb FL140/595mb", code: "595" }
+    ];
+
+    let wafsInfo = {};
+    let turbulenceLayers = {};
+    let currentTurbulenceLayer = null;
+
+    // =====================================================================
+    // === FUNGSI YANG DIPERBAIKI: getLatestWafsCycle ===
+    // =====================================================================
+    function getLatestWafsCycle() {
+        // Buat objek waktu saat ini dalam UTC
+        const now = new Date();
+
+        // **PERBAIKAN**: Mundurkan waktu 4 jam untuk mengakomodasi keterlambatan publikasi data.
+        // Ini memastikan kita tidak mencoba mengambil cycle yang belum ada di server.
+        const lookbackTime = new Date(now.getTime() - (4 * 60 * 60 * 1000));
+
+        const utcHours = lookbackTime.getUTCHours();
+        let cycleHour;
+        
+        // Tentukan cycle berdasarkan waktu yang sudah dimundurkan
+        if (utcHours < 6) { cycleHour = '00'; } 
+        else if (utcHours < 12) { cycleHour = '06'; } 
+        else if (utcHours < 18) { cycleHour = '12'; } 
+        else { cycleHour = '18'; }
+
+        // Gunakan tanggal dari waktu yang sudah dimundurkan untuk memastikan konsistensi
+        const year = lookbackTime.getUTCFullYear();
+        const month = String(lookbackTime.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(lookbackTime.getUTCDate()).padStart(2, '0');
+        const dateString = `${year}${month}${day}`;
+        
+        return {
+            dateString: dateString,
+            cycle: cycleHour,
+            baseDate: new Date(`${dateString.slice(0,4)}-${dateString.slice(4,6)}-${dateString.slice(6,8)}T${cycleHour}:00:00Z`)
+        };
+    }
+
+    // Fungsi-fungsi lainnya tidak berubah
+    function populateFlightLevelDropdown() {
+        flightLevels.forEach(level => {
+            const option = document.createElement('option');
+            option.value = level.code;
+            option.textContent = level.name;
+            flSelector.appendChild(option);
+        });
+        flSelector.value = "301";
+    }
+
+    function createLayersForFlightLevel(levelCode) {
+        turbulenceLayers = {};
+        forecastHours.forEach(hour => {
+            const imageUrl = `https://aviationweather.gov/data/products/wafs/${wafsInfo.dateString}/${wafsInfo.cycle}/${wafsInfo.dateString}_${wafsInfo.cycle}_F${hour}_wafs_${levelCode}_edr_m.png`;
+            turbulenceLayers[hour] = L.imageOverlay(imageUrl, imageBound2, { opacity: 0.8, interactive: false });
+        });
+    }
+
+    function updateMapAndUI(index) {
+        if (currentTurbulenceLayer && map.hasLayer(currentTurbulenceLayer)) {
+            map.removeLayer(currentTurbulenceLayer);
+        }
+        const hour = forecastHours[index];
+        const newLayer = turbulenceLayers[hour];
+        if (newLayer) {
+            newLayer.addTo(map);
+            currentTurbulenceLayer = newLayer;
+        }
+        const validTime = new Date(wafsInfo.baseDate);
+        validTime.setUTCHours(validTime.getUTCHours() + parseInt(hour));
+        const timeString = validTime.toUTCString().replace("GMT", "UTC");
+        timeDisplay.textContent = `+${hour}hr ${timeString.slice(17,22)} UTC ${timeString.slice(5, 16)}`;
+        timeSlider.value = index;
+    }
+    
+    // Inisialisasi Awal dan Event Listeners
+    wafsInfo = getLatestWafsCycle();
+    populateFlightLevelDropdown();
+
+    timeSlider.min = 0;
+    timeSlider.max = forecastHours.length - 1;
+    sliderTicks.innerHTML = '';
+    forecastHours.forEach(hour => {
+        const tickDate = new Date(wafsInfo.baseDate);
+        tickDate.setUTCHours(tickDate.getUTCHours() + parseInt(hour));
+        const tickLabel = `${String(tickDate.getUTCDate()).padStart(2, '0')}/${String(tickDate.getUTCHours()).padStart(2, '0')}Z`;
+        sliderTicks.innerHTML += `<span>${tickLabel}</span>`;
+    });
+
+    flSelector.addEventListener('change', (e) => {
+        const newLevelCode = e.target.value;
+        createLayersForFlightLevel(newLevelCode);
+        updateMapAndUI(parseInt(timeSlider.value));
+    });
+
+    timeSlider.addEventListener('input', (e) => updateMapAndUI(parseInt(e.target.value)));
+    prevButton.addEventListener('click', () => {
+        let newIndex = parseInt(timeSlider.value) - 1;
+        if (newIndex >= 0) updateMapAndUI(newIndex);
+    });
+    nextButton.addEventListener('click', () => {
+        let newIndex = parseInt(timeSlider.value) + 1;
+        if (newIndex < forecastHours.length) updateMapAndUI(newIndex);
+    });
+
+    // Kontrol Layer Utama Leaflet
+    const turbulenceLayerGroup = L.layerGroup();
+    map.on('overlayadd', (e) => {
+        if (e.layer === turbulenceLayerGroup) {
+            createLayersForFlightLevel(flSelector.value);
+            flSelectorContainer.classList.remove('hidden');
+            legend.classList.remove('hidden');
+            sliderContainer.classList.remove('hidden');
+            updateMapAndUI(0);
+        }
+    });
+    map.on('overlayremove', (e) => {
+        if (e.layer === turbulenceLayerGroup) {
+            flSelectorContainer.classList.add('hidden');
+            legend.classList.add('hidden');
+            sliderContainer.classList.add('hidden');
+            if (currentTurbulenceLayer) {
+                map.removeLayer(currentTurbulenceLayer);
+                currentTurbulenceLayer = null;
+            }
+        }
+    });
+
+
 var vaAdvisoryLayer = L.layerGroup();
         var baseMaps = {
             "Peta OSM": osmLayer,
@@ -1394,9 +1541,8 @@ var vaAdvisoryLayer = L.layerGroup();
             "Peta Tutupan Lahan": lulcMap
         };
         var overlayMaps = {
-	    "Satelit RDCA": VSsatelliteLayer,
-            "Tekanan Udara (OWM)": pressureLayer,
-	    "Satelit Visible": VISsatelliteLayer,
+	    "Turbulence (EDR)": turbulenceLayerGroup,
+            "Satelit Visible": VISsatelliteLayer,
             "Satelit Inframerah": IRsatelliteLayer,
 	    "Satelit Uap Air": WVsatelliteLayer,
 	    "Sebaran hujan (OWM)": precipitationLayer,
