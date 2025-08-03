@@ -687,18 +687,4 @@
             #time-slider-container { width: 200px; bottom: 10px; padding: 8px; }
             #time-display, #slider-ticks span { font-size: 9px; }
 
-            /* PERBAIKAN SLIDER MELUAP */
-            #slider-ticks {
-                overflow-x: auto; /* Aktifkan scroll horizontal */
-                -webkit-overflow-scrolling: touch; /* Scroll halus di iOS */
-                justify-content: flex-start; /* Jangan paksa rata kiri-kanan */
-                padding-bottom: 5px; /* Ruang untuk scrollbar */
-                white-space: nowrap; /* Mencegah label turun ke bawah */
             }
-            #slider-ticks span {
-                flex-shrink: 0; /* Mencegah label menciut */
-                margin-right: 15px; /* Beri jarak antar label */
-            }
-
-            .leaflet-control-layers-expanded { max-height: 40vh; overflow-y: auto; }
-        }
