@@ -1397,7 +1397,7 @@ function getSigmetColor(hazard) {
     const nextButton = document.getElementById('slider-next');
     
     const imageBound2 = [[-90, -180], [90, 180]];
-    const forecastHours = ['06', '09', '12', '15', '18', '21', '24', '27', '30', '33', '36', '39', '42', '45', '48'];
+    const forecastHours = ['06', '09', '12', '15', '18', '21', '24'];
     const flightLevels = [
         { name: "Turb FL450/148mb", code: "148" }, { name: "Turb FL390/197mb", code: "197" },
         { name: "Turb FL340/250mb", code: "250" }, { name: "Turb FL300/301mb", code: "301" },
