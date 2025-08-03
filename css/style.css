@@ -666,4 +666,60 @@
 .slider-main { flex-grow: 1; margin: 0 10px; }
 #time-slider { width: 100%; cursor: pointer; }
 #slider-ticks { display: flex; justify-content: space-between; font-size: 10px; color: #ccc; margin-top: 5px; }
+/* ======================================================= */
+        /* === BAGIAN 5: KODE BARU UNTUK RESPONSIVE MOBILE === */
+        /* ======================================================= */
+        @media screen and (max-width: 768px) {
+            
+            /* Atur ulang posisi kontrol Turbulence agar ringkas di bawah */
+            #fl-selector-container {
+                top: auto; /* Hapus posisi atas */
+                bottom: 165px; /* Posisikan di atas legenda */
+                left: 50%;
+                transform: translateX(-50%);
+                width: 90vw; /* Lebar sesuai layar */
+            }
+            #fl-selector {
+                width: 100%;
+            }
 
+            #turbulence-legend {
+                bottom: 70px; /* Naikkan sedikit posisi legenda */
+                width: 90vw; /* 1. Buat legenda mengisi lebar layar */
+                padding: 5px;
+            }
+            /* 2. Buat bar warna dan kontainer label responsif */
+            #turbulence-legend .legend-scale,
+            #turbulence-legend .legend-labels {
+                width: 100%;
+            }
+            /* 3. Buat setiap blok warna fleksibel */
+            #turbulence-legend .legend-color {
+                flex-grow: 1; /* Biarkan setiap blok warna mengisi ruang yang sama */
+                width: auto; /* Hapus lebar tetap */
+                height: 20px; /* Sedikit lebih kecil */
+            }
+            /* 4. Gunakan persentase untuk posisi label agar sesuai dengan bar warna */
+            #turbulence-legend .legend-labels span:nth-child(1) { left: 20%; } /* 2/10 blok */
+            #turbulence-legend .legend-labels span:nth-child(2) { left: 30%; } /* 3/10 blok */
+            #turbulence-legend .legend-labels span:nth-child(3) { left: 50%; } /* 5/10 blok */
+            #turbulence-legend .legend-labels span:nth-child(4) { left: 70%; } /* 7/10 blok */
+            #turbulence-legend .legend-labels span:nth-child(5) { left: 80%; } /* 8/10 blok */
+            #turbulence-legend .legend-labels span:nth-child(6) { left: 100%; }/* 10/10 blok */
+
+            /* 5. Buat slider waktu lebih ringkas */
+            #time-slider-container {
+                width: 90vw;
+                bottom: 10px; /* Posisikan di paling bawah */
+                padding: 8px;
+            }
+            #time-display, #slider-ticks span {
+                font-size: 9px; /* Kecilkan font */
+            }
+
+            /* 6. Buat Kontrol Layer Leaflet bisa di-scroll jika terlalu panjang */
+            .leaflet-control-layers-expanded {
+                max-height: 40vh; /* Batasi tinggi maksimal */
+                overflow-y: auto; /* Tambahkan scroll vertikal */
+            }
+        }
