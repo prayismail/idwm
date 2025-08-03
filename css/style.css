@@ -637,18 +637,18 @@
     position: absolute;
     transform: translateX(-50%);
 }
-#turbulence-legend .legend-labels span:nth-child(1) { left: 50px; }
+#turbulence-legend .legend-labels span:nth-child(1) { left: 30px; }
 #turbulence-legend .legend-labels span:nth-child(2) { left: 100px; }
-#turbulence-legend .legend-labels span:nth-child(3) { left: 150px; }
-#turbulence-legend .legend-labels span:nth-child(4) { left: 250px; }
-#turbulence-legend .legend-labels span:nth-child(5) { left: 300px; }
+#turbulence-legend .legend-labels span:nth-child(3) { left: 170px; }
+#turbulence-legend .legend-labels span:nth-child(4) { left: 240px; }
+#turbulence-legend .legend-labels span:nth-child(5) { left: 310px; }
 #turbulence-legend .legend-labels span:nth-child(6) { left: 400px; }
 
 #turbulence-legend .legend-units {
     text-align: center;
     font-size: 10px;
     color: #ccc;
-    margin-top: 5px;
+    margin-top: 2px;
 }
 
 #time-slider-container {
