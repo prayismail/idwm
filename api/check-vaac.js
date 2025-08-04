@@ -1,5 +1,5 @@
 // File: api/check-vaac.js
-// VERSI FINAL: Mengunduh TXT dan PNG dari FTP, mengirim gambar sebagai Base64.
+// VERSI UPDATE: Menambahkan filter AREA: INDONESIA
 
 const ftp = require('basic-ftp');
 const { Writable } = require('stream');
@@ -28,7 +28,9 @@ module.exports = async (req, res) => {
 
         // Cari file .txt terbaru berdasarkan timestamp (logika ini tetap sama)
         const darwinTxtFiles = list.filter(item => item.name.startsWith('IDY') && item.name.endsWith('.txt') && item.type === ftp.FileType.File);
-        if (darwinTxtFiles.length === 0) return res.status(404).json({ error: `Tidak ada file .txt ditemukan.` });
+        if (darwinTxtFiles.length === 0) {
+            return res.status(404).json({ error: `Tidak ada file .txt ditemukan.` });
+        }
         
         let latestFile = null;
         let latestTimestamp = '0';
@@ -39,7 +41,10 @@ module.exports = async (req, res) => {
                 latestFile = file;
             }
         });
-        if (!latestFile) return res.status(404).json({ error: `Tidak ada file .txt valid.` });
+
+        if (!latestFile) {
+            return res.status(404).json({ error: `Tidak ada file .txt valid.` });
+        }
         
         console.log(`[Proxy VAAC-FTP] File TXT terbaru: ${latestFile.name}`);
 
@@ -49,11 +54,30 @@ module.exports = async (req, res) => {
         txtWritable._write = (chunk, encoding, next) => { txtChunks.push(chunk); next(); };
         await client.downloadTo(txtWritable, latestFile.name);
         const fullText = Buffer.concat(txtChunks).toString('utf-8');
-        
+
+        // --- PEMBARUAN: FILTER BERDASARKAN AREA INDONESIA ---
+        // Regex untuk mencari "AREA: INDONESIA" secara case-insensitive dan di baris terpisah
+        const isIndonesiaArea = /^AREA:\s*INDONESIA/im.test(fullText);
+
+        if (!isIndonesiaArea) {
+            console.log(`[Proxy VAAC-FTP] VAA terbaru (${latestFile.name}) bukan untuk area Indonesia.`);
+            // Kirim respons bahwa VAA tidak relevan, namun tetap berstatus 200 OK
+            // agar client bisa menanganinya sebagai "tidak ada VAA aktif untuk Indonesia".
+            return res.status(200).json({
+                advisoryNumber: null,
+                message: "Latest VAA is not for Indonesia area.",
+                fullText: fullText, // Tetap kirim teksnya untuk debugging
+                imageBase64: null
+            });
+        }
+        // --- AKHIR DARI PEMBARUAN ---
+
+        // Jika lolos filter, lanjutkan proses
+        console.log(`[Proxy VAAC-FTP] VAA terdeteksi untuk area Indonesia.`);
         const advisoryMatch = fullText.match(/ADVISORY\s+NR:\s*(\d{4}\/\d+)/i);
         const advisoryNumber = advisoryMatch ? advisoryMatch[1] : null;
 
-        // --- LOGIKA BARU: CARI DAN UNDUH FILE PNG ---
+        // --- LOGIKA CARI DAN UNDUH FILE PNG (tetap sama) ---
         let imageBase64 = null;
         const matchingPngFile = list.find(item => 
             item.name.endsWith('.png') && getTimestampFromAnyFilename(item.name) === latestTimestamp
@@ -68,7 +92,6 @@ module.exports = async (req, res) => {
             await client.downloadTo(pngWritable, matchingPngFile.name);
             
             const imageBuffer = Buffer.concat(pngChunks);
-            // Konversi buffer gambar menjadi string Base64 dengan tipe MIME
             imageBase64 = `data:image/png;base64,${imageBuffer.toString('base64')}`;
             console.log(`[Proxy VAAC-FTP] Berhasil mengonversi PNG ke Base64.`);
         } else {
@@ -77,11 +100,10 @@ module.exports = async (req, res) => {
 
         res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate');
         
-        // Kirim respons JSON yang sekarang berisi data Base64
         res.status(200).json({
           advisoryNumber: advisoryNumber,
           fullText: fullText,
-          imageBase64: imageBase64, // <-- KUNCI PERUBAHAN
+          imageBase64: imageBase64,
         });
 
     } catch (error) {
