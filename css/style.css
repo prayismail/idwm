@@ -664,7 +664,7 @@
 .slider-arrow { background: #555; color: #fff; border: 1px solid #777; border-radius: 4px; cursor: pointer; font-size: 10px; padding: 5px 10px; }
 .slider-arrow:hover { background: #777; }
 .slider-main { flex-grow: 1; margin: 0 10px; }
-#time-slider { width: 90%; cursor: pointer; }
+#time-slider { width: 100%; cursor: pointer; }
 #slider-ticks { display: flex; justify-content: space-between; font-size: 10px; color: #ccc; margin-top: 5px; }
 /* ======================================================= */
 
