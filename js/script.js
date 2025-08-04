@@ -1554,7 +1554,7 @@ var vaAdvisoryLayer = L.layerGroup();
         setTimeout(() => {
             let layerControl = document.querySelector('.leaflet-control-layers');
             if (layerControl) {
-                layerControl.style.marginBottom = "60px";
+                layerControl.style.marginBottom = "150px";
                 layerControl.style.bottom = "auto";
                 layerControl.style.top = "unset";
                 layerControl.style.maxHeight = "50vh";
