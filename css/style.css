@@ -670,9 +670,9 @@
 
 @media screen and (max-width: 768px) {
             #fl-selector-container { top: auto; bottom: 180px; left: 50%; transform: translateX(-50%); width: 50vw; }
-            #fl-selector { width: 80%; }
+            #fl-selector { width: 100%; }
             #turbulence-legend { bottom: 90px; width: 90vw; padding: 5px; }
-            #turbulence-legend .legend-scale, #turbulence-legend .legend-labels { width: 70%; }
+            #turbulence-legend .legend-scale, #turbulence-legend .legend-labels { width: 90%; }
             #turbulence-legend .legend-color { flex-grow: 1; width: auto; height: 20px; }
             #turbulence-legend .legend-labels span:nth-child(1) { left: 2%; }
             #turbulence-legend .legend-labels span:nth-child(2) { left: 15%; }
