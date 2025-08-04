@@ -669,6 +669,8 @@
 /* ======================================================= */
 
 @media screen and (max-width: 768px) {
+	 #sigmet-tool {
+        display: none !important;}
             #fl-selector-container { top: auto; bottom: 180px; left: 50%; transform: translateX(-50%); width: 50vw; }
             #fl-selector { width: 100%; }
             #turbulence-legend { bottom: 90px; width: 90vw; padding: 5px; }
@@ -687,3 +689,47 @@
             .leaflet-control-layers-expanded { max-height: 40vh; overflow-y: auto; }
         
             }
+        /* === PERUBAHAN CSS UNTUK ALAT SIGMET === */
+        #sigmet-tool {
+            position: absolute; /* PENTING: Agar tombol X bisa diposisikan di dalamnya */
+            /* ... sisa aturan #sigmet-tool tetap sama ... */
+            top: 80px; right: 10px; width: 350px;
+            background: rgba(255, 255, 255, 0.9); color: #333; z-index: 1001;
+            padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            font-size: 12px; max-height: 85vh; display: flex; flex-direction: column;
+        }
+
+        /* === ATURAN CSS BARU UNTUK TOMBOL TUTUP (X) === */
+        #sigmet-tool-close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #aaa;
+            cursor: pointer;
+            line-height: 1; /* Mencegah tinggi baris ekstra */
+        }
+        #sigmet-tool-close-btn:hover {
+            color: #333; /* Warna menjadi lebih gelap saat disentuh mouse */
+        }
+        #sigmet-tool h3 { text-align: center; margin: 0 0 15px 0; font-size: 16px; color: #0056b3; }
+        .sigmet-form-group { margin-bottom: 10px; }
+        .sigmet-form-group label { display: block; margin-bottom: 4px; font-weight: bold; }
+        .sigmet-form-group input[type="text"], .sigmet-form-group select {
+            width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;
+        }
+        .sigmet-form-inline { display: flex; gap: 10px; align-items: flex-end; /* align-items: end agar tombol sejajar bawah */ }
+        .sigmet-form-inline > div { flex: 1; } /* div akan mengambil ruang yang sama */
+        #sigmet-add-4h-btn {
+            flex-shrink: 0; /* Mencegah tombol menciut */
+            padding: 6px 10px;
+            height: 30px; /* Samakan tinggi dengan input */
+        }
+        #sigmet-output { width: 100%; height: 150px; font-family: 'Courier New', Courier, monospace; font-size: 11px; border: 1px solid #ccc; border-radius: 4px; margin-top: 10px; white-space: pre; overflow-x: auto; }
+        .sigmet-button-group { display: flex; gap: 10px; margin-top: 15px; }
+        .sigmet-button-group .btn { flex-grow: 1; padding: 10px; border-radius: 5px; border: none; color: white; cursor: pointer; font-weight: bold; }
+        .btn-draw { background-color: #28a745; }
+        .btn-clear { background-color: #ffc107; color: #333; }
+        .btn-generate { background-color: #007bff; }
+        .btn-copy { background-color: #6c757d; }
