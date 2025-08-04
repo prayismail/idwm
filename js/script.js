@@ -1413,34 +1413,34 @@ function getSigmetColor(hazard) {
     // === FUNGSI YANG DIPERBAIKI: getLatestWafsCycle ===
     // =====================================================================
     function getLatestWafsCycle() {
-        // Buat objek waktu saat ini dalam UTC
-        const now = new Date();
+    // Buat objek waktu saat ini dalam UTC
+    const now = new Date();
 
-        // **PERBAIKAN**: Mundurkan waktu 4 jam untuk mengakomodasi keterlambatan publikasi data.
-        // Ini memastikan kita tidak mencoba mengambil cycle yang belum ada di server.
-        const lookbackTime = new Date(now.getTime() - (4 * 60 * 60 * 1000));
+    // **PERBAIKAN UTAMA**: Mundurkan waktu 7 jam untuk memastikan data model sudah dipublikasikan.
+    const lookbackTime = new Date(now.getTime() - (7 * 60 * 60 * 1000));
 
-        const utcHours = lookbackTime.getUTCHours();
-        let cycleHour;
-        
-        // Tentukan cycle berdasarkan waktu yang sudah dimundurkan
-        if (utcHours < 6) { cycleHour = '00'; } 
-        else if (utcHours < 12) { cycleHour = '06'; } 
-        else if (utcHours < 18) { cycleHour = '12'; } 
-        else { cycleHour = '18'; }
+    const utcHours = lookbackTime.getUTCHours();
+    let cycleHour;
+    
+    // Tentukan cycle berdasarkan waktu yang sudah dimundurkan
+    // Logika ini tetap sama, tetapi sekarang lebih andal karena lookbackTime lebih panjang.
+    if (utcHours < 6) { cycleHour = '00'; } 
+    else if (utcHours < 12) { cycleHour = '06'; } 
+    else if (utcHours < 18) { cycleHour = '12'; } 
+    else { cycleHour = '18'; }
 
-        // Gunakan tanggal dari waktu yang sudah dimundurkan untuk memastikan konsistensi
-        const year = lookbackTime.getUTCFullYear();
-        const month = String(lookbackTime.getUTCMonth() + 1).padStart(2, '0');
-        const day = String(lookbackTime.getUTCDate()).padStart(2, '0');
-        const dateString = `${year}${month}${day}`;
-        
-        return {
-            dateString: dateString,
-            cycle: cycleHour,
-            baseDate: new Date(`${dateString.slice(0,4)}-${dateString.slice(4,6)}-${dateString.slice(6,8)}T${cycleHour}:00:00Z`)
-        };
-    }
+    // Gunakan tanggal dari waktu yang sudah dimundurkan untuk memastikan konsistensi
+    const year = lookbackTime.getUTCFullYear();
+    const month = String(lookbackTime.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(lookbackTime.getUTCDate()).padStart(2, '0');
+    const dateString = `${year}${month}${day}`;
+    
+    return {
+        dateString: dateString,
+        cycle: cycleHour,
+        baseDate: new Date(`${dateString.slice(0,4)}-${dateString.slice(4,6)}-${dateString.slice(6,8)}T${cycleHour}:00:00Z`)
+    };
+}
 
     // Fungsi-fungsi lainnya tidak berubah
     function populateFlightLevelDropdown() {
@@ -1507,29 +1507,205 @@ function getSigmetColor(hazard) {
         let newIndex = parseInt(timeSlider.value) + 1;
         if (newIndex < forecastHours.length) updateMapAndUI(newIndex);
     });
+// =======================================================
+// === BAGIAN 6: JAVASCRIPT UNTUK ALAT SIGMET ===
+// =======================================================
 
-    // Kontrol Layer Utama Leaflet
+// 1. Inisialisasi SEMUA variabel untuk alat SIGMET di sini
+const sigmetToolPanel = document.getElementById('sigmet-tool');
+const closeBtn = document.getElementById('sigmet-tool-close-btn'); 
+const startDrawBtn = document.getElementById('start-draw-btn');
+const clearDrawBtn = document.getElementById('clear-draw-btn');
+const generateBtn = document.getElementById('generate-sigmet-btn');
+const copyBtn = document.getElementById('copy-sigmet-btn');
+const sigmetOutput = document.getElementById('sigmet-output');
+const phenomenonSelect = document.getElementById('sigmet-phenomenon');
+const obsTimeGroup = document.getElementById('obs-time-group');
+// Deklarasi yang hilang, sekarang ditambahkan:
+const startTimeInput = document.getElementById('sigmet-start-time');
+const endTimeInput = document.getElementById('sigmet-end-time');
+const add4hBtn = document.getElementById('sigmet-add-4h-btn');
+const nowBtn = document.getElementById('sigmet-now-btn');
+
+let drawnPolygon = null;
+let polygonDrawer = null;
+let drawnCoordinates = [];
+const drawnItems = new L.FeatureGroup().addTo(map);
+
+// === Event Listener BARU untuk Tombol Tutup (X) ===
+        closeBtn.addEventListener('click', function() {
+            sigmetToolPanel.classList.add('hidden');
+        });
+// === Logika BARU untuk Tombol NOW ===
+        nowBtn.addEventListener('click', function() {
+            const now = new Date();
+            const day = String(now.getUTCDate()).padStart(2, '0');
+            const hour = String(now.getUTCHours()).padStart(2, '0');
+            const minute = String(now.getUTCMinutes()).padStart(2, '0');
+            startTimeInput.value = `${day}${hour}${minute}`;
+        });
+
+// 2. Sekarang Anda bisa menambahkan event listener karena variabel sudah dideklarasikan
+add4hBtn.addEventListener('click', function() {
+    const startTimeStr = startTimeInput.value;
+    if (startTimeStr.length !== 6 || isNaN(startTimeStr)) {
+        alert("Format Start Time salah. Gunakan format DDHHMM, contoh: 040830");
+        return;
+    }
+    const day = parseInt(startTimeStr.substring(0, 2));
+    const hour = parseInt(startTimeStr.substring(2, 4));
+    const minute = parseInt(startTimeStr.substring(4, 6));
+    const startDate = new Date();
+    startDate.setUTCDate(day);
+    startDate.setUTCHours(hour, minute, 0, 0);
+    startDate.setUTCHours(startDate.getUTCHours() + 4);
+    const endDay = String(startDate.getUTCDate()).padStart(2, '0');
+    const endHour = String(startDate.getUTCHours()).padStart(2, '0');
+    const endMinute = String(startDate.getUTCMinutes()).padStart(2, '0');
+    endTimeInput.value = `${endDay}${endHour}${endMinute}`;
+});
+
+// 3. Sisa fungsi dan logika Anda (sudah benar dan tidak perlu diubah)
+function updateValidityTimeFields() {
+    const now = new Date();
+    const startDay = String(now.getUTCDate()).padStart(2, '0');
+    const startHour = String(now.getUTCHours()).padStart(2, '0');
+    const startMinute = String(now.getUTCMinutes()).padStart(2, '0');
+    startTimeInput.value = `${startDay}${startHour}${startMinute}`;
+    const endDate = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+    const endDay = String(endDate.getUTCDate()).padStart(2, '0');
+    const endHour = String(endDate.getUTCHours()).padStart(2, '0');
+    const endMinute = String(endDate.getUTCMinutes()).padStart(2, '0');
+    endTimeInput.value = `${endDay}${endHour}${endMinute}`;
+}
+
+function generateSigmetText() {
+    const seq = document.getElementById('sigmet-seq').value.padStart(2, '0') || 'XX';
+    const phenomenon = phenomenonSelect.value;
+    const startTimeStr = startTimeInput.value;
+    const endTimeStr = endTimeInput.value;
+    if (!startTimeStr || !endTimeStr) {
+        alert("Harap isi Start Time dan End Time.");
+        return;
+    }
+    const validPeriod = `${startTimeStr}/${endTimeStr}`;
+    const obsTime = document.getElementById('sigmet-obs-time').value || '';
+    const level = document.getElementById('sigmet-level').value.toUpperCase() || 'FLXXX/XXX';
+    const movement = document.getElementById('sigmet-movement').value.toUpperCase() || 'STNR';
+    const change = document.getElementById('sigmet-change').value.toUpperCase() || 'NC=';
+    const now = new Date();
+    const issueTime = `${String(now.getUTCDate()).padStart(2, '0')}${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}`;
+    let sigmetText = `WSID21 WAAA ${issueTime}\n` +
+                     `WAAF SIGMET ${seq} VALID ${validPeriod} WAAA-\n` +
+                     `WAAF UJUNG PANDANG FIR SEV TURB ${phenomenon}`;
+    if (phenomenon === 'OBS' && obsTime) {
+        sigmetText += ` AT ${obsTime}`;
+    }
+    if (drawnCoordinates && drawnCoordinates.length > 0) {
+        const coordString = drawnCoordinates.map(latlng => formatCoordinate(latlng.lat, latlng.lng)).join(' - ');
+        const fullCoordString = `${coordString} - ${formatCoordinate(drawnCoordinates[0].lat, drawnCoordinates[0].lng)}`;
+        sigmetText += ` WI ${fullCoordString}`;
+    }
+    sigmetText += `\n${level} ${movement} ${change}`;
+    sigmetOutput.value = sigmetText;
+}
+
+startDrawBtn.addEventListener('click', function() {
+    if (polygonDrawer) { polygonDrawer.disable(); }
+    polygonDrawer = new L.Draw.Polygon(map, {
+        shapeOptions: { color: '#ff0000', weight: 3 },
+        allowIntersection: false, showArea: false
+    });
+    polygonDrawer.enable();
+});
+
+clearDrawBtn.addEventListener('click', function() {
+    drawnItems.clearLayers();
+    drawnCoordinates = [];
+    sigmetOutput.value = '';
+});
+
+map.on(L.Draw.Event.CREATED, function (event) {
+    drawnItems.clearLayers();
+    const layer = event.layer;
+    drawnPolygon = layer;
+    drawnItems.addLayer(layer);
+    drawnCoordinates = layer.getLatLngs()[0];
+    generateSigmetText(); 
+});
+
+phenomenonSelect.addEventListener('change', function() {
+    obsTimeGroup.classList.toggle('hidden', this.value !== 'OBS');
+});
+
+generateBtn.addEventListener('click', generateSigmetText);
+
+function formatCoordinate(lat, lng) {
+    const latDir = lat >= 0 ? 'N' : 'S';
+    const lonDir = lng >= 0 ? 'E' : 'W';
+    const latDeg = Math.floor(Math.abs(lat));
+    const latMin = Math.round((Math.abs(lat) - latDeg) * 60);
+    const lonDeg = Math.floor(Math.abs(lng));
+    const lonMin = Math.round((Math.abs(lng) - lonDeg) * 60);
+    const latStr = `${latDir}${String(latDeg).padStart(2, '0')}${String(latMin).padStart(2, '0')}`;
+    const lonStr = `${lonDir}${String(lonDeg).padStart(3, '0')}${String(lonMin).padStart(2, '0')}`;
+    return `${latStr} ${lonStr}`;
+}
+
+copyBtn.addEventListener('click', function() {
+    if (!sigmetOutput.value) return;
+    navigator.clipboard.writeText(sigmetOutput.value).then(() => {
+        alert('Teks SIGMET berhasil disalin!');
+    }, () => {
+        alert('Gagal menyalin teks.');
+    });
+});
+   
+
+// Kontrol Layer Utama Leaflet
     const turbulenceLayerGroup = L.layerGroup();
-    map.on('overlayadd', (e) => {
-        if (e.layer === turbulenceLayerGroup) {
-            createLayersForFlightLevel(flSelector.value);
-            flSelectorContainer.classList.remove('hidden');
-            legend.classList.remove('hidden');
-            sliderContainer.classList.remove('hidden');
-            updateMapAndUI(0);
+// SATU EVENT LISTENER UNTUK MENANGANI SEMUA AKSI SAAT LAYER DIAKTIFKAN
+map.on('overlayadd', (e) => {
+    // Periksa apakah layer yang ditambahkan adalah layer Turbulence kita
+    if (e.layer === turbulenceLayerGroup) {
+        
+        // 1. Tampilkan semua elemen UI untuk Turbulence (legenda, slider, dll.)
+        createLayersForFlightLevel(flSelector.value); // Buat layer gambar
+        flSelectorContainer.classList.remove('hidden');
+        legend.classList.remove('hidden'); // 'turbulenceLegend' BUKAN 'legend'
+        sliderContainer.classList.remove('hidden');
+        updateMapAndUI(0); // Tampilkan data waktu pertama
+        map.attributionControl.addAttribution('Data source: World Area Forecast System');
+
+        // 2. Tampilkan juga Alat Pembuat SIGMET
+        sigmetToolPanel.classList.remove('hidden');
+    }
+});
+
+// SATU EVENT LISTENER UNTUK MENANGANI SEMUA AKSI SAAT LAYER DINONAKTIFKAN
+map.on('overlayremove', (e) => {
+    // Periksa apakah layer yang dihapus adalah layer Turbulence kita
+    if (e.layer === turbulenceLayerGroup) {
+        
+        // 1. Sembunyikan semua elemen UI untuk Turbulence
+        flSelectorContainer.classList.add('hidden');
+        legend.classList.add('hidden'); // 'turbulenceLegend' BUKAN 'legend'
+        sliderContainer.classList.add('hidden');
+        if (currentTurbulenceLayer) {
+            map.removeLayer(currentTurbulenceLayer);
+            currentTurbulenceLayer = null;
         }
-    });
-    map.on('overlayremove', (e) => {
-        if (e.layer === turbulenceLayerGroup) {
-            flSelectorContainer.classList.add('hidden');
-            legend.classList.add('hidden');
-            sliderContainer.classList.add('hidden');
-            if (currentTurbulenceLayer) {
-                map.removeLayer(currentTurbulenceLayer);
-                currentTurbulenceLayer = null;
-            }
-        }
-    });
+        map.attributionControl.removeAttribution('Data source: World Area Forecast System');
+
+        // 2. Sembunyikan juga Alat Pembuat SIGMET
+        sigmetToolPanel.classList.add('hidden');
+
+        // 3. Hapus juga gambar poligon SIGMET jika ada
+        drawnItems.clearLayers();
+        drawnCoordinates = [];
+        sigmetOutput.value = '';
+    }
+});
 
 
 var vaAdvisoryLayer = L.layerGroup();
