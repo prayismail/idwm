@@ -13,6 +13,7 @@
   <link href="https://cdn.maptiler.com/maptiler-sdk-js/v3.2.0/maptiler-sdk.css" rel="stylesheet" />
   <script src="https://cdn.maptiler.com/maptiler-weather/v3.0.1/maptiler-weather.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+	<script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
 	
    <link rel="stylesheet" href="css/style.css"> <!-- Panggil CSS --> 
 </head>
@@ -20,6 +21,7 @@
     <div id="map"></div>
     <div id="webmap-title">IDWM | Integrated Display for Weather Monitoring</div>
     <div id="time-indicator">Waktu: Memuat...</div>
+	<div id="locate-btn" title="Temukan Lokasi Saya">📍</div>
 <div class="search-toggle" onclick="toggleSearch()">🔍</div>
     <div class="search-box" id="searchBox">
         <input type="text" id="searchInput" placeholder="Cari lokasi..." oninput="searchLocation()" onkeydown="if(event.key==='Enter'){searchLocation()}" >
@@ -58,15 +60,16 @@
         <button id="slider-next" class="slider-arrow">►</button>
     </div>
 </div>
- <!-- === BAGIAN 5: HTML BARU UNTUK ALAT PEMBUAT SIGMET === -->
+  <!-- === BAGIAN 5: HTML BARU UNTUK ALAT PEMBUAT SIGMET === -->
      <div id="sigmet-tool" class="hidden">
 <span id="sigmet-tool-close-btn" title="Tutup Panel">×</span>
         <h3>SIGMET Creation Tool (SEV TURB)</h3>
         
-        <!-- TOMBOL YANG HILANG SEKARANG DIKEMBALIKAN KE SINI -->
-        <div class="sigmet-button-group" style="margin-bottom: 15px;">
+           <div class="sigmet-button-group" style="margin-bottom: 15px;">
             <button id="start-draw-btn" class="btn btn-draw">Gambar Poligon</button>
+	<button id="clip-fir-btn" class="btn" style="background-color: #17a2b8;">Potong ke FIR</button>
             <button id="clear-draw-btn" class="btn btn-clear">Hapus Poligon</button>
+
         </div>
 
         <div class="sigmet-form-group sigmet-form-inline">
@@ -97,7 +100,7 @@
         <div class="sigmet-form-group"><label for="sigmet-change">Intensity Change</label><input type="text" id="sigmet-change" placeholder="e.g., NC=, WKN=, INTSF="></div>
         <button id="generate-sigmet-btn" class="btn btn-generate">Generate SIGMET</button>
         <textarea id="sigmet-output" readonly></textarea>
-        <div class="sigmet-button-group"><button id="copy-sigmet-btn" class="btn btn-copy">Salin Teks</button></div>
+        <div class="sigmet-button-group"><button id="copy-sigmet-btn" class="btn btn-copy">Salin SIGMET</button></div>
     </div>
 	
 <div id="controls">
@@ -298,6 +301,7 @@
     
 </body>
 </html>
+
 
 
 
