@@ -736,7 +736,7 @@
         /* === CSS BARU UNTUK TOMBOL GEOLOKASI === */
         #locate-btn {
             position: absolute;
-            top: 110px; /* Posisikan di bawah judul */
+            top: 120px; /* Posisikan di bawah judul */
             right: 25px;
             z-index: 2000;
             background: rgba(255, 255, 255, 0.8);
