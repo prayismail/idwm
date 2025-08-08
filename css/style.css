@@ -689,17 +689,17 @@
             .leaflet-control-layers-expanded { max-height: 40vh; overflow-y: auto; }
         
             }
-        /* === PERUBAHAN CSS UNTUK ALAT SIGMET === */
+        /* === CSS UNTUK ALAT SIGMET === */
         #sigmet-tool {
             position: absolute; /* PENTING: Agar tombol X bisa diposisikan di dalamnya */
             /* ... sisa aturan #sigmet-tool tetap sama ... */
             top: 80px; right: 10px; width: 350px;
-            background: rgba(255, 255, 255, 0.9); color: #333; z-index: 1001;
+            background: rgba(255, 255, 255, 0.9); color: #333; z-index: 4001;
             padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
             font-size: 12px; max-height: 85vh; display: flex; flex-direction: column;
         }
 
-        /* === ATURAN CSS BARU UNTUK TOMBOL TUTUP (X) === */
+
         #sigmet-tool-close-btn {
             position: absolute;
             top: 10px;
@@ -733,3 +733,24 @@
         .btn-clear { background-color: #ffc107; color: #333; }
         .btn-generate { background-color: #007bff; }
         .btn-copy { background-color: #6c757d; }
+        /* === CSS BARU UNTUK TOMBOL GEOLOKASI === */
+        #locate-btn {
+            position: absolute;
+            top: 110px; /* Posisikan di bawah judul */
+            right: 25px;
+            z-index: 2000;
+            background: rgba(255, 255, 255, 0.8);
+            width: 34px;
+            height: 34px;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            /* Untuk memposisikan simbol di tengah tombol */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+        }
+        #locate-btn:hover {
+            background: #f4f4f4; /* Efek hover agar lebih interaktif */
+        }
