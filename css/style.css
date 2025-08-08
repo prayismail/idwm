@@ -754,3 +754,47 @@
         #locate-btn:hover {
             background: #f4f4f4; /* Efek hover agar lebih interaktif */
         }
+        /* === PERBAIKAN TAMPILAN POPUP SIGMET === */
+        .custom-sigmet-popup .leaflet-popup-content-wrapper {
+            width: 350px; /* Atur lebar tetap untuk popup */
+            border-radius: 8px; /* Sudut lebih tumpul agar modern */
+        }
+        
+        .custom-sigmet-popup .leaflet-popup-content {
+            margin: 0; /* Hapus margin default agar header bisa penuh */
+            width: 100% !important; /* Pastikan konten mengisi wrapper */
+        }
+        
+        .sigmet-popup-header {
+            padding: 8px 12px;
+            background-color: #3388ff; /* Warna default jika tidak di-set*/
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+        }
+
+        .sigmet-popup-body {
+            padding: 12px;
+        }
+        
+        .sigmet-level-info {
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .sigmet-raw-text pre {
+            margin: 0;
+            white-space: pre-wrap; /* Agar teks panjang otomatis turun baris */
+            word-wrap: break-word; /* Memastikan kata yang sangat panjang tidak keluar box */
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11px;
+            color: #333;
+        }
+
+        .custom-sigmet-popup hr {
+            border: 0;
+            border-top: 1px solid #eee;
+            margin: 8px 0;
+        }
