@@ -1735,7 +1735,7 @@ map.on('overlayadd', (e) => {
         document.getElementById('turbulence-legend').classList.remove('hidden');
         sliderContainer.classList.remove('hidden');
         updateMapAndUI(0);
-        map.attributionControl.addAttribution('Data source: World Area Forecast System');
+        map.attributionControl.addAttribution('EDR data © World Area Forecast System');
         sigmetToolPanel.classList.remove('hidden');
     }
 });
