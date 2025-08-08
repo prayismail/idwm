@@ -789,7 +789,7 @@
             white-space: pre-wrap; /* Agar teks panjang otomatis turun baris */
             word-wrap: break-word; /* Memastikan kata yang sangat panjang tidak keluar box */
             font-family: 'Courier New', Courier, monospace;
-            font-size: 11px;
+            font-size: 12px;
             color: #333;
         }
 
