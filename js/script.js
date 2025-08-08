@@ -1759,9 +1759,9 @@ map.on('overlayremove', (e) => {
 
 var vaAdvisoryLayer = L.layerGroup();
         var baseMaps = {
-            "Peta OSM": osmLayer,
-            "Peta Esri Imagery": esriImagery,
             "Peta CartoDB": cartoPositron,
+			"Peta OSM": osmLayer,
+            "Peta Esri Imagery": esriImagery,
             "Peta Topografi": topoMap,
             "Peta Tutupan Lahan": lulcMap
         };
@@ -1770,8 +1770,7 @@ var vaAdvisoryLayer = L.layerGroup();
             "Satelit Visible": VISsatelliteLayer,
             "Satelit Inframerah": IRsatelliteLayer,
 	    "Satelit Uap Air": WVsatelliteLayer,
-	    "Sebaran hujan (OWM)": precipitationLayer,
-            "Radar Cuaca": radarLayer,
+	     "Radar Cuaca": radarLayer,
             "Cuaca Bandara": airportLayer,
 	    "Tropical Waves": TropicalLayer,
 	     "VA Advisory": vaAdvisoryLayer
