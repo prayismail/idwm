@@ -418,7 +418,7 @@ cropImageButton.addEventListener('click', () => {
         });
         var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'Base map &copy; OpenStreetMap contributors' }).addTo(map);
         var esriImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution:  'Base map &copy; Esri, DigitalGlobe, GeoEye, Earthstar Geographics' });
-        var cartoPositron = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: 'Base map &copy; CartoDB' });
+        var cartoPositron = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: 'Base map &copy; CartoDB' });
         var topoMap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: 'Base map &copy; <a href="https://opentopomap.org/">OpenTopoMap</a> contributors' });
         var lulcMap = L.tileLayer.wms("/api/lulc-wms", {layers: 'WORLDCOVER_2021_MAP', format: 'image/png', transparent: true, attribution: 'Base map &copy; ESA WorldCover 2021' });
         var radarLayer = L.tileLayer('', { opacity: 0.8, attribution: 'Radar data &copy; Accuweather' }); 
@@ -454,7 +454,11 @@ map.on('overlayremove', function(eventLayer) {
         map.closePopup();} });
         var precipitationLayer = L.tileLayer('https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=62ac6e2d12bbaaa3de6bf9f57fe1cc00', { attribution: 'Precipitation data &copy; OpenWeatherMap', opacity: 1 });
         var pressureLayer = L.tileLayer('https://tile.openweathermap.org/map/pressure_new/{z}/{x}/{y}.png?appid=62ac6e2d12bbaaa3de6bf9f57fe1cc00', { attribution: 'Pressure data &copy; OpenWeatherMap', opacity: 1 });
-        function addUserLocation() {
+        // === PERUBAHAN PADA FUNGSI GEOLOKASI (TIDAK OTOMATIS LAGI) ===
+// ===================================================================
+
+function addUserLocation() {
+    // Isi fungsi ini tetap sama persis, tidak ada yang diubah
     if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition(
             function (position) {
@@ -462,7 +466,7 @@ map.on('overlayremove', function(eventLayer) {
                 let userLng = position.coords.longitude;
 
                 // Atur tampilan peta ke lokasi pengguna
-                map.setView([userLat, userLng], 8);
+                map.setView([userLat, userLng], 13); // Zoom lebih dekat saat menemukan lokasi
 
                 // Tambahkan penanda lokasi pengguna dan simpan ke variabel
                 let userMarker = L.marker([userLat, userLng])
@@ -477,14 +481,17 @@ map.on('overlayremove', function(eventLayer) {
             },
             function (error) {
                 console.error("Gagal mendapatkan lokasi:", error.message);
-                alert("Gagal mendapatkan lokasi. Pastikan izin lokasi diaktifkan.");
+                alert("Gagal mendapatkan lokasi. Pastikan izin lokasi diaktifkan di browser Anda.");
             }
         );
     } else {
         alert("Geolocation tidak didukung di browser ini.");
     }
 }
-addUserLocation();
+
+// === KODE BARU: Hubungkan fungsi addUserLocation ke tombol yang baru dibuat ===
+document.getElementById('locate-btn').addEventListener('click', addUserLocation);
+
         var style = document.createElement('style');
         style.innerHTML = `.leaflet-control-layers label { font-size: 10px; color: #333; }`;
         document.head.appendChild(style);
@@ -1507,21 +1514,21 @@ function getSigmetColor(hazard) {
         let newIndex = parseInt(timeSlider.value) + 1;
         if (newIndex < forecastHours.length) updateMapAndUI(newIndex);
     });
-// =======================================================
-// === BAGIAN 6: JAVASCRIPT UNTUK ALAT SIGMET ===
-// =======================================================
+// === BAGIAN 6: JAVASCRIPT UNTUK ALAT SIGMET (DENGAN FITUR SEDERHANAKAN / SIMPLIFY) ===
+// ==================================================================================
 
-// 1. Inisialisasi SEMUA variabel untuk alat SIGMET di sini
+// 1. Inisialisasi variabel dan elemen UI
 const sigmetToolPanel = document.getElementById('sigmet-tool');
-const closeBtn = document.getElementById('sigmet-tool-close-btn'); 
+const closeBtn = document.getElementById('sigmet-tool-close-btn');
 const startDrawBtn = document.getElementById('start-draw-btn');
 const clearDrawBtn = document.getElementById('clear-draw-btn');
+const clipFirBtn = document.getElementById('clip-fir-btn');
+const simplifyBtn = document.getElementById('simplify-btn'); // Tombol baru
 const generateBtn = document.getElementById('generate-sigmet-btn');
 const copyBtn = document.getElementById('copy-sigmet-btn');
 const sigmetOutput = document.getElementById('sigmet-output');
 const phenomenonSelect = document.getElementById('sigmet-phenomenon');
 const obsTimeGroup = document.getElementById('obs-time-group');
-// Deklarasi yang hilang, sekarang ditambahkan:
 const startTimeInput = document.getElementById('sigmet-start-time');
 const endTimeInput = document.getElementById('sigmet-end-time');
 const add4hBtn = document.getElementById('sigmet-add-4h-btn');
@@ -1530,26 +1537,24 @@ const nowBtn = document.getElementById('sigmet-now-btn');
 let drawnPolygon = null;
 let polygonDrawer = null;
 let drawnCoordinates = [];
+let isSimplified = false; // Flag untuk menandai apakah format deskriptif sedang digunakan
 const drawnItems = new L.FeatureGroup().addTo(map);
 
-// === Event Listener BARU untuk Tombol Tutup (X) ===
-        closeBtn.addEventListener('click', function() {
-            sigmetToolPanel.classList.add('hidden');
-        });
-// === Logika BARU untuk Tombol NOW ===
-        nowBtn.addEventListener('click', function() {
-            const now = new Date();
-            const day = String(now.getUTCDate()).padStart(2, '0');
-            const hour = String(now.getUTCHours()).padStart(2, '0');
-            const minute = String(now.getUTCMinutes()).padStart(2, '0');
-            startTimeInput.value = `${day}${hour}${minute}`;
-        });
+// 2. Event Listeners untuk tombol-tombol
+closeBtn.addEventListener('click', () => sigmetToolPanel.classList.add('hidden'));
 
-// 2. Sekarang Anda bisa menambahkan event listener karena variabel sudah dideklarasikan
-add4hBtn.addEventListener('click', function() {
+nowBtn.addEventListener('click', () => {
+    const now = new Date();
+    const day = String(now.getUTCDate()).padStart(2, '0');
+    const hour = String(now.getUTCHours()).padStart(2, '0');
+    const minute = String(now.getUTCMinutes()).padStart(2, '0');
+    startTimeInput.value = `${day}${hour}${minute}`;
+});
+
+add4hBtn.addEventListener('click', () => {
     const startTimeStr = startTimeInput.value;
     if (startTimeStr.length !== 6 || isNaN(startTimeStr)) {
-        alert("Format Start Time salah. Gunakan format DDHHMM, contoh: 040830");
+        alert("Format Start Time salah. Gunakan format DDHHMM.");
         return;
     }
     const day = parseInt(startTimeStr.substring(0, 2));
@@ -1565,53 +1570,9 @@ add4hBtn.addEventListener('click', function() {
     endTimeInput.value = `${endDay}${endHour}${endMinute}`;
 });
 
-// 3. Sisa fungsi dan logika Anda (sudah benar dan tidak perlu diubah)
-function updateValidityTimeFields() {
-    const now = new Date();
-    const startDay = String(now.getUTCDate()).padStart(2, '0');
-    const startHour = String(now.getUTCHours()).padStart(2, '0');
-    const startMinute = String(now.getUTCMinutes()).padStart(2, '0');
-    startTimeInput.value = `${startDay}${startHour}${startMinute}`;
-    const endDate = new Date(now.getTime() + 4 * 60 * 60 * 1000);
-    const endDay = String(endDate.getUTCDate()).padStart(2, '0');
-    const endHour = String(endDate.getUTCHours()).padStart(2, '0');
-    const endMinute = String(endDate.getUTCMinutes()).padStart(2, '0');
-    endTimeInput.value = `${endDay}${endHour}${endMinute}`;
-}
-
-function generateSigmetText() {
-    const seq = document.getElementById('sigmet-seq').value.padStart(2, '0') || 'XX';
-    const phenomenon = phenomenonSelect.value;
-    const startTimeStr = startTimeInput.value;
-    const endTimeStr = endTimeInput.value;
-    if (!startTimeStr || !endTimeStr) {
-        alert("Harap isi Start Time dan End Time.");
-        return;
-    }
-    const validPeriod = `${startTimeStr}/${endTimeStr}`;
-    const obsTime = document.getElementById('sigmet-obs-time').value || '';
-    const level = document.getElementById('sigmet-level').value.toUpperCase() || 'FLXXX/XXX';
-    const movement = document.getElementById('sigmet-movement').value.toUpperCase() || 'STNR';
-    const change = document.getElementById('sigmet-change').value.toUpperCase() || 'NC=';
-    const now = new Date();
-    const issueTime = `${String(now.getUTCDate()).padStart(2, '0')}${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}`;
-    let sigmetText = `WSID21 WAAA ${issueTime}\n` +
-                     `WAAF SIGMET ${seq} VALID ${validPeriod} WAAA-\n` +
-                     `WAAF UJUNG PANDANG FIR SEV TURB ${phenomenon}`;
-    if (phenomenon === 'OBS' && obsTime) {
-        sigmetText += ` AT ${obsTime}`;
-    }
-    if (drawnCoordinates && drawnCoordinates.length > 0) {
-        const coordString = drawnCoordinates.map(latlng => formatCoordinate(latlng.lat, latlng.lng)).join(' - ');
-        const fullCoordString = `${coordString} - ${formatCoordinate(drawnCoordinates[0].lat, drawnCoordinates[0].lng)}`;
-        sigmetText += ` WI ${fullCoordString}`;
-    }
-    sigmetText += `\n${level} ${movement} ${change}`;
-    sigmetOutput.value = sigmetText;
-}
-
-startDrawBtn.addEventListener('click', function() {
-    if (polygonDrawer) { polygonDrawer.disable(); }
+startDrawBtn.addEventListener('click', () => {
+    if (polygonDrawer) polygonDrawer.disable();
+    isSimplified = false; // Reset status simplified
     polygonDrawer = new L.Draw.Polygon(map, {
         shapeOptions: { color: '#ff0000', weight: 3 },
         allowIntersection: false, showArea: false
@@ -1619,19 +1580,12 @@ startDrawBtn.addEventListener('click', function() {
     polygonDrawer.enable();
 });
 
-clearDrawBtn.addEventListener('click', function() {
+clearDrawBtn.addEventListener('click', () => {
     drawnItems.clearLayers();
+    drawnPolygon = null;
     drawnCoordinates = [];
+    isSimplified = false;
     sigmetOutput.value = '';
-});
-
-map.on(L.Draw.Event.CREATED, function (event) {
-    drawnItems.clearLayers();
-    const layer = event.layer;
-    drawnPolygon = layer;
-    drawnItems.addLayer(layer);
-    drawnCoordinates = layer.getLatLngs()[0];
-    generateSigmetText(); 
 });
 
 phenomenonSelect.addEventListener('change', function() {
@@ -1640,72 +1594,167 @@ phenomenonSelect.addEventListener('change', function() {
 
 generateBtn.addEventListener('click', generateSigmetText);
 
+copyBtn.addEventListener('click', () => {
+    if (!sigmetOutput.value) return;
+    navigator.clipboard.writeText(sigmetOutput.value)
+        .then(() => alert('Teks SIGMET berhasil disalin!'))
+        .catch(() => alert('Gagal menyalin teks.'));
+});
+
+map.on(L.Draw.Event.CREATED, event => {
+    clearDrawBtn.click(); // Bersihkan dulu untuk reset state
+    const layer = event.layer;
+    drawnPolygon = layer;
+    drawnItems.addLayer(layer);
+    updateCoordinatesFromLayer(layer);
+    generateSigmetText();
+});
+
+clipFirBtn.addEventListener('click', () => {
+    if (!drawnPolygon) {
+        alert("Gambar sebuah poligon terlebih dahulu!");
+        return;
+    }
+    const drawnPolygonTurf = drawnPolygon.toGeoJSON();
+    const firUPGTurf = firUPG_geojson;
+    try {
+        const intersection = turf.intersect(firUPGTurf, drawnPolygonTurf);
+        if (!intersection) {
+            alert("Poligon yang Anda gambar tidak berpotongan dengan area FIR UPG.");
+            clearDrawBtn.click();
+            return;
+        }
+        const clippedLayer = L.geoJSON(intersection, {
+            style: { color: '#00ff00', weight: 3, fillColor: '#00ff00', fillOpacity: 0.2 }
+        }).getLayers()[0];
+        drawnItems.clearLayers();
+        drawnPolygon = clippedLayer;
+        drawnItems.addLayer(clippedLayer);
+        updateCoordinatesFromLayer(clippedLayer);
+        isSimplified = false; // Reset status, karena ini poligon baru
+        generateSigmetText();
+    } catch (error) {
+        console.error("Gagal melakukan operasi pemotongan:", error);
+        alert("Terjadi kesalahan saat memotong poligon.");
+    }
+});
+
+
+
+
+// 3. Fungsi-fungsi pembantu
+function updateCoordinatesFromLayer(layer) {
+    const geojson = layer.toGeoJSON();
+    // Menangani Polygon dan MultiPolygon
+    const coords = geojson.geometry.type === 'Polygon' 
+        ? geojson.geometry.coordinates[0] 
+        : geojson.geometry.coordinates[0][0];
+
+    // Konversi dari [lng, lat] ke objek L.latLng
+    drawnCoordinates = coords.map(p => L.latLng(p[1], p[0]));
+}
+
+
+function generateSigmetText() {
+    const seq = document.getElementById('sigmet-seq').value.padStart(2, '0') || 'XX';
+    const phenomenon = phenomenonSelect.value;
+    const startTimeStr = startTimeInput.value;
+    const endTimeStr = endTimeInput.value;
+    
+    const validPeriod = `${startTimeStr}/${endTimeStr}`;
+    const obsTime = document.getElementById('sigmet-obs-time').value || '';
+    const level = document.getElementById('sigmet-level').value.toUpperCase() || 'FLXXX/XXX';
+    const movement = document.getElementById('sigmet-movement').value.toUpperCase() || 'STNR';
+    const change = document.getElementById('sigmet-change').value.toUpperCase() || 'NC=';
+    const now = new Date();
+    const issueTime = `${String(now.getUTCDate()).padStart(2, '0')}${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}`;
+    
+    let sigmetText = `WSID21 WAAA ${issueTime}\nWAAF SIGMET ${seq} VALID ${validPeriod} WAAA-\nWAAF UJUNG PANDANG FIR SEV TURB ${phenomenon}`;
+    
+    if (phenomenon === 'OBS' && obsTime) {
+        sigmetText += ` AT ${obsTime}Z`;
+    }
+    
+    // === LOGIKA INTI YANG BARU ===
+    if (drawnCoordinates && drawnCoordinates.length > 0) {
+        let coordinateString = "";
+        
+        // Cek apakah jumlah titik > 7 ATAU flag isSimplified aktif
+        if (drawnCoordinates.length > 7 || isSimplified) {
+            // --- Logika untuk format deskriptif ---
+            const turfPolygon = turf.polygon([drawnCoordinates.map(p => [p.lng, p.lat])]);
+            const bbox = turf.bbox(turfPolygon); // -> [minLon, minLat, maxLon, maxLat]
+            const [minLon, minLat, maxLon, maxLat] = bbox;
+
+            const descriptions = [
+                `N OF ${formatCoordinate(minLat, 0).split(' ')[0]}`,
+                `S OF ${formatCoordinate(maxLat, 0).split(' ')[0]}`,
+                `E OF ${formatCoordinate(0, minLon).split(' ')[1]}`,
+                `W OF ${formatCoordinate(0, maxLon).split(' ')[1]}`
+            ];
+            coordinateString = descriptions.join(' AND ');
+
+        } else {
+            // --- Logika lama untuk format daftar koordinat ---
+            const coordList = drawnCoordinates.map(latlng => formatCoordinate(latlng.lat, latlng.lng));
+            coordinateString = `${coordList.join(' - ')} - ${coordList[0]}`;
+        }
+        
+        sigmetText += ` WI ${coordinateString}`;
+    }
+    
+    sigmetText += `\n${level} ${movement} ${change}`;
+    sigmetOutput.value = sigmetText;
+}
+
+
 function formatCoordinate(lat, lng) {
     const latDir = lat >= 0 ? 'N' : 'S';
     const lonDir = lng >= 0 ? 'E' : 'W';
-    const latDeg = Math.floor(Math.abs(lat));
-    const latMin = Math.round((Math.abs(lat) - latDeg) * 60);
-    const lonDeg = Math.floor(Math.abs(lng));
-    const lonMin = Math.round((Math.abs(lng) - lonDeg) * 60);
+    
+    const latAbs = Math.abs(lat);
+    const latDeg = Math.floor(latAbs);
+    const latMin = Math.round((latAbs - latDeg) * 60);
+    
+    const lonAbs = Math.abs(lng);
+    const lonDeg = Math.floor(lonAbs);
+    const lonMin = Math.round((lonAbs - lonDeg) * 60);
+    
     const latStr = `${latDir}${String(latDeg).padStart(2, '0')}${String(latMin).padStart(2, '0')}`;
     const lonStr = `${lonDir}${String(lonDeg).padStart(3, '0')}${String(lonMin).padStart(2, '0')}`;
+    
     return `${latStr} ${lonStr}`;
 }
 
-copyBtn.addEventListener('click', function() {
-    if (!sigmetOutput.value) return;
-    navigator.clipboard.writeText(sigmetOutput.value).then(() => {
-        alert('Teks SIGMET berhasil disalin!');
-    }, () => {
-        alert('Gagal menyalin teks.');
-    });
-});
-   
-
-// Kontrol Layer Utama Leaflet
-    const turbulenceLayerGroup = L.layerGroup();
-// SATU EVENT LISTENER UNTUK MENANGANI SEMUA AKSI SAAT LAYER DIAKTIFKAN
+// 4. Logika untuk menampilkan/menyembunyikan panel (tidak berubah)
+const turbulenceLayerGroup = L.layerGroup();
 map.on('overlayadd', (e) => {
-    // Periksa apakah layer yang ditambahkan adalah layer Turbulence kita
     if (e.layer === turbulenceLayerGroup) {
-        
-        // 1. Tampilkan semua elemen UI untuk Turbulence (legenda, slider, dll.)
-        createLayersForFlightLevel(flSelector.value); // Buat layer gambar
+        createLayersForFlightLevel(flSelector.value);
         flSelectorContainer.classList.remove('hidden');
-        legend.classList.remove('hidden'); // 'turbulenceLegend' BUKAN 'legend'
+        document.getElementById('turbulence-legend').classList.remove('hidden');
         sliderContainer.classList.remove('hidden');
-        updateMapAndUI(0); // Tampilkan data waktu pertama
+        updateMapAndUI(0);
         map.attributionControl.addAttribution('Data source: World Area Forecast System');
-
-        // 2. Tampilkan juga Alat Pembuat SIGMET
         sigmetToolPanel.classList.remove('hidden');
     }
 });
 
-// SATU EVENT LISTENER UNTUK MENANGANI SEMUA AKSI SAAT LAYER DINONAKTIFKAN
 map.on('overlayremove', (e) => {
-    // Periksa apakah layer yang dihapus adalah layer Turbulence kita
     if (e.layer === turbulenceLayerGroup) {
-        
-        // 1. Sembunyikan semua elemen UI untuk Turbulence
         flSelectorContainer.classList.add('hidden');
-        legend.classList.add('hidden'); // 'turbulenceLegend' BUKAN 'legend'
+        document.getElementById('turbulence-legend').classList.add('hidden');
         sliderContainer.classList.add('hidden');
         if (currentTurbulenceLayer) {
             map.removeLayer(currentTurbulenceLayer);
             currentTurbulenceLayer = null;
         }
-        map.attributionControl.removeAttribution('Data source: World Area Forecast System');
-
-        // 2. Sembunyikan juga Alat Pembuat SIGMET
+        map.attributionControl.removeAttribution('EDR data © World Area Forecast System');
         sigmetToolPanel.classList.add('hidden');
-
-        // 3. Hapus juga gambar poligon SIGMET jika ada
-        drawnItems.clearLayers();
-        drawnCoordinates = [];
-        sigmetOutput.value = '';
+        clearDrawBtn.click();
     }
 });
+
 
 
 var vaAdvisoryLayer = L.layerGroup();
