@@ -1318,64 +1318,81 @@ function parseMultiPolygonSigmet(rawText) {
  */
 function fetchSIGMET(icao) {
     let url = "/api/sigmet";
+// Definisikan prioritas bahaya. Angka lebih tinggi = digambar lebih dulu (di lapisan bawah)
+            const hazardPriority = {
+                'VA': 1,    // Volcanic Ash -> Prioritas tertinggi (digambar terakhir / paling atas)
+                'TS': 2,    // Thunderstorm -> Prioritas kedua
+                'ICE': 3,   // Icing -> Prioritas lebih rendah
+                'TURB': 3,  // Turbulence -> Prioritas sama dengan Icing
+                'default': 4 // Lainnya
+            };
 
     fetch(url)
-        .then(response => {
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            return response.json();
-        })
-        .then(data => {
-            map.eachLayer(layer => {
-                if (layer.options && layer.options.isSigmetPolygon) {
-                    map.removeLayer(layer);
-                }
-            });
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    // Hapus poligon SIGMET lama dari peta
+                    map.eachLayer(layer => {
+                        if (layer.options && layer.options.isSigmetPolygon) {
+                            map.removeLayer(layer);
+                        }
+                    });
 
-            const sigmetsForIcao = data.filter(sigmet => sigmet.icaoId === icao);
-            if (sigmetsForIcao.length === 0) return;
+                    // 1. Filter SIGMET untuk FIR yang relevan
+                    let sigmetsForIcao = data.filter(sigmet => sigmet.icaoId === icao);
+                    if (sigmetsForIcao.length === 0) return;
 
-            sigmetsForIcao.forEach(sigmet => {
-                // Fungsi ini sekarang akan mengembalikan array dengan satu atau LEBIH poligon.
-                const parsedPolygons = parseMultiPolygonSigmet(sigmet.rawSigmet);
-                
-                if (parsedPolygons.length === 0) {
-                    return;
-                }
-                
-                const color = getSigmetColor(sigmet.hazard);
-                const sigmetId = sigmet.sigmetId ? ` ${sigmet.sigmetId}` : '';
-                const formattedSigmetHtml = sigmet.rawSigmet.replace(/\n|\r/g, '<br>');
+                    // 2. === PERUBAHAN UTAMA: URUTKAN (SORT) ARRAY SIGMET ===
+                    // Urutkan array berdasarkan prioritas bahaya, dari prioritas terendah ke tertinggi.
+                    // Ini memastikan SIGMET yang kurang penting (TURB/ICE) digambar lebih dulu,
+                    // dan SIGMET yang paling penting (VA) digambar terakhir (sehingga muncul di paling atas).
+                    sigmetsForIcao.sort((a, b) => {
+                        const priorityA = hazardPriority[a.hazard] || hazardPriority['default'];
+                        const priorityB = hazardPriority[b.hazard] || hazardPriority['default'];
+                        return priorityB - priorityA; // Mengurutkan dari besar ke kecil (angka prioritasnya)
+                    });
 
-                // Loop ini akan berjalan untuk setiap poligon yang ditemukan.
-                parsedPolygons.forEach(polygonData => {
-                    const popupContent = `
-                        <div class="sigmet-popup-header" style="background-color: ${color};">
-                            ${sigmet.hazard} SIGMET${sigmetId}
-                        </div>
-                        <div class="sigmet-popup-body">
-                            <div class="sigmet-level-info">
-                                <strong>Level:</strong> ${polygonData.level}
-                            </div>
-                            <hr>
-                            <div class="sigmet-raw-text">
-                                ${formattedSigmetHtml}
-                            </div>
-                        </div>
-                    `;
+                    // 3. Loop melalui array yang SUDAH TERURUT dan gambar poligon
+                    sigmetsForIcao.forEach(sigmet => {
+                        const parsedPolygons = parseMultiPolygonSigmet(sigmet.rawSigmet);
+                        if (parsedPolygons.length === 0) {
+                            return; // Lanjut ke SIGMET berikutnya jika tidak ada poligon
+                        }
+                        
+                        const color = getSigmetColor(sigmet.hazard);
+                        const sigmetId = sigmet.sigmetId ? ` ${sigmet.sigmetId}` : '';
+                        const formattedSigmetHtml = sigmet.rawSigmet.replace(/\n|\r/g, '<br>');
 
-                    L.polygon(polygonData.coords, { 
-                        color: color,
-                        fillColor: color,
-                        fillOpacity: 0.2,
-                        isSigmetPolygon: true
-                    })
-                    .addTo(map)
-                    .bindPopup(popupContent, { className: 'custom-sigmet-popup' });
-                });
-            });
-        })
-        .catch(error => console.error("Error mengambil atau memproses data SIGMET:", error));
-}
+                        parsedPolygons.forEach(polygonData => {
+                            const popupContent = `
+                                <div class="sigmet-popup-header" style="background-color: ${color};">
+                                    ${sigmet.hazard} SIGMET${sigmetId}
+                                </div>
+                                <div class="sigmet-popup-body">
+                                    <div class="sigmet-level-info">
+                                        <strong>Level:</strong> ${polygonData.level}
+                                    </div>
+                                    <hr>
+                                    <div class="sigmet-raw-text">
+                                        <pre style="margin: 0; white-space: pre-wrap;">${sigmet.rawSigmet}</pre>
+                                    </div>
+                                </div>`;
+
+                            L.polygon(polygonData.coords, { 
+                                color: color,
+                                fillColor: color,
+                                fillOpacity: 0.2,
+                                isSigmetPolygon: true
+                            })
+                            .addTo(map)
+                            .bindPopup(popupContent, { className: 'custom-sigmet-popup' });
+                        });
+                    });
+                })
+                .catch(error => console.error("Error mengambil atau memproses data SIGMET:", error));
+        }
 
 // =========================================================================
 // BAGIAN 3: FUNGSI UTILITAS DAN STYLING (Tidak ada perubahan)
