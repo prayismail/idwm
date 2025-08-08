@@ -2352,7 +2352,7 @@ function updateDebugStatus(message, isError = false) {
     }).addTo(map);
 
     L.polyline(upgCoords, {
-        color: "green",
+        color: "maroon",
         weight: 3, // Dibuat lebih tebal agar jelas
         opacity: 0.8,
         interactive: false
