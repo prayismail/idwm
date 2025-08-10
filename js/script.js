@@ -506,14 +506,14 @@ document.getElementById('locate-btn').addEventListener('click', addUserLocation)
             img.onload = callback;
             img.src = url;
         }
-       /** function updateRadar(timeOffset = 0) {
+        function updateRadar(timeOffset = 0) {
     fetch('https://api.rainviewer.com/public/weather-maps.json')
         .then(response => response.json())
         .then(data => {
             if (data.radar && data.radar.past.length > 0) {
                 let index = Math.max(0, data.radar.past.length - 1 - timeOffset);
                 let timestamp = data.radar.past[index].time;
-                let radarUrl = `https://tilecache.rainviewer.com/v2/radar/${timestamp}/256/{z}/{x}/{y}/8/1_1.png`;
+                let radarUrl = `https://tilecache.rainviewer.com/v2/radar/${timestamp}/256/{z}/{x}/{y}/7/1_1.png`;
                 radarLayer.setUrl(radarUrl);
 
                 // Buat objek Date dari timestamp
@@ -541,7 +541,7 @@ document.getElementById('locate-btn').addEventListener('click', addUserLocation)
             }
         })
         .catch(error => console.error("Gagal mengambil data radar:", error));}
-  **/      
+        
 // --- Konfigurasi Umum AccuWeather ---
 const ACCUWEATHER_API_KEY = 'de13920f574d420984d3080b1fa6132b'; 
 const RADAR_TIME_INTERVAL_MINUTES = 5; // AccuWeather radar biasanya memiliki interval 5 menit. Sesuaikan jika perlu.
@@ -809,11 +809,13 @@ updateWVSatellite();
 updateVISSatellite();
 
 // Set interval untuk pembaruan otomatis
-	updateRadarAccuweather();
+updateRadar();	
+//updateRadarAccuweather();
         updateIRSatellite();
 	updateWVSatellite();
 	updateVISSatellite();
-	setInterval(updateRadarAccuweather, 300000);
+setInterval(updateRadar, 300000);
+//	setInterval(updateRadarAccuweather, 300000);
         setInterval(updateIRSatellite, 300000);
 	setInterval(updateWVSatellite, 300000); 
 	setInterval(updateVISSatellite, 300000); // 10 menit jadi 5 menit aja
@@ -892,7 +894,8 @@ function addTimeControls() {
         else timeLabel.textContent = `${step * 5} menit lalu`;}
 
     function updateLayers(timeOffset) {
-        updateRadarAccuweather(timeOffset);
+        updateRadar(timeOffset);
+		//updateRadarAccuweather(timeOffset);
         updateIRSatellite(timeOffset);
 	updateWVSatellite(timeOffset);
 	updateVISSatellite(timeOffset);
