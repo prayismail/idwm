@@ -1164,7 +1164,7 @@ closePopup.addEventListener('click', function() {
             { code: "WIOO", name: "Supadio", lat: -0.14648, lon: 109.40582 },
             { code: "WIPP", name: "Sultan Mahmud Badaruddin II", lat: -2.8949, lon: 104.70679 },
 	    { code: "WIDD", name: "Hang Nadim", lat: 1.11902, lon: 104.1142 },
-			{ code: "WIEE", name: "Minangkabau", lat: -0.8525, lon: 100.125 },
+			{ code: "WIEE", name: "Minangkabau", lat: -0.79, lon: 100.28 },
         ];
         
         var markers = {};
