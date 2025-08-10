@@ -759,7 +759,7 @@ function updateVISSatellite(timeOffsetIntervals = 0) {
         if (!VISsatelliteLayer) {
             VISsatelliteLayer = L.tileLayer(satelliteUrl, {
                 attribution: 'Satellite data &copy; Accuweather',
-                opacity: 0.6,
+                opacity: 0.8,
                 minZoom: 1,
             });
             // VISsatelliteLayer.addTo(map); // Penambahan ke map akan diatur oleh Layer Control atau di bawah
