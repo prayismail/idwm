@@ -1238,80 +1238,113 @@ function showAWOS(code) {
  * @param {string} coordStr - String koordinat, e.g., "S0302 E12647 - S0453 E12721"
  * @returns {Array<[number, number]>} Array koordinat, e.g., [[-3.03, 126.78], ...]
  */
-function parseCoordString(coordStr) {
-    const coords = [];
-    const pairs = coordStr.trim().split(/\s*-\s*/);
-    const pairRegex = /([NS])\s*([\d\s]+)\s*([EW])\s*([\d\s]+)/;
+        // Fungsi parseCoordString tetap ada untuk menangani SIGMET berbasis titik
+        function parseCoordString(coordStr) {
+            const coords = [];
+            const pairs = coordStr.trim().split(/\s*-\s*/);
+            const pairRegex = /([NS])\s*([\d\s]+)\s*([EW])\s*([\d\s]+)/;
 
-    for (const pair of pairs) {
-        if (!pair) continue;
-        const match = pair.match(pairRegex);
-
-        if (match) {
-            let latStr = match[2].replace(/\s/g, '');
-            let lonStr = match[4].replace(/\s/g, '');
-
-            const latDeg = parseInt(latStr.substring(0, 2), 10);
-            const latMin = latStr.length > 2 ? parseInt(latStr.substring(2), 10) : 0;
-            let lat = (latDeg + latMin / 60) * (match[1] === 'S' ? -1 : 1);
-
-            const lonDeg = parseInt(lonStr.substring(0, 3), 10);
-            const lonMin = lonStr.length > 3 ? parseInt(lonStr.substring(3), 10) : 0;
-            let lon = (lonDeg + lonMin / 60) * (match[3] === 'W' ? -1 : 1);
-
-            if (!isNaN(lat) && !isNaN(lon)) {
-                coords.push([parseFloat(lat.toFixed(4)), parseFloat(lon.toFixed(4))]);
+            for (const pair of pairs) {
+                if (!pair) continue;
+                const match = pair.match(pairRegex);
+                if (match) {
+                    let latStr = match[2].replace(/\s/g, '');
+                    let lonStr = match[4].replace(/\s/g, '');
+                    const latDeg = parseInt(latStr.substring(0, 2), 10);
+                    const latMin = latStr.length > 2 ? parseInt(latStr.substring(2), 10) : 0;
+                    let lat = (latDeg + latMin / 60) * (match[1] === 'S' ? -1 : 1);
+                    const lonDeg = parseInt(lonStr.substring(0, 3), 10);
+                    const lonMin = lonStr.length > 3 ? parseInt(lonStr.substring(3), 10) : 0;
+                    let lon = (lonDeg + lonMin / 60) * (match[3] === 'W' ? -1 : 1);
+                    if (!isNaN(lat) && !isNaN(lon)) {
+                        coords.push([parseFloat(lat.toFixed(4)), parseFloat(lon.toFixed(4))]);
+                    }
+                }
             }
+            return coords;
         }
-    }
-    return coords;
-}
 
-/**
- * Mengekstrak semua poligon (lengkap dengan koordinat dan level) dari teks SIGMET mentah.
- * @param {string} rawText - Teks SIGMET lengkap.
- * @returns {Array<object>} Array objek poligon, e.g., [{ coords: [...], level: "FL190/230" }, ...]
- */
-function parseMultiPolygonSigmet(rawText) {
-    const polygons = [];
-    const singleLineText = rawText.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
+        // FUNGSI BARU untuk mengubah format 'S0052' menjadi angka desimal
+        function parseDescriptiveCoord(coordStr) {
+            const dir = coordStr.charAt(0);
+            let deg, min;
+            if (dir === 'N' || dir === 'S') { // Latitude
+                deg = parseFloat(coordStr.substring(1, 3));
+                min = parseFloat(coordStr.substring(3, 5));
+            } else { // Longitude
+                deg = parseFloat(coordStr.substring(1, 4));
+                min = parseFloat(coordStr.substring(4, 6));
+            }
+            let value = deg + (min / 60);
+            return (dir === 'S' || dir === 'W') ? -value : value;
+        }
 
-    // ================== PERUBAHAN UTAMA DI SINI ==================
-    // Menambahkan alternatif `|AND\s+OBS\s+AT\s+\d{4}Z\s+WI` ke dalam regex.
-    // Ini memungkinkan loop untuk menemukan dan mem-parsing beberapa poligon
-    // di dalam satu pesan SIGMET yang sama, seperti pada kasus VA SIGMET.
-    const sigmetPartRegex = /(?:VA CLD OBS AT \d{4}Z WI|EMBD TS OBS WI|(?:SEV|MOD)?\s+(?:TURB|ICE)\s+(?:OBS|FCST)?(?:\s+AT\s+\d{4}Z)?\s+WI|AND\s+OBS\s+AT\s+\d{4}Z\s+WI)\s+(.*?)\s*(SFC\s*\/\s*F\s*L\d+|F\s*L\d+\s*\/\s*(?:F\s*L)?\d+|(?:TOP\s+)?F\s*L\d+)/gi;
-    // =============================================================
+        // FUNGSI PARSER UTAMA YANG SEKARANG LEBIH CERDAS
+        function parseMultiPolygonSigmet(rawText, firGeoJson) {
+            const singleLineText = rawText.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
+            
+            // Regex 1: Mencari poligon berbasis titik (seperti sebelumnya)
+            const pointBasedRegex = /(?:VA CLD OBS AT \d{4}Z WI|EMBD TS OBS WI|(?:SEV|MOD)?\s+(?:TURB|ICE)\s+(?:OBS|FCST)?(?:\s+AT\s+\d{4}Z)?\s+WI|AND\s+OBS\s+AT\s+\d{4}Z\s+WI)\s+(.*?)\s*(SFC\s*\/\s*F\s*L\d+|F\s*L\d+\s*\/\s*(?:F\s*L)?\d+|(?:TOP\s+)?F\s*L\d+)/gi;
+            let match;
+            const polygons = [];
 
-    let match;
-    // Loop `while` akan terus berjalan dan menemukan semua blok poligon yang cocok dengan regex.
-    while ((match = sigmetPartRegex.exec(singleLineText)) !== null) {
-        const coordString = match[1].trim();
-        const levelString = match[2];
-
-        const coordinates = parseCoordString(coordString);
-
-        if (coordinates.length > 1) {
-            const firstPoint = coordinates[0];
-            const lastPoint = coordinates[coordinates.length - 1];
-            if (firstPoint[0] !== lastPoint[0] || firstPoint[1] !== lastPoint[1]) {
-                coordinates.push(firstPoint);
+            while ((match = pointBasedRegex.exec(singleLineText)) !== null) {
+                const coordinates = parseCoordString(match[1].trim());
+                if (coordinates.length > 1) {
+                    coordinates.push(coordinates[0]); // Tutup poligon
+                    polygons.push({
+                        coords: coordinates,
+                        level: match[2].trim().replace(/\s+/g, ' ')
+                    });
+                }
             }
 
-            polygons.push({
-                coords: coordinates,
-                level: levelString.trim().replace(/\s+/g, ' ')
-            });
+            // JIKA tidak ada poligon berbasis titik yang ditemukan, coba cari area deskriptif
+            if (polygons.length === 0) {
+                const descriptiveRegex = /(?:(ENTIRE)\s+(FIR|UIR|CTA))|(?:([NSEW])\s+OF\s+([NSNEW]\d+))(?:\s+AND\s+([NSEW])\s+OF\s+([NSNEW]\d+))?/;
+                const descriptiveMatch = singleLineText.match(descriptiveRegex);
+
+                if (descriptiveMatch) {
+                    const firBbox = turf.bbox(firGeoJson); // Dapatkan batas terluar FIR
+                    let [minLon, minLat, maxLon, maxLat] = firBbox;
+
+                    if (descriptiveMatch[1] === 'ENTIRE') {
+                        // Jika 'ENTIRE FIR', gunakan bbox apa adanya
+                    } else {
+                        // Jika 'N OF', 'S OF', dll.
+                        const processPart = (direction, coordStr) => {
+                            if (!direction || !coordStr) return;
+                            const val = parseDescriptiveCoord(coordStr);
+                            if (direction === 'N') minLat = val;
+                            if (direction === 'S') maxLat = val;
+                            if (direction === 'E') minLon = val;
+                            if (direction === 'W') maxLon = val;
+                        };
+                        processPart(descriptiveMatch[3], descriptiveMatch[4]); // Proses bagian pertama (e.g., N OF S0052)
+                        processPart(descriptiveMatch[5], descriptiveMatch[6]); // Proses bagian kedua jika ada (e.g., AND W OF E11748)
+                    }
+                    
+                    // Buat koordinat poligon dari bounding box yang sudah disesuaikan
+                    const descriptiveCoords = [
+    [minLat, minLon], // Kiri-Bawah
+    [minLat, maxLon], // Kanan-Bawah
+    [maxLat, maxLon], // Kanan-Atas
+    [maxLat, minLon], // Kiri-Atas
+    [minLat, minLon]  // Kembali ke titik awal untuk menutup poligon
+];                    
+                    // Ekstrak level dari teks
+                    const levelMatch = singleLineText.match(/(SFC\s*\/\s*F\s*L\d+|F\s*L\d+\s*\/\s*(?:F\s*L)?\d+|(?:TOP\s+)?F\s*L\d+)/);
+                    const level = levelMatch ? levelMatch[0].trim().replace(/\s+/g, ' ') : 'N/A';
+                    
+                    polygons.push({ coords: descriptiveCoords, level: level });
+                }
+            }
+            
+            if (polygons.length === 0) {
+                console.warn("SIGMET ditemukan, tetapi tidak ada poligon yang bisa di-parse:", singleLineText);
+            }
+            return polygons;
         }
-    }
-
-    if (polygons.length === 0) {
-        console.warn("SIGMET ditemukan, tetapi tidak ada poligon yang bisa di-parse (kemungkinan karena area deskriptif):", singleLineText);
-    }
-
-    return polygons;
-}
-
 
 // =========================================================================
 // BAGIAN 2: FUNGSI UTAMA FETCH DAN PLOTTING (Tidak ada perubahan)
@@ -1444,8 +1477,8 @@ function getSigmetColor(hazard) {
     // Buat objek waktu saat ini dalam UTC
     const now = new Date();
 
-    // **PERBAIKAN UTAMA**: Mundurkan waktu 7 jam untuk memastikan data model sudah dipublikasikan.
-    const lookbackTime = new Date(now.getTime() - (7 * 60 * 60 * 1000));
+    // **PERBAIKAN UTAMA**: Mundurkan waktu 4 jam untuk memastikan data model sudah dipublikasikan.
+    const lookbackTime = new Date(now.getTime() - (4 * 60 * 60 * 1000));
 
     const utcHours = lookbackTime.getUTCHours();
     let cycleHour;
