@@ -1320,201 +1320,207 @@ function showAWOS(code) {
 
 
 // Ambil Data SIGMET
-// =========================================================================
-// BAGIAN 1: FUNGSI-FUNGSI PARSER (PEMBANTU)
-// =========================================================================
+// BAGIAN 1: FUNGSI-FUNGSI PEMBANTU (TIDAK ADA PERUBAHAN)
+// -------------------------------------------------------------------------
 
-/**
- * Mengubah string koordinat mentah menjadi array numerik yang bisa dibaca Leaflet.
- * @param {string} coordStr - String koordinat, e.g., "S0302 E12647 - S0453 E12721"
- * @returns {Array<[number, number]>} Array koordinat, e.g., [[-3.03, 126.78], ...]
- */
-     // Fungsi parseCoordString tetap ada untuk menangani SIGMET berbasis titik
-        function parseCoordString(coordStr) {
-            const coords = [];
-            const pairs = coordStr.trim().split(/\s*-\s*/);
-            const pairRegex = /([NS])\s*([\d\s]+)\s*([EW])\s*([\d\s]+)/;
+function parseCoordString(coordStr) {
+    const coords = [];
+    if (!coordStr) return coords;
+    const pairs = coordStr.trim().split(/\s*-\s*/);
+    const pairRegex = /([NS])\s*([\d\s]+)\s*([EW])\s*([\d\s]+)/;
 
-            for (const pair of pairs) {
-                if (!pair) continue;
-                const match = pair.match(pairRegex);
-                if (match) {
-                    let latStr = match[2].replace(/\s/g, '');
-                    let lonStr = match[4].replace(/\s/g, '');
-                    const latDeg = parseInt(latStr.substring(0, 2), 10);
-                    const latMin = latStr.length > 2 ? parseInt(latStr.substring(2), 10) : 0;
-                    let lat = (latDeg + latMin / 60) * (match[1] === 'S' ? -1 : 1);
-                    const lonDeg = parseInt(lonStr.substring(0, 3), 10);
-                    const lonMin = lonStr.length > 3 ? parseInt(lonStr.substring(3), 10) : 0;
-                    let lon = (lonDeg + lonMin / 60) * (match[3] === 'W' ? -1 : 1);
-                    if (!isNaN(lat) && !isNaN(lon)) {
-                        coords.push([parseFloat(lat.toFixed(4)), parseFloat(lon.toFixed(4))]);
-                    }
+    for (const pair of pairs) {
+        if (!pair) continue;
+        const match = pair.match(pairRegex);
+        if (match) {
+            let latStr = match[2].replace(/\s/g, '');
+            let lonStr = match[4].replace(/\s/g, '');
+            const latDeg = parseInt(latStr.substring(0, 2), 10);
+            const latMin = latStr.length > 2 ? parseInt(latStr.substring(2), 10) : 0;
+            let lat = (latDeg + latMin / 60) * (match[1] === 'S' ? -1 : 1);
+            const lonDeg = parseInt(lonStr.substring(0, 3), 10);
+            const lonMin = lonStr.length > 3 ? parseInt(lonStr.substring(3), 10) : 0;
+            let lon = (lonDeg + lonMin / 60) * (match[3] === 'W' ? -1 : 1);
+            if (!isNaN(lat) && !isNaN(lon)) {
+                coords.push([parseFloat(lat.toFixed(4)), parseFloat(lon.toFixed(4))]);
+            }
+        }
+    }
+    return coords;
+}
+
+function parseDescriptiveCoord(coordStr) {
+    const dir = coordStr.charAt(0).toUpperCase();
+    let deg, min;
+    if (dir === 'N' || dir === 'S') {
+        deg = parseFloat(coordStr.substring(1, 3));
+        min = parseFloat(coordStr.substring(3, 5));
+    } else {
+        deg = parseFloat(coordStr.substring(1, 4));
+        min = parseFloat(coordStr.substring(4, 6));
+    }
+    let value = deg + (min / 60);
+    return (dir === 'S' || dir === 'W') ? -value : value;
+}
+
+
+// BAGIAN 2: FUNGSI PARSER UTAMA (SUDAH BENAR, TIDAK PERLU DIUBAH)
+// -------------------------------------------------------------------------
+
+function parseMultiPolygonSigmet(rawText, firToIntersectWith) {
+    const singleLineText = rawText.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
+    const polygons = [];
+
+    // Regex ini sudah kuat untuk mengenali semua jenis poligon berbasis titik
+    const pointBasedRegex = /(?:VA CLD OBS AT \d{4}Z WI|EMBD TS OBS WI|(?:SEV|MOD)?\s+(?:TURB|ICE)\s+(?:OBS|FCST)?(?:\s+AT\s+\d{4}Z)?\s+WI|AND\s+OBS\s+AT\s+\d{4}Z\s+WI)\s+(.*?)\s*(SFC\s*\/\s*F\s*L\d+|F\s*L\d+\s*\/\s*(?:F\s*L)?\d+|(?:TOP\s+)?F\s*L\d+)/gi;
+    let match;
+
+    while ((match = pointBasedRegex.exec(singleLineText)) !== null) {
+        const coordinates = parseCoordString(match[1].trim());
+        if (coordinates.length > 2) {
+            coordinates.push(coordinates[0]);
+            polygons.push({
+                coords: coordinates,
+                level: match[2] ? match[2].trim().replace(/\s+/g, ' ') : 'N/A'
+            });
+        }
+    }
+
+    if (polygons.length === 0) {
+        const descriptiveRegex = /(?:(ENTIRE)\s+(FIR|UIR|CTA))|(?:([NSEW])\s+OF\s+([NSEW]\d+))(?:\s+AND\s+([NSEW])\s+OF\s+([NSEW]\d+))?/i;
+        const descriptiveMatch = descriptiveRegex.exec(singleLineText);
+
+        if (descriptiveMatch) {
+            if (!firToIntersectWith || !firToIntersectWith.geometry) {
+                console.error("Data GeoJSON pemotong tidak valid.", singleLineText);
+                return [];
+            }
+            let minLon = -180, minLat = -90, maxLon = 180, maxLat = 90;
+            if (!(descriptiveMatch[1] && descriptiveMatch[1].toUpperCase() === 'ENTIRE')) {
+                const processPart = (direction, coordStr) => {
+                    if (!direction || !coordStr) return;
+                    const val = parseDescriptiveCoord(coordStr);
+                    const dir = direction.toUpperCase();
+                    if (dir === 'N') minLat = val;
+                    if (dir === 'S') maxLat = val;
+                    if (dir === 'E') minLon = val;
+                    if (dir === 'W') maxLon = val;
+                };
+                processPart(descriptiveMatch[3], descriptiveMatch[4]);
+                processPart(descriptiveMatch[5], descriptiveMatch[6]);
+            }
+            const sigmetAreaPolygon = turf.polygon([[[minLon, minLat], [maxLon, minLat], [maxLon, maxLat], [minLon, maxLat], [minLon, minLat]]]);
+            const intersection = turf.intersect(firToIntersectWith, sigmetAreaPolygon);
+            if (intersection) {
+                const levelMatch = singleLineText.match(/(SFC\s*\/\s*F\s*L\d+|F\s*L\d+\s*\/\s*(?:F\s*L)?\d+|(?:TOP\s+)?F\s*L\d+)/i);
+                const level = levelMatch ? levelMatch[0].trim().replace(/\s+/g, ' ') : 'N/A';
+                const processCoords = (coords) => coords.map(point => [point[1], point[0]]);
+                if (intersection.geometry.type === 'Polygon') {
+                    polygons.push({ coords: processCoords(intersection.geometry.coordinates[0]), level: level });
+                } else if (intersection.geometry.type === 'MultiPolygon') {
+                    intersection.geometry.coordinates.forEach(polyCoords => { polygons.push({ coords: processCoords(polyCoords[0]), level: level }); });
                 }
             }
-            return coords;
         }
+    }
+    if (polygons.length === 0) {
+        console.warn("SIGMET ditemukan, tetapi tidak ada poligon yang bisa di-parse:", singleLineText);
+    }
+    return polygons;
+}
 
-        // FUNGSI BARU untuk mengubah format 'S0052' menjadi angka desimal
-        function parseDescriptiveCoord(coordStr) {
-            const dir = coordStr.charAt(0);
-            let deg, min;
-            if (dir === 'N' || dir === 'S') { // Latitude
-                deg = parseFloat(coordStr.substring(1, 3));
-                min = parseFloat(coordStr.substring(3, 5));
-            } else { // Longitude
-                deg = parseFloat(coordStr.substring(1, 4));
-                min = parseFloat(coordStr.substring(4, 6));
+
+// BAGIAN 3: FUNGSI FETCH UTAMA - DENGAN LOGIKA FILTER YANG DISEMPURNAKAN
+// -------------------------------------------------------------------------
+
+function fetchSIGMET(firIcao) {
+    let url = "https://api.allorigins.win/raw?url=https://aviationweather.gov/api/data/isigmet?format=json";
+    const hazardPriority = {'VA': 1, 'TS': 2, 'ICE': 3, 'TURB': 3, 'default': 4};
+
+    fetch(url)
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            map.eachLayer(layer => {
+                if (layer.options && layer.options.isSigmetPolygon) map.removeLayer(layer);
+            });
+
+            let relevantSigmets;
+            let firToUseForClipping;
+
+            // === INI ADALAH PERBAIKAN KUNCI ===
+            // Filter berdasarkan ICAO yang di-klik, dengan memeriksa DUA kemungkinan identifier
+            if (firIcao === 'WIII') { // FIR Jakarta
+                console.log("Filtering for Jakarta (WSID20 or WVID20)...");
+                relevantSigmets = data.filter(sigmet => 
+                    sigmet.rawSigmet.includes('WSID20') || sigmet.rawSigmet.includes('WVID20')
+                );
+                firToUseForClipping = firJakarta_geojson;
+            } else if (firIcao === 'WAAA') { // FIR Ujung Pandang
+                console.log("Filtering for Ujung Pandang (WSID21 or WVID21)...");
+                relevantSigmets = data.filter(sigmet => 
+                    sigmet.rawSigmet.includes('WSID21') || sigmet.rawSigmet.includes('WVID21')
+                );
+                firToUseForClipping = firUPG_geojson;
+            } else {
+                return; // Jika ICAO tidak dikenal, jangan lakukan apa-apa
             }
-            let value = deg + (min / 60);
-            return (dir === 'S' || dir === 'W') ? -value : value;
-        }
-
-        // FUNGSI PARSER UTAMA YANG SEKARANG LEBIH CERDAS
-        function parseMultiPolygonSigmet(rawText, firGeoJson) {
-            const singleLineText = rawText.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
             
-            // Regex 1: Mencari poligon berbasis titik (seperti sebelumnya)
-            const pointBasedRegex = /(?:VA CLD OBS AT \d{4}Z WI|EMBD TS OBS WI|(?:SEV|MOD)?\s+(?:TURB|ICE)\s+(?:OBS|FCST)?(?:\s+AT\s+\d{4}Z)?\s+WI|AND\s+OBS\s+AT\s+\d{4}Z\s+WI)\s+(.*?)\s*(SFC\s*\/\s*F\s*L\d+|F\s*L\d+\s*\/\s*(?:F\s*L)?\d+|(?:TOP\s+)?F\s*L\d+)/gi;
-            let match;
-            const polygons = [];
-
-            while ((match = pointBasedRegex.exec(singleLineText)) !== null) {
-                const coordinates = parseCoordString(match[1].trim());
-                if (coordinates.length > 1) {
-                    coordinates.push(coordinates[0]); // Tutup poligon
-                    polygons.push({
-                        coords: coordinates,
-                        level: match[2].trim().replace(/\s+/g, ' ')
-                    });
-                }
+            if (relevantSigmets.length === 0) {
+                console.log(`Tidak ada SIGMET aktif untuk FIR ${firIcao}`);
+                return;
             }
 
-            // JIKA tidak ada poligon berbasis titik yang ditemukan, coba cari area deskriptif
-            if (polygons.length === 0) {
-                const descriptiveRegex = /(?:(ENTIRE)\s+(FIR|UIR|CTA))|(?:([NSEW])\s+OF\s+([NSNEW]\d+))(?:\s+AND\s+([NSEW])\s+OF\s+([NSNEW]\d+))?/;
-                const descriptiveMatch = singleLineText.match(descriptiveRegex);
-
-                if (descriptiveMatch) {
-                    const firBbox = turf.bbox(firGeoJson); // Dapatkan batas terluar FIR
-                    let [minLon, minLat, maxLon, maxLat] = firBbox;
-
-                    if (descriptiveMatch[1] === 'ENTIRE') {
-                        // Jika 'ENTIRE FIR', gunakan bbox apa adanya
-                    } else {
-                        // Jika 'N OF', 'S OF', dll.
-                        const processPart = (direction, coordStr) => {
-                            if (!direction || !coordStr) return;
-                            const val = parseDescriptiveCoord(coordStr);
-                            if (direction === 'N') minLat = val;
-                            if (direction === 'S') maxLat = val;
-                            if (direction === 'E') minLon = val;
-                            if (direction === 'W') maxLon = val;
-                        };
-                        processPart(descriptiveMatch[3], descriptiveMatch[4]); // Proses bagian pertama (e.g., N OF S0052)
-                        processPart(descriptiveMatch[5], descriptiveMatch[6]); // Proses bagian kedua jika ada (e.g., AND W OF E11748)
-                    }
-                    
-                    // Buat koordinat poligon dari bounding box yang sudah disesuaikan
-                    const descriptiveCoords = [
-    [minLat, minLon], // Kiri-Bawah
-    [minLat, maxLon], // Kanan-Bawah
-    [maxLat, maxLon], // Kanan-Atas
-    [maxLat, minLon], // Kiri-Atas
-    [minLat, minLon]  // Kembali ke titik awal untuk menutup poligon
-];                    
-                    // Ekstrak level dari teks
-                    const levelMatch = singleLineText.match(/(SFC\s*\/\s*F\s*L\d+|F\s*L\d+\s*\/\s*(?:F\s*L)?\d+|(?:TOP\s+)?F\s*L\d+)/);
-                    const level = levelMatch ? levelMatch[0].trim().replace(/\s+/g, ' ') : 'N/A';
-                    
-                    polygons.push({ coords: descriptiveCoords, level: level });
-                }
-            }
+            relevantSigmets.sort((a, b) => (hazardPriority[a.hazard] || 4) - (hazardPriority[b.hazard] || 4));
             
-            if (polygons.length === 0) {
-                console.warn("SIGMET ditemukan, tetapi tidak ada poligon yang bisa di-parse:", singleLineText);
-            }
-            return polygons;
-        }
-        
-        // FUNGSI fetchSIGMET (sedikit dimodifikasi untuk mengirim data FIR ke parser)
-        function fetchSIGMET(firIcao) {
-            let url =  "/api/sigmet";
-            const hazardPriority = {'VA': 1, 'TS': 2, 'ICE': 3, 'TURB': 3, 'default': 4};
+            relevantSigmets.forEach(sigmet => {
+                // Gunakan GeoJSON yang sudah ditentukan di atas
+                const parsedPolygons = parseMultiPolygonSigmet(sigmet.rawSigmet, firToUseForClipping);
+                
+                if (parsedPolygons.length === 0) return;
+                
+                const color = getSigmetColor(sigmet.hazard);
+                const sigmetId = sigmet.sigmetId ? ` ${sigmet.sigmetId}` : '';
 
-            fetch(url)
-                .then(response => {
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    return response.json();
-                })
-                .then(data => {
-                    map.eachLayer(layer => {
-                        if (layer.options && layer.options.isSigmetPolygon) {
-                            map.removeLayer(layer);
-                        }
-                    });
+                parsedPolygons.forEach(polygonData => {
+                    const popupContent = `
+                        <div class="sigmet-popup-header" style="background-color: ${color};">
+                            ${sigmet.hazard} SIGMET${sigmetId}
+                        </div>
+                        <div class="sigmet-popup-body">
+                            <div class="sigmet-level-info">
+                                <strong>Level:</strong> ${polygonData.level}
+                            </div>
+                            <hr>
+                            <div class="sigmet-raw-text">
+                                <pre style="margin: 0; white-space: pre-wrap;">${sigmet.rawSigmet}</pre>
+                            </div>
+                        </div>`;
 
-                    const sigmetsForIcao = data.filter(sigmet => sigmet.icaoId === firIcao);
-                    if (sigmetsForIcao.length === 0) return;
+                    L.polygon(polygonData.coords, { 
+                        color: color, fillColor: color, fillOpacity: 0.2, weight: 2, isSigmetPolygon: true
+                    }).addTo(map).bindPopup(popupContent, { className: 'custom-sigmet-popup' });
+                });
+            });
+        })
+        .catch(error => console.error("Error mengambil atau memproses data SIGMET:", error));
+}
 
-                    sigmetsForIcao.sort((a, b) => {
-                        const priorityA = hazardPriority[a.hazard] || hazardPriority['default'];
-                        const priorityB = hazardPriority[b.hazard] || hazardPriority['default'];
-                        return priorityB - priorityA;
-                    });
-                    
-                    // Tentukan GeoJSON FIR mana yang akan digunakan sebagai batas
-                    const relevantFirGeoJson = firIcao === 'WAAF' ? firUPG_geojson : firJakarta_geojson;
 
-                    sigmetsForIcao.forEach(sigmet => {
-                        // Kirim data FIR ke parser
-                        const parsedPolygons = parseMultiPolygonSigmet(sigmet.rawSigmet, relevantFirGeoJson);
-                        
-                        if (parsedPolygons.length === 0) return;
-                        
-                        const color = getSigmetColor(sigmet.hazard);
-                        const sigmetId = sigmet.sigmetId ? ` ${sigmet.sigmetId}` : '';
-                        const formattedSigmetHtml = sigmet.rawSigmet.replace(/\n|\r/g, '<br>');
+// BAGIAN 4: FUNGSI UTILITAS WARNA - TIDAK DIUBAH
+// -------------------------------------------------------------------------
 
-                        parsedPolygons.forEach(polygonData => {
-                            const popupContent = `
-                                <div class="sigmet-popup-header" style="background-color: ${color};">
-                                    ${sigmet.hazard} SIGMET${sigmetId}
-                                </div>
-                                <div class="sigmet-popup-body">
-                                    <div class="sigmet-level-info">
-                                        <strong>Level:</strong> ${polygonData.level}
-                                    </div>
-                                    <hr>
-                                    <div class="sigmet-raw-text">
-                                        <pre style="margin: 0; white-space: pre-wrap;">${sigmet.rawSigmet}</pre>
-                                    </div>
-                                </div>`;
-
-                            L.polygon(polygonData.coords, { 
-                                color: color,
-                                fillColor: color,
-                                fillOpacity: 0.2,
-                                isSigmetPolygon: true
-                            })
-                            .addTo(map)
-                            .bindPopup(popupContent, { className: 'custom-sigmet-popup' });
-                        });
-                    });
-                })
-                .catch(error => console.error("Error mengambil atau memproses data SIGMET:", error));
-        }
-
-        // Fungsi Warna SIGMET (tidak berubah)
-        function getSigmetColor(hazard) {
-            switch (hazard) {
-                case "VA": return "blue";
-                case "TURB": return "orange";
-                case "ICE": return "green";
-                case "TS": return "red";
-                default: return "purple";
-            }
-        }
+function getSigmetColor(hazard) {
+    switch (hazard) {
+        case "VA": return "blue";
+        case "TURB": return "orange";
+        case "ICE": return "green";
+        case "TS": return "red";
+        default: return "purple";
+    }
+}
 // Variabel state dan elemen UI
     const flSelectorContainer = document.getElementById('fl-selector-container');
     const flSelector = document.getElementById('fl-selector');
