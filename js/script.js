@@ -1552,8 +1552,8 @@ function getSigmetColor(hazard) {
     // Buat objek waktu saat ini dalam UTC
     const now = new Date();
 
-    // **PERBAIKAN UTAMA**: Mundurkan waktu 4 jam untuk memastikan data model sudah dipublikasikan.
-    const lookbackTime = new Date(now.getTime() - (4 * 60 * 60 * 1000));
+    // **PERBAIKAN UTAMA**: Mundurkan waktu 5 jam untuk memastikan data model sudah dipublikasikan.
+    const lookbackTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
 
     const utcHours = lookbackTime.getUTCHours();
     let cycleHour;
