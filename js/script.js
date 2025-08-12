@@ -962,7 +962,8 @@ addTimeControls();
 
 // Tambahkan event listener untuk memantau perubahan layer
 map.on('layeradd layerremove', toggleTimeControls);
-        var marker;
+//LAYER PRAKIRAAN CUACA//
+var marker;
 var weatherChart;
 var chartPopup = document.getElementById('chart-popup');
 var closePopup = document.getElementById('close-popup');
@@ -972,17 +973,22 @@ var locationInfo = document.getElementById('location-info');
 var modelSelect = document.getElementById('model-select');
 var currentData = {};
 var currentLocation = {};
-var marker;
+var marker; // Variabel global untuk marker
 
-// === MODIFIKASI DIMULAI DI SINI ===
+// ===================================================================
+// PENGATURAN KONTROL LAYER
+// ===================================================================
 
-
+// 1. Buat layer grup kosong sebagai placeholder untuk kontrol layer.
 var weatherForecastLayer = L.layerGroup();
 
-
-// 3. State untuk melacak apakah layer prakiraan cuaca aktif (dicentang)
+// 2. State untuk melacak apakah layer prakiraan cuaca aktif (dicentang)
 var isWeatherLayerActive = false;
 
+
+// ===================================================================
+// FUNGSI-FUNGSI UTAMA
+// ===================================================================
 
 function fetchWeatherData(lat, lon) {
     let model = modelSelect.value;
@@ -997,32 +1003,42 @@ function fetchWeatherData(lat, lon) {
             currentData = { times, precipitation, windSpeed, windDirection };
             fetchElevation(lat, lon, times, precipitation, windSpeed, windDirection);
         })
-        .catch(error => console.error('Gagal mengambil data:', error));
-}        
+        .catch(error => {
+            console.error('Gagal mengambil data cuaca:', error);
+            locationInfo.innerHTML = 'Gagal mengambil data cuaca. Coba lagi.';
+        });
+}
 
 function fetchElevation(lat, lon, times, precipitation, windSpeed, windDirection) {
     fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lon}`)
         .then(response => response.json())
         .then(data => {
             let elevation = data.elevation;
-            
+            currentLocation = { lat: lat.toFixed(2), lon: lon.toFixed(2), elevation: elevation };
+
+            // === PERUBAHAN KUNCI ADA DI SINI ===
+            // Perbarui konten popup marker yang sudah ada dengan info elevasi.
             if (marker) {
-                // Tambahkan popup setelah mendapatkan semua data
-                marker.bindPopup(`<b>Koordinat:</b> ${lat.toFixed(2)}, ${lon.toFixed(2)}<br><b>Elevasi:</b> ${elevation} m`).openPopup();
+                marker.setPopupContent(`<b>Elevasi: ${elevation} m</b><br>Koordinat: ${currentLocation.lat}, ${currentLocation.lon}`);
             }
             
-            currentLocation = { lat: lat.toFixed(2), lon: lon.toFixed(2), elevation: elevation };
+            // Perbarui info di atas chart
             locationInfo.innerHTML = `Koordinat: ${currentLocation.lat}, ${currentLocation.lon} | Elevasi: ${currentLocation.elevation} m`;
             
+            // Tampilkan chart cuaca
             showChart(times, precipitation, windSpeed, windDirection);
         })
-        .catch(error => console.error('Gagal mengambil data elevasi:', error));
-}        
+        .catch(error => {
+            console.error('Gagal mengambil data elevasi:', error);
+            locationInfo.innerHTML = `Gagal mengambil data elevasi untuk lokasi ini.`;
+        });
+}
 
 function showChart(times, precipitation, windSpeed, windDirection) {
     chartPopup.style.display = 'block';
     let ctx = document.getElementById('weatherChart').getContext('2d');
     if (weatherChart) weatherChart.destroy();
+    
     weatherChart = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -1080,7 +1096,7 @@ function showChart(times, precipitation, windSpeed, windDirection) {
 }
 
 function downloadCSVFile() {
-    let csvContent = `data:text/csv;charset=utf-8,Koordinat:, ${currentLocation.lat}, ${currentLocation.lon}\nElevasi:, ${currentLocation.elevation} m\n\nWaktu Setempat,Curah Hujan (mm),Kecepatan Angin (knots),Arah Angin (o)\n`;
+    let csvContent = `data:text/csv;charset=utf-8,Koordinat:, ${currentLocation.lat}, ${currentLocation.lon}\nElevasi:, ${currentLocation.elevation} m\n\nWaktu Setempat,Curah Hujan (mm),Kecepatan Angin (knots),Arah Angin (°)\n`;
     currentData.times.forEach((time, index) => {
         csvContent += `${time},${currentData.precipitation[index]},${currentData.windSpeed[index]},${currentData.windDirection[index]}\n`;
     });
@@ -1092,13 +1108,14 @@ function downloadCSVFile() {
     link.click();
     document.body.removeChild(link);
 }
+
 function downloadMeteogram() {
     let canvas = document.getElementById('weatherChart');
     let ctx = canvas.getContext('2d');
     
     let newCanvas = document.createElement('canvas');
     newCanvas.width = canvas.width;
-    newCanvas.height = canvas.height + 30; // Tambah ruang untuk header
+    newCanvas.height = canvas.height + 30;
     let newCtx = newCanvas.getContext('2d');
     newCtx.fillStyle = 'white';
     newCtx.fillRect(0, 0, newCanvas.width, newCanvas.height);
@@ -1113,22 +1130,19 @@ function downloadMeteogram() {
     link.click();
 }
 
-// === EVENT LISTENER YANG DIMODIFIKASI ===
+// ===================================================================
+// EVENT LISTENERS
+// ===================================================================
 
-// 4. Listener untuk mengontrol state berdasarkan pilihan di kontrol layer
 map.on('overlayadd', function(e) {
     if (e.layer === weatherForecastLayer) {
-        console.log('Layer Prakiraan Cuaca diaktifkan.');
         isWeatherLayerActive = true;
     }
 });
 
 map.on('overlayremove', function(e) {
     if (e.layer === weatherForecastLayer) {
-        console.log('Layer Prakiraan Cuaca dinonaktifkan.');
         isWeatherLayerActive = false;
-
-        // Saat layer dinonaktifkan, sembunyikan chart dan hapus marker
         chartPopup.style.display = 'none';
         if (marker) {
             marker.remove();
@@ -1136,10 +1150,8 @@ map.on('overlayremove', function(e) {
     }
 });
 
-
-// 5. Modifikasi listener klik pada peta
+// PERUBAHAN ADA DI FUNGSI INI
 map.on('click', function(e) {
-    // HANYA jalankan fungsi jika layer prakiraan cuaca sedang aktif
     if (isWeatherLayerActive) {
         let lat = e.latlng.lat;
         let lon = e.latlng.lng;
@@ -1147,33 +1159,37 @@ map.on('click', function(e) {
         if (marker) {
             marker.remove();
         }
-        
-        // Buat marker baru tanpa popup dulu
         marker = L.marker([lat, lon]).addTo(map);
 
-        // Panggil fungsi untuk mengambil data cuaca
-        fetchWeatherData(lat, lon);
+        // Bind popup dengan teks awal (tanpa elevasi)
+        marker.bindPopup(`Koordinat: ${lat.toFixed(2)}, ${lon.toFixed(2)}<br><b>Klik untuk melihat prakiraan...</b>`).openPopup();
+
+        // Tambahkan event listener PADA MARKER
+        marker.on('click', function() {
+            locationInfo.innerHTML = `Mengambil data untuk ${lat.toFixed(2)}, ${lon.toFixed(2)}...`;
+            if (weatherChart) {
+                weatherChart.destroy();
+            }
+            fetchWeatherData(lat, lon);
+        });
     }
 });
 
-
-// Listener untuk tombol close, download, dan ganti model
 closePopup.addEventListener('click', function() {
     chartPopup.style.display = 'none';
-    // Tidak perlu flag 'isChartClosed' lagi
 });
 
 downloadCSV.addEventListener('click', downloadCSVFile);
 downloadImg.addEventListener('click', downloadMeteogram);
 
 modelSelect.addEventListener('change', function() {
-    // Jika marker ada dan layer aktif, fetch ulang data dengan model baru
-    if (marker && isWeatherLayerActive) {
+    if (marker && chartPopup.style.display === 'block') {
         let latlng = marker.getLatLng();
         fetchWeatherData(latlng.lat, latlng.lng);
     }
 });
-        var airports = [
+
+var airports = [
             { code: "WAAA", name: "Sultan Hasanuddin", lat: -5.07629, lon: 119.54639 },
             { code: "WABB", name: "Frans Kaisiepo", lat: -1.19208, lon: 136.10663 },
             { code: "WADD", name: "I Gusti Ngurah Rai", lat: -8.7489, lon: 115.15381 },
