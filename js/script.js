@@ -1329,7 +1329,7 @@ function showAWOS(code) {
  * @param {string} coordStr - String koordinat, e.g., "S0302 E12647 - S0453 E12721"
  * @returns {Array<[number, number]>} Array koordinat, e.g., [[-3.03, 126.78], ...]
  */
-        // Fungsi parseCoordString tetap ada untuk menangani SIGMET berbasis titik
+     // Fungsi parseCoordString tetap ada untuk menangani SIGMET berbasis titik
         function parseCoordString(coordStr) {
             const coords = [];
             const pairs = coordStr.trim().split(/\s*-\s*/);
@@ -1436,58 +1436,41 @@ function showAWOS(code) {
             }
             return polygons;
         }
+        
+        // FUNGSI fetchSIGMET (sedikit dimodifikasi untuk mengirim data FIR ke parser)
+        function fetchSIGMET(firIcao) {
+            let url =  "/api/sigmet";
+            const hazardPriority = {'VA': 1, 'TS': 2, 'ICE': 3, 'TURB': 3, 'default': 4};
 
-// =========================================================================
-// BAGIAN 2: FUNGSI UTAMA FETCH DAN PLOTTING (Tidak ada perubahan)
-// =========================================================================
-/**
- * Mengambil data SIGMET, mem-parsing, dan mem-plot semua poligon ke peta.
- * @param {string} icao - Kode ICAO dari FIR, e.g., "WAAF".
- */
-function fetchSIGMET(icao) {
-    let url = "/api/sigmet";
-// Definisikan prioritas bahaya. Angka lebih tinggi = digambar lebih dulu (di lapisan bawah)
-            const hazardPriority = {
-                'VA': 1,    // Volcanic Ash -> Prioritas tertinggi (digambar terakhir / paling atas)
-                'TS': 2,    // Thunderstorm -> Prioritas kedua
-                'ICE': 3,   // Icing -> Prioritas lebih rendah
-                'TURB': 3,  // Turbulence -> Prioritas sama dengan Icing
-                'default': 4 // Lainnya
-            };
-
-    fetch(url)
+            fetch(url)
                 .then(response => {
                     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                     return response.json();
                 })
                 .then(data => {
-                    // Hapus poligon SIGMET lama dari peta
                     map.eachLayer(layer => {
                         if (layer.options && layer.options.isSigmetPolygon) {
                             map.removeLayer(layer);
                         }
                     });
 
-                    // 1. Filter SIGMET untuk FIR yang relevan
-                    let sigmetsForIcao = data.filter(sigmet => sigmet.icaoId === icao);
+                    const sigmetsForIcao = data.filter(sigmet => sigmet.icaoId === firIcao);
                     if (sigmetsForIcao.length === 0) return;
 
-                    // 2. === PERUBAHAN UTAMA: URUTKAN (SORT) ARRAY SIGMET ===
-                    // Urutkan array berdasarkan prioritas bahaya, dari prioritas terendah ke tertinggi.
-                    // Ini memastikan SIGMET yang kurang penting (TURB/ICE) digambar lebih dulu,
-                    // dan SIGMET yang paling penting (VA) digambar terakhir (sehingga muncul di paling atas).
                     sigmetsForIcao.sort((a, b) => {
                         const priorityA = hazardPriority[a.hazard] || hazardPriority['default'];
                         const priorityB = hazardPriority[b.hazard] || hazardPriority['default'];
-                        return priorityB - priorityA; // Mengurutkan dari besar ke kecil (angka prioritasnya)
+                        return priorityB - priorityA;
                     });
+                    
+                    // Tentukan GeoJSON FIR mana yang akan digunakan sebagai batas
+                    const relevantFirGeoJson = firIcao === 'WAAF' ? firUPG_geojson : firJakarta_geojson;
 
-                    // 3. Loop melalui array yang SUDAH TERURUT dan gambar poligon
                     sigmetsForIcao.forEach(sigmet => {
-                        const parsedPolygons = parseMultiPolygonSigmet(sigmet.rawSigmet);
-                        if (parsedPolygons.length === 0) {
-                            return; // Lanjut ke SIGMET berikutnya jika tidak ada poligon
-                        }
+                        // Kirim data FIR ke parser
+                        const parsedPolygons = parseMultiPolygonSigmet(sigmet.rawSigmet, relevantFirGeoJson);
+                        
+                        if (parsedPolygons.length === 0) return;
                         
                         const color = getSigmetColor(sigmet.hazard);
                         const sigmetId = sigmet.sigmetId ? ` ${sigmet.sigmetId}` : '';
@@ -1522,21 +1505,16 @@ function fetchSIGMET(icao) {
                 .catch(error => console.error("Error mengambil atau memproses data SIGMET:", error));
         }
 
-// =========================================================================
-// BAGIAN 3: FUNGSI UTILITAS DAN STYLING (Tidak ada perubahan)
-// =========================================================================
-/**
- * Fungsi untuk mendapatkan warna berdasarkan jenis hazard.
- */
-function getSigmetColor(hazard) {
-    switch(hazard) {
-        case 'VA': return '#0000FF';   // Biru
-        case 'TS': return '#FF0000';   // Merah
-        case 'TURB': return '#FFA500'; // Oranye
-        case 'ICE': return '#00BFFF';  // Biru muda
-        default: return 'gray';
-    }
-}
+        // Fungsi Warna SIGMET (tidak berubah)
+        function getSigmetColor(hazard) {
+            switch (hazard) {
+                case "VA": return "blue";
+                case "TURB": return "orange";
+                case "ICE": return "green";
+                case "TS": return "red";
+                default: return "purple";
+            }
+        }
 // Variabel state dan elemen UI
     const flSelectorContainer = document.getElementById('fl-selector-container');
     const flSelector = document.getElementById('fl-selector');
