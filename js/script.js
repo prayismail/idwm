@@ -1434,7 +1434,7 @@ function parseMultiPolygonSigmet(rawText, firToIntersectWith) {
 // -------------------------------------------------------------------------
 
 function fetchSIGMET(firIcao) {
-    let url = "https://api.allorigins.win/raw?url=https://aviationweather.gov/api/data/isigmet?format=json";
+    let url = "/api/sigmet";
     const hazardPriority = {'VA': 1, 'TS': 2, 'ICE': 3, 'TURB': 3, 'default': 4};
 
     fetch(url)
