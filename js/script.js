@@ -1484,13 +1484,13 @@ function fetchSIGMET(firIcao) {
             // === INI ADALAH PERBAIKAN KUNCI ===
             // Filter berdasarkan ICAO yang di-klik, dengan memeriksa DUA kemungkinan identifier
             if (firIcao === 'WIII') { // FIR Jakarta
-                console.log("Filtering for Jakarta (WSID20 or WVID20)...");
+                
                 relevantSigmets = data.filter(sigmet => 
                     sigmet.rawSigmet.includes('WSID20') || sigmet.rawSigmet.includes('WVID20')
                 );
                 firToUseForClipping = firJakarta_geojson;
             } else if (firIcao === 'WAAA') { // FIR Ujung Pandang
-                console.log("Filtering for Ujung Pandang (WSID21 or WVID21)...");
+                
                 relevantSigmets = data.filter(sigmet => 
                     sigmet.rawSigmet.includes('WSID21') || sigmet.rawSigmet.includes('WVID21')
                 );
@@ -1561,7 +1561,7 @@ function startSigmetAutoUpdate(firIcao) {
     // 2. Jika ICAO yang diklik sama dengan yang sudah aktif, tidak perlu memulai ulang.
     //    Cukup hentikan di sini. Jika berbeda, proses akan lanjut.
     if (activeFirForSigmet === firIcao) {
-        console.log(`SIGMET untuk ${firIcao} sudah aktif.`);
+        
         return;
     }
 
@@ -1579,7 +1579,7 @@ function startSigmetAutoUpdate(firIcao) {
         fetchSIGMET(activeFirForSigmet);
     }, updateIntervalMs);
     
-    console.log(`Auto-update SIGMET untuk ${firIcao} dimulai (setiap ${updateIntervalMinutes} menit).`);
+    
 }
 
 /**
@@ -1597,7 +1597,7 @@ function stopSigmetAutoUpdate() {
             }
         });
         
-        console.log("Auto-update SIGMET dihentikan dan peta dibersihkan.");
+        
     }
 }
 
