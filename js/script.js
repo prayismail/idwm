@@ -1222,29 +1222,58 @@ var airports = [
         ];
         
         var markers = {};
-        var airportLayer = L.layerGroup();
+var airportLayer = L.layerGroup();
 
-        // Tambahkan Marker untuk Setiap Bandara
-        airports.forEach(airport => {
-            var marker = L.circleMarker([airport.lat, airport.lon], {
-                radius: 7,
-                color: "black",
-                fillColor: "white",
-                fillOpacity: 0.5
-            }).bindPopup(`
-                <b>${airport.name} (${airport.code})</b><br>
-                Memuat data METAR...<br>
-                <a href='#' class="awos-link" onclick='showAWOS("${airport.code}")'>AWOS REALTIME</a>
-            `);
-            
-            markers[airport.code] = marker;
-            airportLayer.addLayer(marker);
-            
-            marker.on('click', function () {
-                fetchMETAR();
-                fetchSIGMET(airport.code);
-            });
-        });
+// Tambahkan Marker untuk Setiap Bandara
+airports.forEach(airport => {
+    var marker = L.circleMarker([airport.lat, airport.lon], {
+        radius: 7,
+        color: "black",
+        fillColor: "white",
+        fillOpacity: 0.5
+    }).bindPopup(`
+        <b>${airport.name} (${airport.code})</b><br>
+        Memuat data METAR...<br>
+        <a href='#' class="awos-link" onclick='showAWOS("${airport.code}")'>AWOS REALTIME</a>
+    `);
+    
+    markers[airport.code] = marker;
+    airportLayer.addLayer(marker);
+    
+    // === INI ADALAH BAGIAN YANG DIPERBAIKI ===
+    marker.on('click', function () {
+        // 1. Ambil data METAR (logika Anda yang sudah ada, tetap dipertahankan)
+        fetchMETAR(airport.code); // Asumsi fetchMETAR perlu kode bandara
+
+        // 2. Tentukan FIR "induk" dari bandara yang di-klik
+        let parentFirIcao;
+        
+        // Buat daftar bandara untuk setiap FIR agar lebih mudah dikelola
+        const jakartaFirAirports = ['WIII']; // Tambahkan ICAO lain di sini
+        const upgFirAirports = ['WAAA'];   // Tambahkan ICAO lain di sini
+
+        if (jakartaFirAirports.includes(airport.code)) {
+            parentFirIcao = 'WIII';
+        } else if (upgFirAirports.includes(airport.code)) {
+            parentFirIcao = 'WAAA';
+        } else {
+            // Jika bandara tidak termasuk dalam dua FIR utama, hentikan update SIGMET
+           stopSigmetAutoUpdate();
+            return; // Selesai
+        }
+
+        // 3. Panggil fungsi untuk memulai siklus update SIGMET untuk FIR induknya
+        startSigmetAutoUpdate(parentFirIcao);
+    });
+});
+
+// --- Integrasi dengan Kontrol Layer ---
+// Panggil stopSigmetAutoUpdate() saat layer bandara di-uncheck
+map.on('overlayremove', function(e) {
+    if (e.layer === airportLayer) {
+        stopSigmetAutoUpdate();
+    }
+});
 
         // Fungsi Menampilkan Popup AWOS
 function showAWOS(code) {
@@ -1322,7 +1351,9 @@ function showAWOS(code) {
 // Ambil Data SIGMET
 // BAGIAN 1: FUNGSI-FUNGSI PEMBANTU (TIDAK ADA PERUBAHAN)
 // -------------------------------------------------------------------------
-
+// --- Variabel Global untuk Mengontrol Auto-Update ---
+let sigmetUpdateInterval = null; // Menyimpan ID dari setInterval
+let activeFirForSigmet = null;  // Menyimpan ICAO dari FIR yang sedang di-update
 function parseCoordString(coordStr) {
     const coords = [];
     if (!coordStr) return coords;
@@ -1521,6 +1552,55 @@ function getSigmetColor(hazard) {
         default: return "purple";
     }
 }
+function startSigmetAutoUpdate(firIcao) {
+    // 1. Hentikan timer sebelumnya jika sedang berjalan untuk FIR lain
+    if (sigmetUpdateInterval) {
+        clearInterval(sigmetUpdateInterval);
+    }
+    
+    // 2. Jika ICAO yang diklik sama dengan yang sudah aktif, tidak perlu memulai ulang.
+    //    Cukup hentikan di sini. Jika berbeda, proses akan lanjut.
+    if (activeFirForSigmet === firIcao) {
+        console.log(`SIGMET untuk ${firIcao} sudah aktif.`);
+        return;
+    }
+
+    // 3. Simpan ICAO FIR yang baru sebagai yang aktif
+    activeFirForSigmet = firIcao;
+    
+    // 4. Jalankan fetch pertama kali secara langsung
+    fetchSIGMET(firIcao);
+    
+    // 5. Mulai timer baru untuk auto-update setiap 1 menit
+    const updateIntervalMinutes = 1;
+    const updateIntervalMs = updateIntervalMinutes * 60 * 1000;
+    
+    sigmetUpdateInterval = setInterval(() => {
+        fetchSIGMET(activeFirForSigmet);
+    }, updateIntervalMs);
+    
+    console.log(`Auto-update SIGMET untuk ${firIcao} dimulai (setiap ${updateIntervalMinutes} menit).`);
+}
+
+/**
+ * Menghentikan semua update SIGMET dan membersihkan peta.
+ */
+function stopSigmetAutoUpdate() {
+    if (sigmetUpdateInterval) {
+        clearInterval(sigmetUpdateInterval);
+        sigmetUpdateInterval = null;
+        activeFirForSigmet = null;
+        
+        map.eachLayer(layer => {
+            if (layer.options && layer.options.isSigmetPolygon) {
+                map.removeLayer(layer);
+            }
+        });
+        
+        console.log("Auto-update SIGMET dihentikan dan peta dibersihkan.");
+    }
+}
+
 // Variabel state dan elemen UI
     const flSelectorContainer = document.getElementById('fl-selector-container');
     const flSelector = document.getElementById('fl-selector');
