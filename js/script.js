@@ -1504,7 +1504,7 @@ function fetchSIGMET(firIcao) {
                 return;
             }
 
-            relevantSigmets.sort((a, b) => (hazardPriority[a.hazard] || 4) - (hazardPriority[b.hazard] || 4));
+            relevantSigmets.sort((a, b) => (hazardPriority[b.hazard] || 4) - (hazardPriority[a.hazard] || 4));
             
             relevantSigmets.forEach(sigmet => {
                 // Gunakan GeoJSON yang sudah ditentukan di atas
