@@ -1402,8 +1402,9 @@ function parseMultiPolygonSigmet(rawText, firToIntersectWith) {
     const singleLineText = rawText.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
     const polygons = [];
 
-    // Regex ini sudah kuat untuk mengenali semua jenis poligon berbasis titik
-    const pointBasedRegex = /(?:VA CLD OBS AT \d{4}Z WI|EMBD TS OBS WI|(?:SEV|MOD)?\s+(?:TURB|ICE)\s+(?:OBS|FCST)?(?:\s+AT\s+\d{4}Z)?\s+WI|AND\s+OBS\s+AT\s+\d{4}Z\s+WI)\s+(.*?)\s*(SFC\s*\/\s*F\s*L\d+|F\s*L\d+\s*\/\s*(?:F\s*L)?\d+|(?:TOP\s+)?F\s*L\d+)/gi;
+    // === PERBAIKAN 1: Regex Level yang lebih kuat di dalam Regex Utama ===
+    // Pola level sekarang lebih komprehensif: (SFC/FL..., FL.../..., TOP FL..., FL...)
+    const pointBasedRegex = /(?:VA CLD OBS AT \d{4}Z WI|EMBD TS OBS WI|(?:SEV|MOD)?\s+(?:TURB|ICE)\s+(?:OBS|FCST)?(?:\s+AT\s+\d{4}Z)?\s+WI|AND\s+OBS\s+AT\s+\d{4}Z\s+WI)\s+(.*?)\s*((?:SFC|TOP)?\s*\/?\s*FL\s*[\d\/]+)/gi;
     let match;
 
     while ((match = pointBasedRegex.exec(singleLineText)) !== null) {
@@ -1443,7 +1444,8 @@ function parseMultiPolygonSigmet(rawText, firToIntersectWith) {
             const sigmetAreaPolygon = turf.polygon([[[minLon, minLat], [maxLon, minLat], [maxLon, maxLat], [minLon, maxLat], [minLon, minLat]]]);
             const intersection = turf.intersect(firToIntersectWith, sigmetAreaPolygon);
             if (intersection) {
-                const levelMatch = singleLineText.match(/(SFC\s*\/\s*F\s*L\d+|F\s*L\d+\s*\/\s*(?:F\s*L)?\d+|(?:TOP\s+)?F\s*L\d+)/i);
+                // === PERBAIKAN 2: Regex Level yang lebih kuat sebagai fallback ===
+                const levelMatch = singleLineText.match(/((?:SFC|TOP)?\s*\/?\s*FL\s*[\d\/]+)/i);
                 const level = levelMatch ? levelMatch[0].trim().replace(/\s+/g, ' ') : 'N/A';
                 const processCoords = (coords) => coords.map(point => [point[1], point[0]]);
                 if (intersection.geometry.type === 'Polygon') {
@@ -1459,7 +1461,6 @@ function parseMultiPolygonSigmet(rawText, firToIntersectWith) {
     }
     return polygons;
 }
-
 
 // BAGIAN 3: FUNGSI FETCH UTAMA - DENGAN LOGIKA FILTER YANG DISEMPURNAKAN
 // -------------------------------------------------------------------------
