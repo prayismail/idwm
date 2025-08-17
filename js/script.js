@@ -1395,67 +1395,83 @@ function parseDescriptiveCoord(coordStr) {
 }
 
 
-// BAGIAN 2: FUNGSI PARSER UTAMA (SUDAH BENAR, TIDAK PERLU DIUBAH)
+// BAGIAN 2: FUNGSI PARSER UTAMA 
 // -------------------------------------------------------------------------
 
 function parseMultiPolygonSigmet(rawText, firToIntersectWith) {
     const singleLineText = rawText.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
     const polygons = [];
 
-    // === PERBAIKAN 1: Regex Level yang lebih kuat di dalam Regex Utama ===
-    // Pola level sekarang lebih komprehensif: (SFC/FL..., FL.../..., TOP FL..., FL...)
-    const pointBasedRegex = /(?:VA CLD OBS AT \d{4}Z WI|EMBD TS OBS WI|(?:SEV|MOD)?\s+(?:TURB|ICE)\s+(?:OBS|FCST)?(?:\s+AT\s+\d{4}Z)?\s+WI|AND\s+OBS\s+AT\s+\d{4}Z\s+WI)\s+(.*?)\s*((?:SFC|TOP)?\s*\/?\s*FL\s*[\d\/]+)/gi;
-    let match;
+    // STRATEGI 1: Cari semua segmen poligon berbasis titik dalam satu teks.
+    // Regex ini mencari semua kemunculan dari [opsional AND] [OBS/FCST] WI [koordinat dan level].
+    const sectionRegex = /(?:AND\s+)?(?:OBS|FCST)(?:\s+AT\s+\d{4}Z)?\s+WI\s+([\s\S]*?)(?=\s+AND\s+(?:OBS|FCST)|\s+INTSF=|\s+NC=|\s+MOV|FCST TO BE ISSUED|$)/gi;
+    let sectionMatch;
 
-    while ((match = pointBasedRegex.exec(singleLineText)) !== null) {
-        const coordinates = parseCoordString(match[1].trim());
-        if (coordinates.length > 2) {
-            coordinates.push(coordinates[0]);
-            polygons.push({
-                coords: coordinates,
-                level: match[2] ? match[2].trim().replace(/\s+/g, ' ') : 'N/A'
-            });
-        }
-    }
+    while ((sectionMatch = sectionRegex.exec(singleLineText)) !== null) {
+        const sectionText = sectionMatch[1].trim();
 
-    if (polygons.length === 0) {
-        const descriptiveRegex = /(?:(ENTIRE)\s+(FIR|UIR|CTA))|(?:([NSEW])\s+OF\s+([NSEW]\d+))(?:\s+AND\s+([NSEW])\s+OF\s+([NSEW]\d+))?/i;
-        const descriptiveMatch = descriptiveRegex.exec(singleLineText);
+        // Di dalam setiap segmen, ekstrak koordinat dan level
+        const contentRegex = /^(.*?)\s*((?:SFC|TOP)?\s*\/?\s*FL\s*[\d\/]+)/i;
+        const contentMatch = sectionText.match(contentRegex);
 
-        if (descriptiveMatch) {
-            if (!firToIntersectWith || !firToIntersectWith.geometry) {
-                console.error("Data GeoJSON pemotong tidak valid.", singleLineText);
-                return [];
-            }
-            let minLon = -180, minLat = -90, maxLon = 180, maxLat = 90;
-            if (!(descriptiveMatch[1] && descriptiveMatch[1].toUpperCase() === 'ENTIRE')) {
-                const processPart = (direction, coordStr) => {
-                    if (!direction || !coordStr) return;
-                    const val = parseDescriptiveCoord(coordStr);
-                    const dir = direction.toUpperCase();
-                    if (dir === 'N') minLat = val;
-                    if (dir === 'S') maxLat = val;
-                    if (dir === 'E') minLon = val;
-                    if (dir === 'W') maxLon = val;
-                };
-                processPart(descriptiveMatch[3], descriptiveMatch[4]);
-                processPart(descriptiveMatch[5], descriptiveMatch[6]);
-            }
-            const sigmetAreaPolygon = turf.polygon([[[minLon, minLat], [maxLon, minLat], [maxLon, maxLat], [minLon, maxLat], [minLon, minLat]]]);
-            const intersection = turf.intersect(firToIntersectWith, sigmetAreaPolygon);
-            if (intersection) {
-                // === PERBAIKAN 2: Regex Level yang lebih kuat sebagai fallback ===
-                const levelMatch = singleLineText.match(/((?:SFC|TOP)?\s*\/?\s*FL\s*[\d\/]+)/i);
-                const level = levelMatch ? levelMatch[0].trim().replace(/\s+/g, ' ') : 'N/A';
-                const processCoords = (coords) => coords.map(point => [point[1], point[0]]);
-                if (intersection.geometry.type === 'Polygon') {
-                    polygons.push({ coords: processCoords(intersection.geometry.coordinates[0]), level: level });
-                } else if (intersection.geometry.type === 'MultiPolygon') {
-                    intersection.geometry.coordinates.forEach(polyCoords => { polygons.push({ coords: processCoords(polyCoords[0]), level: level }); });
-                }
+        if (contentMatch) {
+            const coordStr = contentMatch[1].trim();
+            const levelStr = contentMatch[2].trim().replace(/\s+/g, ' ');
+            const coordinates = parseCoordString(coordStr);
+
+            if (coordinates.length > 2) {
+                coordinates.push(coordinates[0]); // Tutup poligon
+                polygons.push({
+                    coords: coordinates,
+                    level: levelStr
+                });
             }
         }
     }
+
+    // Jika setelah loop di atas ditemukan poligon, kita bisa langsung mengembalikannya.
+    if (polygons.length > 0) {
+        return polygons;
+    }
+
+    // STRATEGI 2 (FALLBACK): Jika tidak ada poligon titik, cari area deskriptif
+    const descriptiveRegex = /(?:(ENTIRE)\s+(FIR|UIR|CTA))|(?:([NSEW])\s+OF\s+([NSEW]\d+))(?:\s+AND\s+([NSEW])\s+OF\s+([NSEW]\d+))?/i;
+    const descriptiveMatch = descriptiveRegex.exec(singleLineText);
+    if (descriptiveMatch) {
+        if (!firToIntersectWith || !firToIntersectWith.geometry) {
+            console.error("Data GeoJSON pemotong tidak valid untuk SIGMET deskriptif.", singleLineText);
+            return [];
+        }
+
+        let minLon = -180, minLat = -90, maxLon = 180, maxLat = 90;
+        if (!(descriptiveMatch[1] && descriptiveMatch[1].toUpperCase() === 'ENTIRE')) {
+            const processPart = (direction, coordStr) => {
+                if (!direction || !coordStr) return;
+                const val = parseDescriptiveCoord(coordStr);
+                const dir = direction.toUpperCase();
+                if (dir === 'N') minLat = val; if (dir === 'S') maxLat = val;
+                if (dir === 'E') minLon = val; if (dir === 'W') maxLon = val;
+            };
+            processPart(descriptiveMatch[3], descriptiveMatch[4]);
+            processPart(descriptiveMatch[5], descriptiveMatch[6]);
+        }
+        
+        const sigmetAreaPolygon = turf.polygon([[[minLon, minLat], [maxLon, minLat], [maxLon, maxLat], [minLon, maxLat], [minLon, minLat]]]);
+        const intersection = turf.intersect(firToIntersectWith, sigmetAreaPolygon);
+
+        if (intersection) {
+            const levelMatch = singleLineText.match(/((?:SFC|TOP)?\s*\/?\s*FL\s*[\d\/]+)/i);
+            const level = levelMatch ? levelMatch[0].trim().replace(/\s+/g, ' ') : 'N/A';
+            const processCoords = (coords) => coords.map(point => [point[1], point[0]]);
+
+            if (intersection.geometry.type === 'Polygon') {
+                polygons.push({ coords: processCoords(intersection.geometry.coordinates[0]), level: level });
+            } else if (intersection.geometry.type === 'MultiPolygon') {
+                intersection.geometry.coordinates.forEach(polyCoords => { polygons.push({ coords: processCoords(polyCoords[0]), level: level }); });
+            }
+        }
+    }
+    
     if (polygons.length === 0) {
         console.warn("SIGMET ditemukan, tetapi tidak ada poligon yang bisa di-parse:", singleLineText);
     }
