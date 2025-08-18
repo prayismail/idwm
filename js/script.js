@@ -1397,22 +1397,19 @@ function parseDescriptiveCoord(coordStr) {
 
 // BAGIAN 2: FUNGSI PARSER UTAMA 
 // -------------------------------------------------------------------------
-
 function parseMultiPolygonSigmet(rawText, firToIntersectWith) {
     const singleLineText = rawText.replace(/\n|\r/g, ' ').replace(/\s+/g, ' ');
     const polygons = [];
 
-    // STRATEGI 1: Cari semua segmen poligon berbasis titik dalam satu teks.
-    // Regex ini mencari semua kemunculan dari [opsional AND] [OBS/FCST] WI [koordinat dan level].
-    const sectionRegex = /(?:AND\s+)?(?:OBS|FCST)(?:\s+AT\s+\d{4}Z)?\s+WI\s+([\s\S]*?)(?=\s+AND\s+(?:OBS|FCST)|\s+INTSF=|\s+NC=|\s+MOV|FCST TO BE ISSUED|$)/gi;
-    let sectionMatch;
+    // STRATEGI 1: Cari dan proses semua poligon berbasis titik.
+    // Membelah (split) string menjadi beberapa segmen berdasarkan penanda universal "OBS AT" atau "FCST AT".
+    // Ini akan memisahkan setiap definisi poligon, tidak peduli apa pun teks di antaranya.
+    const segments = singleLineText.split(/\s+(?:AND\s+)?(?=OBS AT|FCST AT)/i);
 
-    while ((sectionMatch = sectionRegex.exec(singleLineText)) !== null) {
-        const sectionText = sectionMatch[1].trim();
-
-        // Di dalam setiap segmen, ekstrak koordinat dan level
-        const contentRegex = /^(.*?)\s*((?:SFC|TOP)?\s*\/?\s*FL\s*[\d\/]+)/i;
-        const contentMatch = sectionText.match(contentRegex);
+    for (const segment of segments) {
+        // Regex ini sekarang hanya perlu bekerja pada segmen kecil yang bersih.
+        // Ia mencari [koordinat] dan [level] setelah kata kunci "WI".
+        const contentMatch = segment.match(/WI\s+(.*?)\s+((?:SFC|TOP)?\s*\/?\s*FL[\d\/]+)/i);
 
         if (contentMatch) {
             const coordStr = contentMatch[1].trim();
@@ -1429,7 +1426,6 @@ function parseMultiPolygonSigmet(rawText, firToIntersectWith) {
         }
     }
 
-    // Jika setelah loop di atas ditemukan poligon, kita bisa langsung mengembalikannya.
     if (polygons.length > 0) {
         return polygons;
     }
@@ -1439,10 +1435,9 @@ function parseMultiPolygonSigmet(rawText, firToIntersectWith) {
     const descriptiveMatch = descriptiveRegex.exec(singleLineText);
     if (descriptiveMatch) {
         if (!firToIntersectWith || !firToIntersectWith.geometry) {
-            console.error("Data GeoJSON pemotong tidak valid untuk SIGMET deskriptif.", singleLineText);
+            console.error("Data GeoJSON pemotong tidak valid.", singleLineText);
             return [];
         }
-
         let minLon = -180, minLat = -90, maxLon = 180, maxLat = 90;
         if (!(descriptiveMatch[1] && descriptiveMatch[1].toUpperCase() === 'ENTIRE')) {
             const processPart = (direction, coordStr) => {
@@ -1455,15 +1450,12 @@ function parseMultiPolygonSigmet(rawText, firToIntersectWith) {
             processPart(descriptiveMatch[3], descriptiveMatch[4]);
             processPart(descriptiveMatch[5], descriptiveMatch[6]);
         }
-        
         const sigmetAreaPolygon = turf.polygon([[[minLon, minLat], [maxLon, minLat], [maxLon, maxLat], [minLon, maxLat], [minLon, minLat]]]);
         const intersection = turf.intersect(firToIntersectWith, sigmetAreaPolygon);
-
         if (intersection) {
             const levelMatch = singleLineText.match(/((?:SFC|TOP)?\s*\/?\s*FL\s*[\d\/]+)/i);
             const level = levelMatch ? levelMatch[0].trim().replace(/\s+/g, ' ') : 'N/A';
             const processCoords = (coords) => coords.map(point => [point[1], point[0]]);
-
             if (intersection.geometry.type === 'Polygon') {
                 polygons.push({ coords: processCoords(intersection.geometry.coordinates[0]), level: level });
             } else if (intersection.geometry.type === 'MultiPolygon') {
@@ -1477,6 +1469,7 @@ function parseMultiPolygonSigmet(rawText, firToIntersectWith) {
     }
     return polygons;
 }
+
 
 // BAGIAN 3: FUNGSI FETCH UTAMA - DENGAN LOGIKA FILTER YANG DISEMPURNAKAN
 // -------------------------------------------------------------------------
