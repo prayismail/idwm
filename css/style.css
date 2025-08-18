@@ -45,67 +45,210 @@
         }
 /* HAPUS SEMUA CSS #va-notification dan GANTI DENGAN INI */
 
-/* ================================================= */
-/* === CSS TAMBAHAN UNTUK FITUR PREVIEW POLYGON === */
-/* ================================================= */
+/* --- 1. Ikon Notifikasi Gunung Berapi di Peta --- */
 
-/* Style untuk tombol baru "View Polygon". 
-   Anda bisa menyesuaikan warnanya agar serasi dengan tombol lain. */
-.view-polygon-btn {
-    background-color: #007bff; /* Warna biru sebagai contoh */
-    color: white;
-    /* Anda bisa menambahkan properti lain dari tombol Anda yang sudah ada agar seragam */
+/* Keyframes untuk animasi berkedip */
+@keyframes blinker {
+  50% {
+    opacity: 0.3; /* Sedikit meredup, bukan hilang total */
+  }
 }
 
-.view-polygon-btn:hover {
-    background-color: #0056b3;
+/* Style utama untuk marker gunung berapi */
+.blinking-volcano-marker {
+    /* Membuat bentuk segitiga dengan CSS borders */
+    width: 0;
+    height: 0;
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-bottom: 22px solid #ff0a0a; /* Warna merah terang */
+    
+    /* Bayangan agar ikon lebih menonjol dari peta */
+    filter: drop-shadow(0 0 3px rgba(0,0,0,0.7));
+    
+    /* Menerapkan animasi berkedip */
+    animation: blinker 1s linear infinite;
+}
+
+/* Lapisan putih di dalam segitiga untuk efek visual */
+.blinking-volcano-marker:after {
+    content: '';
+    position: absolute;
+    left: -12px; 
+    top: 0;
+    width: 0; 
+    height: 0;
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-bottom: 22px solid white;
+    transform: scale(0.6);
+    opacity: 0.7;
 }
 
 
-/* [PENTING] Style untuk label Flight Level (FLXXX) di atas poligon. 
-   Tanpa ini, label tidak akan memiliki latar belakang dan sulit dibaca. */
-.vaa-polygon-fl-label {
-    background-color: rgba(0, 0, 0, 0.7); /* Latar belakang semi-transparan */
-    color: #ffffff;                      /* Teks putih */
-    border: none;
-    box-shadow: none;
-    font-weight: bold;
-    font-size: 12px;                      /* Ukuran font */
-    padding: 2px 6px;                     /* Sedikit padding */
-    border-radius: 4px;                   /* Sudut sedikit melengkung */
-}
+/* --- 2. Konten di dalam Pop-up Notifikasi (Leaflet Popup) --- */
 
-/* ===================================================== */
-/* === PENYESUAIAN KECIL PADA CSS ANDA YANG ADA (OPSIONAL) === */
-/* ===================================================== */
-
-/* Kode JavaScript menggunakan CLASS "vaa-popup-buttons", bukan ID.
-   Sebaiknya ubah selector CSS Anda dari '#' menjadi '.' agar cocok. */
-.vaa-popup-buttons { /* Diubah dari #vaa-popup-buttons */
+/* Kontainer utama untuk tombol-tombol aksi di dalam popup */
+.vaa-popup-buttons {
+    margin-top: 12px;
     display: flex;
-    justify-content: flex-start; /* 'flex-start' atau 'center' mungkin lebih baik untuk banyak tombol */
     gap: 8px; /* Jarak antar tombol */
-    margin-top: 10px;
-    flex-wrap: wrap; /* Agar tombol turun jika layar sempit */
+    flex-wrap: wrap; /* Tombol akan turun ke baris baru jika tidak muat */
+    justify-content: flex-start; /* Rata kiri */
 }
 
-/* Berikan style dasar untuk semua tombol di dalam popup Leaflet */
-.leaflet-popup-content .vaa-popup-buttons button {
+/* Style dasar untuk SEMUA tombol di dalam popup VAA */
+.vaa-popup-buttons button {
     border: none;
-    padding: 6px 12px;
-    border-radius: 4px;
+    padding: 8px 12px;
+    border-radius: 5px;
     cursor: pointer;
     color: white;
     font-weight: bold;
     font-size: 12px;
+    transition: background-color 0.2s ease;
 }
 
-/* Contoh warna untuk tombol lain agar seragam */
-.leaflet-popup-content .vaa-popup-buttons .sigmet-btn {
+/* Warna spesifik untuk setiap tombol */
+.vaa-popup-buttons .download-btn { /* Disarankan menambah class 'download-btn' di JS */
+    background-color: #5c6bc0; /* Indigo */
+}
+.vaa-popup-buttons .download-btn:hover {
+    background-color: #3f51b5;
+}
+
+.vaa-popup-buttons .view-polygon-btn {
+    background-color: #007bff; /* Biru */
+}
+.vaa-popup-buttons .view-polygon-btn:hover {
+    background-color: #0056b3;
+}
+
+.vaa-popup-buttons .sigmet-btn {
     background-color: #28a745; /* Hijau */
 }
-.leaflet-popup-content .vaa-popup-buttons .sigmet-btn:hover {
+.vaa-popup-buttons .sigmet-btn:hover {
     background-color: #218838;
+}
+
+
+/* Kontainer untuk output SIGMET yang muncul setelah tombol diklik */
+.sigmet-output-container {
+    margin-top: 15px;
+}
+
+/* Textarea untuk menampilkan teks SIGMET */
+.sigmet-output-container textarea {
+    width: 100%;
+    box-sizing: border-box; /* Agar padding tidak merusak layout */
+    background-color: #2e2e2e;
+    color: #f0f0f0;
+    font-family: 'Courier New', Courier, monospace;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 8px;
+}
+
+/* Tombol "Salin Teks" di bawah textarea */
+.sigmet-output-container button {
+    width: 100%;
+    padding: 8px;
+    background-color: #6c757d; /* Abu-abu */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+.sigmet-output-container button:hover {
+    background-color: #5a6268;
+}
+
+
+/* --- 3. Preview Poligon Abu Vulkanik --- */
+
+/* Style untuk label Flight Level (FLXXX) di atas poligon */
+.vaa-polygon-fl-label {
+    background-color: rgba(0, 0, 0, 0.75); /* Latar belakang semi-transparan */
+    color: #ffffff;
+    border: none;
+    box-shadow: none;
+    font-weight: bold;
+    font-size: 12px;
+    padding: 3px 7px; /* Sedikit padding */
+    border-radius: 4px;
+}
+
+
+/* --- 4. Panel Status Debug --- */
+
+#va-debug-status {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-family: monospace;
+    font-size: 11px;
+    z-index: 9999; /* Pastikan di atas layer peta */
+    opacity: 0; /* Awalnya transparan */
+    transition: opacity 0.5s ease-in-out;
+    pointer-events: none; /* Agar tidak bisa diklik */
+}
+
+#va-debug-status.visible {
+    opacity: 1; /* Tampilkan saat layer VAA aktif */
+}
+
+/* --- 5. (Opsional) Style untuk Pop-up Modal Full-Screen --- */
+/* Catatan: Kode JavaScript yang diberikan menggunakan pop-up bawaan Leaflet, 
+   bukan modal full-screen ini. Anda bisa menyimpan atau menghapusnya
+   tergantung pada apakah Anda menggunakannya di bagian lain. */
+
+#vaa-popup-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 10000;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+#vaa-popup-content {
+    background: white;
+    padding: 20px 25px;
+    border-radius: 10px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    width: 100%;
+    max-width: 600px;
+    text-align: center;
+}
+
+#vaa-text-display {
+    background-color: #f4f4f4;
+    border: 1px solid #ddd;
+    padding: 15px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    text-align: left;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 50vh;
+    overflow-y: auto;
+    margin: 15px 0;
+}
+
+#vaa-popup-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 15px;
 }
 
 /* Style untuk overlay cropping */
