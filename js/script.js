@@ -2187,6 +2187,8 @@ let searchMarker;
 
 // --- Deklarasi Variabel Global ---
 var vaAdvisoryLayer = L.layerGroup();
+// --- BARU: Layer khusus untuk preview poligon ---
+var vaaPolygonPreviewLayer = L.layerGroup();
 let vaaCheckerInterval = null;
 let lastAdvisoryData = null;
 let isFirstCheck = true;
@@ -2216,37 +2218,25 @@ async function fetchLatestVAA() {
 /**
  * 2. Mengurai teks VAA untuk info peta (nama & posisi gunung).
  */
-/**
- * 2. Mengurai teks VAA untuk info peta (nama & posisi gunung). (VERSI DIPERBAIKI)
- */
 function parseVaaForMapInfo(vaaFullText) {
-    // Bersihkan teks dari karakter carriage return (\r)
     const cleanText = vaaFullText.replace(/\r/g, '');
-
     try {
         const volcanoMatch = cleanText.match(/VOLCANO:\s*([\w\s-]+?)\s+\d+/i);
-        
-        // Regex ini sekarang lebih toleran terhadap spasi antara bagian-bagian PSN
         const psnMatch = cleanText.match(/PSN:\s*(S|N)(\d{2})(\d{2})\s*(E|W)(\d{3})(\d{2})/i);
-
         if (!volcanoMatch || !psnMatch) {
             console.error("[Map Info Parser] Gagal mem-parsing nama atau posisi gunung dari teks VAA.");
             return null;
         }
-
         const volcanoName = volcanoMatch[1].trim();
-        
-        // Konversi koordinat dari format Derajat-Menit ke Desimal (logika ini tetap sama)
         const [, latDir, latDeg, latMin, lonDir, lonDeg, lonMin] = psnMatch;
         let lat = parseInt(latDeg) + (parseInt(latMin) / 60);
         if (latDir.toUpperCase() === 'S') lat = -lat;
         let lon = parseInt(lonDeg) + (parseInt(lonMin) / 60);
         if (lonDir.toUpperCase() === 'W') lon = -lon;
-        
-        return { 
-            volcanoName: volcanoName, 
+        return {
+            volcanoName: volcanoName,
             lat: lat.toFixed(4),
-            lon: lon.toFixed(4) 
+            lon: lon.toFixed(4)
         };
     } catch (error) {
         console.error("[Map Info Parser] Error saat parsing VAA untuk info peta:", error);
@@ -2254,51 +2244,108 @@ function parseVaaForMapInfo(vaaFullText) {
     }
 }
 
-    /**
- * 3. Membuat string SIGMET WV dari teks VAA.
+
+/**
+ * --- BARU ---
+ * Fungsi spesifik untuk mem-parsing VAA dan mengembalikan data poligon untuk digambar di peta.
+ * Mengembalikan array of objects, contoh: [{ flightLevel: "350", coordinates: [[lat,lon], [lat,lon],...] }, ...]
  */
-function generateSigmet(vaaFullText) {
-    // Bersihkan teks dari karakter carriage return (\r) yang sering jadi masalah
+function parseVaaForPolygons(vaaFullText) {
     const cleanText = vaaFullText.replace(/\r/g, '');
 
+    // Helper function untuk konversi format S0815 atau E11257 ke desimal
+    function convertCoordToDecimal(coordStr) {
+        if (!coordStr) return null;
+        const coordMatch = coordStr.match(/([NS])(\d{2})(\d{2})|([EW])(\d{3})(\d{2})/);
+        if (!coordMatch) return null;
+
+        if (coordMatch[1]) { // Latitude
+            let lat = parseInt(coordMatch[2]) + (parseInt(coordMatch[3]) / 60);
+            return coordMatch[1].toUpperCase() === 'S' ? -lat : lat;
+        } else { // Longitude
+            let lon = parseInt(coordMatch[5]) + (parseInt(coordMatch[6]) / 60);
+            return coordMatch[4].toUpperCase() === 'W' ? -lon : lon;
+        }
+    }
+
+    try {
+        const ashCloudBlockMatch = cleanText.match(/(?:OBS|EST) VA CLD:([\s\S]*?)(?=FCST VA CLD|RMK:|NXT ADVISORY:)/i);
+        if (!ashCloudBlockMatch) {
+            console.error("[Polygon Parser] Blok 'OBS/EST VA CLD' tidak ditemukan.");
+            return [];
+        }
+
+        const ashCloudBlock = ashCloudBlockMatch[1];
+        const cloudChunks = ashCloudBlock.split(/SFC\/FL/).filter(chunk => chunk.trim() !== '');
+        
+        if (cloudChunks.length === 0) {
+             console.error("[Polygon Parser] Tidak ada deskripsi awan abu (SFC/FL) di dalam blok.");
+            return [];
+        }
+
+        const polygonsData = cloudChunks.map(chunk => {
+            const flMatch = chunk.match(/^\s*(\d{3})\s*/);
+            if (!flMatch) return null;
+
+            const flightLevel = flMatch[1];
+            const coordsString = chunk.split(/\s+MOV\s+/i)[0].substring(flMatch[0].length)
+                                     .replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+            
+            const coordinates = coordsString.split(' - ').map(pointStr => {
+                const parts = pointStr.trim().split(' ');
+                if (parts.length !== 2) return null;
+                const lat = convertCoordToDecimal(parts[0]);
+                const lon = convertCoordToDecimal(parts[1]);
+                return (lat !== null && lon !== null) ? [lat, lon] : null;
+            }).filter(Boolean); // Filter out any null results from bad parsing
+
+            // VAA polygon description doesn't always close the loop, Leaflet does this automatically.
+            return { flightLevel, coordinates };
+
+        }).filter(Boolean); // Filter out any null chunks
+
+        return polygonsData;
+
+    } catch (error) {
+        console.error("[Polygon Parser] Error saat parsing VAA untuk poligon:", error);
+        return [];
+    }
+}
+
+
+/**
+ * 3. Membuat string SIGMET WV dari teks VAA. (Tidak ada perubahan di fungsi ini)
+ */
+function generateSigmet(vaaFullText) {
+    const cleanText = vaaFullText.replace(/\r/g, '');
     try {
         const extract = (regex) => (cleanText.match(regex) || [])[1]?.trim() || null;
         const extractGroup = (regex) => (cleanText.match(regex) || []);
-
-        // --- Bagian 1: Ekstraksi Informasi Umum (Tidak berubah) ---
         const headerMatch = extractGroup(/FVAU\d{2}\s*ADRM\s*(\d{2})(\d{2})(\d{2})/i);
         const headerDay = headerMatch[1] || null;
         const headerHHMM = headerMatch[2] && headerMatch[3] ? `${headerMatch[2]}${headerMatch[3]}` : null;
         const publicationTime = headerDay && headerHHMM ? `${headerDay}${headerHHMM}` : null;
         const validStartTime = publicationTime;
-
         const nxtAdvisoryMatch = extractGroup(/NXT ADVISORY:[\s\S]*?(\d{2})?\/?(\d{4,6}Z)/i);
-        const nxtDay = nxtAdvisoryMatch[1] || headerDay; 
+        const nxtDay = nxtAdvisoryMatch[1] || headerDay;
         const nxtTime = nxtAdvisoryMatch[2]?.match(/(\d{4})Z/)?.[1] || null;
         const validEndTime = nxtDay && nxtTime ? `${nxtDay}${nxtTime}` : null;
-        
         const volcano = extract(/VOLCANO:\s*([\w\s-]+?)\s+\d+/i);
         const position = extract(/PSN:\s*([NS]\d{4}\s*E\d{5})/i);
         const obsTime = extract(/(?:OBS|EST)\s*VA\s*DTG:\s*\d{2}\/(\d{4}Z)/i);
-
         if (!publicationTime || !validStartTime || !validEndTime || !volcano || !position || !obsTime) {
             console.error("[SIGMET Generator] Gagal parsing informasi umum.");
             return "Error: Gagal mem-parsing header atau informasi umum VAA.";
         }
-
-        // --- Bagian 2: Logika Parsing Multipoligon (Tidak berubah, sudah solid) ---
         const ashCloudBlockMatch = cleanText.match(/(?:OBS|EST) VA CLD:([\s\S]*?)(?=FCST VA CLD|RMK:|NXT ADVISORY:)/i);
         if (!ashCloudBlockMatch) {
             return "Error: Tidak dapat menemukan blok 'EST VA CLD' pada VAA.";
         }
-        
         const ashCloudBlock = ashCloudBlockMatch[1];
         const cloudChunks = ashCloudBlock.split(/SFC\/FL/).filter(chunk => chunk.trim() !== '');
-
         if (cloudChunks.length === 0) {
             return "Error: Blok 'EST VA CLD' ditemukan, tetapi tidak ada deskripsi awan abu (SFC/FL).";
         }
-        
         const parsedClouds = cloudChunks.map(chunk => {
             const chunkContent = chunk.trim();
             const movParts = chunkContent.split(/\s+MOV\s+/i);
@@ -2312,88 +2359,77 @@ function generateSigmet(vaaFullText) {
             if (firstCoord && !coords.endsWith(firstCoord)) {
                 coords += ` - ${firstCoord}`;
             }
-            return { flightLevel, coords, movementStr };
+            return {
+                flightLevel,
+                coords,
+                movementStr
+            };
         }).filter(Boolean);
-
         if (parsedClouds.length === 0) {
             return "Error: Gagal mem-parsing detail awan abu dari blok 'EST VA CLD'.";
         }
-        
-        // --- Bagian 3: Merakit String SIGMET dengan Logika INTENSITY yang Benar ---
         const sigmetHeader = `WVID21 WAAA ${publicationTime}\nWAAF SIGMET XX VALID ${validStartTime}/${validEndTime} WAAA-\nWAAF UJUNG PANDANG FIR VA ERUPTION MT ${volcano} PSN ${position}\n`;
-
-        // Rakit deskripsi fenomena dengan logika baru
         const phenomenonDescription = parsedClouds.map((cloud, index) => {
-            const prefix = (index === 0) 
-                ? `VA CLD OBS AT ${obsTime} WI ` 
-                : `AND OBS AT ${obsTime} WI `;
-
-            // Bangun segmen lengkap untuk satu awan abu
+            const prefix = (index === 0) ?
+                `VA CLD OBS AT ${obsTime} WI ` :
+                `AND OBS AT ${obsTime} WI `;
             const segment = `${prefix}${cloud.coords}\nSFC/FL${cloud.flightLevel} ${cloud.movementStr}`;
-            
-            // Tambahkan "NC" setelah setiap segmen.
-            // Jika ini segmen terakhir, tambahkan "=" setelah "NC".
             if (index === parsedClouds.length - 1) {
-                return `${segment} NC=`; // Untuk segmen terakhir
+                return `${segment} NC=`;
             } else {
-                return `${segment} NC`; // Untuk semua segmen lainnya
+                return `${segment} NC`;
             }
-        }).join(' '); // Gabungkan semua segmen yang telah jadi dengan spasi
-
-        // Gabungkan header dengan deskripsi yang sudah final
+        }).join(' ');
         return `${sigmetHeader}${phenomenonDescription}`;
-
     } catch (error) {
         console.error("[SIGMET Generator] Terjadi error internal:", error);
         return `Terjadi error internal saat membuat SIGMET.\n\nDetail: ${error.message}`;
     }
 }
+
 /**
  * 4. Fungsi utama untuk menampilkan notifikasi di peta.
- * (VERSI FINAL LENGKAP)
+ * (VERSI FINAL LENGKAP DENGAN TOMBOL VIEW POLYGON)
  */
 function showVaaNotificationOnMap(vaaData) {
-    // Verifikasi data yang diterima dari backend untuk debugging
     console.log("[VAA] Data diterima oleh Frontend");
-
     const mapInfo = parseVaaForMapInfo(vaaData.fullText);
     if (!mapInfo) {
         alert("Gagal memproses lokasi gunung dari VAA terbaru. Cek console untuk detail.");
         return;
     }
 
-    // Bersihkan notifikasi lama dan siapkan elemen
     vaAdvisoryLayer.clearLayers();
+    // --- MODIFIKASI: Bersihkan juga layer preview poligon sebelumnya ---
+    vaaPolygonPreviewLayer.clearLayers();
+
     const alertSound = document.getElementById('vaa-alert-sound');
     const volcanoIcon = L.divIcon({ className: 'blinking-volcano-marker', iconSize: [24, 24], iconAnchor: [12, 22] });
     const volcanoMarker = L.marker([mapInfo.lat, mapInfo.lon], { icon: volcanoIcon });
     
-    // --- MEMBANGUN KONTEN POP-UP SECARA DINAMIS ---
-    
-    // 1. Buat container utama untuk semua konten di dalam pop-up
     const popupContainer = document.createElement('div');
     popupContainer.innerHTML = `<b>🚨 VA Advisory Baru! 🚨</b><br><b>Gunung:</b> ${mapInfo.volcanoName}<br><b>Posisi:</b> ${mapInfo.lat}, ${mapInfo.lon}`;
     
-    // 2. Buat container untuk tombol-tombol aksi
     const buttonContainer = document.createElement('div');
     buttonContainer.className = 'vaa-popup-buttons';
     
-    // Tombol "Unduh" gabungan
     const downloadBtn = document.createElement('button');
     downloadBtn.innerText = vaaData.imageBase64 ? 'Unduh (Txt+Png)' : 'Unduh (.txt)';
     buttonContainer.appendChild(downloadBtn);
 
-    // Tombol "Buat SIGMET"
+    // --- BARU: Membuat tombol "View Polygon" ---
+    const viewPolygonBtn = document.createElement('button');
+    viewPolygonBtn.innerText = 'View Polygon';
+    viewPolygonBtn.className = 'view-polygon-btn'; // Tambahkan class untuk styling jika perlu
+    buttonContainer.appendChild(viewPolygonBtn);
+
     const generateSigmetBtn = document.createElement('button');
     generateSigmetBtn.innerText = 'Buat SIGMET';
     generateSigmetBtn.className = 'sigmet-btn';
     buttonContainer.appendChild(generateSigmetBtn);
     
-    // 3. Atur logika onclick untuk tombol "Unduh"
     downloadBtn.onclick = function() {
         console.log("[VAA] Tombol Unduh Gabungan diklik.");
-        
-        // Aksi 1: Selalu unduh file .txt
         try {
             const blob = new Blob([vaaData.fullText], { type: 'text/plain' });
             const txtUrl = URL.createObjectURL(blob);
@@ -2402,11 +2438,8 @@ function showVaaNotificationOnMap(vaaData) {
             txtLink.download = `VAA_${vaaData.advisoryNumber}.txt`;
             txtLink.click();
             URL.revokeObjectURL(txtUrl);
-        } catch (e) {
-            console.error("[VAA] Gagal mengunduh file TXT:", e);
-        }
+        } catch (e) { console.error("[VAA] Gagal mengunduh file TXT:", e); }
 
-        // Aksi 2: Jika ada data Base64, unduh juga file .png
         if (vaaData.imageBase64) {
             setTimeout(() => {
                 try {
@@ -2414,30 +2447,61 @@ function showVaaNotificationOnMap(vaaData) {
                     pngLink.href = vaaData.imageBase64;
                     pngLink.download = `VAA_MAP_${vaaData.advisoryNumber}.png`;
                     pngLink.click();
-                } catch (e) {
-                    console.error("[VAA] Gagal mengunduh file PNG dari Base64:", e);
-                }
+                } catch (e) { console.error("[VAA] Gagal mengunduh file PNG dari Base64:", e); }
             }, 100);
         }
     };
     
-    // 4. Buat container untuk output SIGMET (awalnya tersembunyi)
     const sigmetContainer = document.createElement('div');
     sigmetContainer.className = 'sigmet-output-container';
     sigmetContainer.style.display = 'none';
     sigmetContainer.innerHTML = `<textarea readonly rows="8"></textarea><button>Salin Teks SIGMET</button>`;
 
-    // 5. Atur logika onclick untuk tombol "Buat SIGMET"
+    // --- BARU: Logika untuk tombol "View Polygon" ---
+    viewPolygonBtn.onclick = () => {
+        // Hapus preview lama sebelum menampilkan yang baru
+        vaaPolygonPreviewLayer.clearLayers();
+
+        const polygons = parseVaaForPolygons(vaaData.fullText);
+        if (polygons.length > 0) {
+            polygons.forEach(polyData => {
+                if (polyData.coordinates.length > 1) {
+                    const polygon = L.polygon(polyData.coordinates, {
+                        color: '#ff4000', // Warna oranye-merah
+                        weight: 2,
+                        opacity: 0.8,
+                        fillOpacity: 0.3
+                    }).addTo(vaaPolygonPreviewLayer);
+
+                    // Tambahkan tooltip yang menunjukkan Flight Level
+                    polygon.bindTooltip(`SFC/FL${polyData.flightLevel}`, {
+                        permanent: true, // Selalu tampil
+                        direction: 'center',
+                        className: 'vaa-polygon-fl-label' // Class untuk styling
+                    }).openTooltip();
+                }
+            });
+            // Sembunyikan tombol setelah diklik untuk menghindari klik ganda
+            viewPolygonBtn.style.display = 'none'; 
+        } else {
+            alert("Tidak dapat menemukan data poligon yang valid di dalam VAA.");
+        }
+    };
+
+    // --- MODIFIKASI: Logika tombol "Buat SIGMET" ditambahkan cleanup ---
     generateSigmetBtn.onclick = () => {
+        // --- BARU: Sembunyikan layer preview saat SIGMET dibuat ---
+        vaaPolygonPreviewLayer.clearLayers();
+        
         const sigmetText = generateSigmet(vaaData.fullText);
         const textarea = sigmetContainer.querySelector('textarea');
         textarea.value = sigmetText;
         sigmetContainer.style.display = 'block';
         generateSigmetBtn.style.display = 'none';
+        viewPolygonBtn.style.display = 'none'; // Sembunyikan juga tombol view polygon
         volcanoMarker.getPopup().update();
     };
     
-    // 6. Atur logika onclick untuk tombol "Salin Teks SIGMET"
     sigmetContainer.querySelector('button').onclick = () => {
         const textarea = sigmetContainer.querySelector('textarea');
         navigator.clipboard.writeText(textarea.value).then(() => {
@@ -2447,16 +2511,15 @@ function showVaaNotificationOnMap(vaaData) {
         });
     };
 
-    // 7. Gabungkan semua elemen ke dalam container pop-up utama
     popupContainer.appendChild(buttonContainer);
     popupContainer.appendChild(sigmetContainer);
 
-    // --- SELESAI MEMBUAT KONTEN POP-UP ---
-
-    // 8. Ikat pop-up ke marker, tampilkan, dan mulai alarm
-    volcanoMarker.bindPopup(popupContainer, { minWidth: 280 });
+    volcanoMarker.bindPopup(popupContainer, { minWidth: 320 }); // Lebarkan sedikit pop-up
     vaAdvisoryLayer.addLayer(volcanoMarker);
     vaAdvisoryLayer.addTo(map);
+
+    // --- BARU: Tambahkan layer preview ke peta ---
+    vaaPolygonPreviewLayer.addTo(map);
 
     map.panTo([mapInfo.lat, mapInfo.lon]);
     volcanoMarker.openPopup();
@@ -2464,7 +2527,7 @@ function showVaaNotificationOnMap(vaaData) {
         alertSound.play().catch(e => console.warn("[VAA] Autoplay suara diblokir oleh browser.", e));
     }
 
-    // 9. Atur event saat pop-up ditutup untuk menghentikan alarm
+    // --- MODIFIKASI: Event saat pop-up ditutup ditambahkan cleanup ---
     volcanoMarker.on('popupclose', () => {
         console.log("[VAA] Pop-up ditutup, alarm dihentikan.");
         if (alertSound) {
@@ -2472,6 +2535,8 @@ function showVaaNotificationOnMap(vaaData) {
             alertSound.currentTime = 0;
         }
         vaAdvisoryLayer.clearLayers();
+        // --- BARU: Hapus juga poligon preview saat pop-up ditutup ---
+        vaaPolygonPreviewLayer.clearLayers();
     });
 }
 /**
@@ -2526,6 +2591,8 @@ document.addEventListener('DOMContentLoaded', function() {
             clearInterval(vaaCheckerInterval);
             vaaCheckerInterval = null;
             vaAdvisoryLayer.clearLayers();
+            // --- BARU: Pastikan layer preview juga bersih saat fitur dinonaktifkan ---
+            vaaPolygonPreviewLayer.clearLayers();
             const alertSound = document.getElementById('vaa-alert-sound');
             if (alertSound) { alertSound.pause(); alertSound.currentTime = 0; }
             console.log("[VAA] Notifier dinonaktifkan.");
@@ -2540,4 +2607,3 @@ function updateDebugStatus(message, isError = false) {
     }
 }
 // ========================= AKHIR KODE VAA =========================
-
