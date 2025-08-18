@@ -2415,6 +2415,7 @@ function showVaaNotificationOnMap(vaaData) {
     
     const downloadBtn = document.createElement('button');
     downloadBtn.innerText = vaaData.imageBase64 ? 'Unduh (Txt+Png)' : 'Unduh (.txt)';
+	downloadBtn.className = 'download-btn';
     buttonContainer.appendChild(downloadBtn);
 
     // --- BARU: Membuat tombol "View Polygon" ---
