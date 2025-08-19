@@ -42,7 +42,7 @@ export default async function handler(req, res) {
     // Vercel akan menangani header CORS secara otomatis.
     // Untuk kontrol lebih, Anda bisa set header cache di sini jika diperlukan.
     // Contoh: cache selama 5 menit
-    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');
+    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=300');
 
     console.log(`[Proxy SIGMET] Berhasil mengambil dan mengirim data SIGMET.`);
     res.status(200).json(data);
