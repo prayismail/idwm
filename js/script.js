@@ -1562,54 +1562,6 @@ function getSigmetColor(hazard) {
         default: return "purple";
     }
 }
-function startSigmetAutoUpdate(firIcao) {
-    // 1. Hentikan timer sebelumnya jika sedang berjalan untuk FIR lain
-    if (sigmetUpdateInterval) {
-        clearInterval(sigmetUpdateInterval);
-    }
-    
-    // 2. Jika ICAO yang diklik sama dengan yang sudah aktif, tidak perlu memulai ulang.
-    //    Cukup hentikan di sini. Jika berbeda, proses akan lanjut.
-    if (activeFirForSigmet === firIcao) {
-        
-        return;
-    }
-
-    // 3. Simpan ICAO FIR yang baru sebagai yang aktif
-    activeFirForSigmet = firIcao;
-    
-    // 4. Jalankan fetch pertama kali secara langsung
-    fetchSIGMET(firIcao);
-    
-    // 5. Mulai timer baru untuk auto-update setiap 1 menit
-    const updateIntervalMinutes = 1;
-    const updateIntervalMs = updateIntervalMinutes * 60 * 1000;
-    
-    sigmetUpdateInterval = setInterval(() => {
-        fetchSIGMET(activeFirForSigmet);
-    }, updateIntervalMs);
-    
-    
-}
-
-/**
- * Menghentikan semua update SIGMET dan membersihkan peta.
- */
-function stopSigmetAutoUpdate() {
-    if (sigmetUpdateInterval) {
-        clearInterval(sigmetUpdateInterval);
-        sigmetUpdateInterval = null;
-        activeFirForSigmet = null;
-        
-        map.eachLayer(layer => {
-            if (layer.options && layer.options.isSigmetPolygon) {
-                map.removeLayer(layer);
-            }
-        });
-        
-        
-    }
-}
 
 // Variabel state dan elemen UI
     const flSelectorContainer = document.getElementById('fl-selector-container');
