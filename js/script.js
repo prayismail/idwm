@@ -1236,44 +1236,37 @@ airports.forEach(airport => {
         Memuat data METAR...<br>
         <a href='#' class="awos-link" onclick='showAWOS("${airport.code}")'>AWOS REALTIME</a>
     `);
-    
     markers[airport.code] = marker;
-    airportLayer.addLayer(marker);
-    
-    // === INI ADALAH BAGIAN YANG DIPERBAIKI ===
-    marker.on('click', function () {
-        // 1. Ambil data METAR (logika Anda yang sudah ada, tetap dipertahankan)
-        fetchMETAR(airport.code); // Asumsi fetchMETAR perlu kode bandara
+            airportLayer.addLayer(marker);
+            
+            marker.on('click', function () {
+                fetchMETAR();
+                fetchSIGMET(airport.code);
+            });
+        });
+    function fetchSIGMET(icao) {
+            let url = "/api/sigmet";
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    // Hapus SIGMET lama
+                    map.eachLayer(layer => {
+                        if (layer instanceof L.Polygon) {
+                            map.removeLayer(layer);
+                        }
+                    });
 
-        // 2. Tentukan FIR "induk" dari bandara yang di-klik
-        let parentFirIcao;
-        
-        // Buat daftar bandara untuk setiap FIR agar lebih mudah dikelola
-        const jakartaFirAirports = ['WIII']; // Tambahkan ICAO lain di sini
-        const upgFirAirports = ['WAAA'];   // Tambahkan ICAO lain di sini
-
-        if (jakartaFirAirports.includes(airport.code)) {
-            parentFirIcao = 'WIII';
-        } else if (upgFirAirports.includes(airport.code)) {
-            parentFirIcao = 'WAAA';
-        } else {
-            // Jika bandara tidak termasuk dalam dua FIR utama, hentikan update SIGMET
-           stopSigmetAutoUpdate();
-            return; // Selesai
+                    let sigmets = data.filter(sigmet => sigmet.icaoId === icao);
+                    sigmets.forEach(sigmet => {
+                        let coords = sigmet.coords.map(coord => [coord.lat, coord.lon]);
+                        let color = getSigmetColor(sigmet.hazard);
+                        L.polygon(coords, { color: color }).addTo(map)
+                            .bindPopup(`<b>SIGMET:</b> ${sigmet.rawSigmet}`);
+                    });
+                })
+                .catch(error => console.error("Error mengambil data SIGMET:", error));
         }
 
-        // 3. Panggil fungsi untuk memulai siklus update SIGMET untuk FIR induknya
-        startSigmetAutoUpdate(parentFirIcao);
-    });
-});
-
-// --- Integrasi dengan Kontrol Layer ---
-// Panggil stopSigmetAutoUpdate() saat layer bandara di-uncheck
-map.on('overlayremove', function(e) {
-    if (e.layer === airportLayer) {
-        stopSigmetAutoUpdate();
-    }
-});
 
         // Fungsi Menampilkan Popup AWOS
 function showAWOS(code) {
@@ -1311,6 +1304,7 @@ function showAWOS(code) {
                 })
                 .catch(error => console.error("Gagal mengambil data METAR", error));
         }
+
 // Data poligon FIR UPG (WAAF)
     var firUPG_geojson = {
         "type": "Feature",
