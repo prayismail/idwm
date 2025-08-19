@@ -43,9 +43,9 @@ export default async function handler(req, res) {
 
     const metarText = await apiResponse.text();
 
-    // Set header Cache-Control, misalnya cache selama 2 menit
+    // Set header Cache-Control, misalnya cache selama 5 menit
     // met.no biasanya memiliki data yang sering update
-    res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate');
+    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=300');
     // Set Content-Type ke text/plain karena itu yang dikembalikan
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
 
