@@ -2138,7 +2138,7 @@ var vaaPolygonPreviewLayer = L.layerGroup();
 let vaaCheckerInterval = null;
 let lastAdvisoryData = null;
 let isFirstCheck = true;
-const vaacApiUrl = '/api/check-vaac';
+const vaacApiUrl = 'https://idwm-vaac.vercel.app/api/check-vaac';
 const debugStatusElement = document.getElementById('va-debug-status');
 
 // --- Fungsi Helper ---
