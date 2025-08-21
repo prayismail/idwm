@@ -1,36 +1,10 @@
-// LANGKAH 2: Definisikan sistem koordinat (CRS) EPSG:4326
-    // Ini memberitahu Proj4Leaflet cara kerja proyeksi geografis standar.
-    const crs = new L.Proj.CRS('EPSG:4326',
-        '+proj=longlat +datum=WGS84 +no_defs', // Definisi proyeksi
-        {
-            origin: [-180, 90], // Titik awal grid tile [bujur, lintang]
-            // Resolusi untuk setiap level zoom, ini penting agar skala peta benar
-            resolutions: [
-                0.5625, 0.28125, 0.140625, 0.0703125, 0.03515625, 0.017578125,
-                0.0087890625, 0.00439453125, 0.002197265625, 0.0010986328125,
-                0.00054931640625, 0.000274658203125, 0.0001373291015625
-            ]
-        }
-    );
-//var map = L.map('map', { crs: crs, center: [-2.5, 118], zoom: 5, attributionControl: false });
-// Inisialisasi Peta dengan CRS yang baru
+
+var map = L.map('map', { crs: crs, center: [-2.5, 118], zoom: 5, attributionControl: false });
+// Inisialisasi Peta dengan CRS
     const map = L.map('map', {
-        crs: crs
-    }).setView([-2.5, 118.0], 5);
+         }).setView([-2.5, 118.0], 5);
 
-    // =======================================================
-    //          SOLUSI: GUNAKAN BASEMAP WMS YANG KOMPATIBEL
-    // =======================================================
-     // Peta Dasar WMS (Basemap)
-    const baseLayer = L.tileLayer.wms('https://ows.mundialis.de/services/service?', {
-        layers: 'OSM-WMS',
-        format: 'image/png',
-        transparent: true,
-        //attribution: 'Peta Dasar &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Mundialis',
-        // --- SOLUSI DI SINI: Atur zIndex ke angka rendah ---
-        zIndex: 1     }).addTo(map);  
-
-L.control.attribution({ position: 'bottomright' }).addAttribution('Proposed by <a href="https://mail.google.com/mail/?view=cm&fs=1&to=prayoga.ismail@bmkg.go.id" target="_blank">Prayoga Ismail</a>').addTo(map);
+   L.control.attribution({ position: 'bottomright' }).addAttribution('Proposed by <a href="https://mail.google.com/mail/?view=cm&fs=1&to=prayoga.ismail@bmkg.go.id" target="_blank">Prayoga Ismail</a>').addTo(map);
         document.getElementById("legend").style.display = "none";
 document.getElementById("webmap-title").addEventListener("click", function() {
     location.reload(); });
