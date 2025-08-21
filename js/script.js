@@ -2138,7 +2138,7 @@ var vaaPolygonPreviewLayer = L.layerGroup();
 let vaaCheckerInterval = null;
 let lastAdvisoryData = null;
 let isFirstCheck = true;
-const vaacApiUrl = '/check-vaac';
+const vaacApiUrl = '/api/check-vaac';
 const debugStatusElement = document.getElementById('va-debug-status');
 
 // --- Fungsi Helper ---
