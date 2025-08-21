@@ -872,8 +872,9 @@ updateWVSatellite();
 updateVISSatellite();
 
 // Set interval untuk pembaruan otomatis
-updateRadar();	
+//updateRadar(); ini radar rainviewer	
 //updateRadarAccuweather();
+updateRadarBMKG();
         updateIRSatellite();
 	updateWVSatellite();
 	updateVISSatellite();
