@@ -21,12 +21,14 @@
     // =======================================================
     //          SOLUSI: GUNAKAN BASEMAP WMS YANG KOMPATIBEL
     // =======================================================
+     // Peta Dasar WMS (Basemap)
     const baseLayer = L.tileLayer.wms('https://ows.mundialis.de/services/service?', {
         layers: 'OSM-WMS',
         format: 'image/png',
         transparent: true,
-        attribution: 'Peta Dasar &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Mundialis'
-    }).addTo(map);  
+        //attribution: 'Peta Dasar &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Mundialis',
+        // --- SOLUSI DI SINI: Atur zIndex ke angka rendah ---
+        zIndex: 1     }).addTo(map);  
 
 L.control.attribution({ position: 'bottomright' }).addAttribution('Proposed by <a href="https://mail.google.com/mail/?view=cm&fs=1&to=prayoga.ismail@bmkg.go.id" target="_blank">Prayoga Ismail</a>').addTo(map);
         document.getElementById("legend").style.display = "none";
