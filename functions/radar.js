@@ -1,7 +1,4 @@
-/**
- * File: /functions/radar.js
- * Versi 3: Menyempurnakan logika timestamp ke interval 5 menit.
- */
+// File: /functions/radar.js
 
 function getLatestBMKGTimestamp() {
     const now = new Date();
@@ -10,16 +7,12 @@ function getLatestBMKGTimestamp() {
     const day = now.getUTCDate().toString().padStart(2, '0');
     const hours = now.getUTCHours().toString().padStart(2, '0');
     const minutes = now.getUTCMinutes();
-    
-    // --- PERBAIKAN DI SINI ---
-    // Bulatkan menit ke bawah ke kelipatan 5 terdekat (misal: 08:57 -> 08:55)
-    // Ini lebih akurat daripada pembulatan ke 10 menit.
     const roundedMinutes = Math.floor(minutes / 5) * 5;
     const formattedMinutes = roundedMinutes.toString().padStart(2, '0');
-    
     return `${year}${month}${day}${hours}${formattedMinutes}`;
 }
 
+// PASTIKAN FUNGSI DI-EXPORT DENGAN BENAR SEPERTI INI
 export async function onRequestGet(context) {
     try {
         const { searchParams } = new URL(context.request.url);
@@ -50,9 +43,10 @@ export async function onRequestGet(context) {
         }
 
         const response = new Response(bmkgResponse.body, bmkgResponse);
-        response.headers.set('Cache-Control', 'public, max-age=300'); // Cache selama 5 menit
+        response.headers.set('Cache-Control', 'public, max-age=300');
         
         return response;
+
     } catch (error) {
         console.error(error);
         return new Response('Terjadi kesalahan internal pada server fungsi.', { status: 500 });
