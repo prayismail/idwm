@@ -1,20 +1,21 @@
 /**
  * File: /functions/radar.js
-  */
+ *Menambahkan parameter 'offset' untuk mendukung slider waktu.
+ */
 
-function getLatestBMKGTimestamp() {
-    // Mulai dengan waktu saat ini
+function getLatestBMKGTimestamp(offsetMinutes = 0) {
     const now = new Date();
     
-    // Kurangi waktu sebanyak 10 menit untuk memastikan data sudah ada di server BMKG.
-    // 10 menit = 10 * 60 detik * 1000 milidetik
-    now.setTime(now.getTime() - 10 * 60 * 1000);
+    // Total menit untuk mundur: 10 menit (buffer aman) + offset dari slider.
+    const totalOffsetMinutes = 10 + offsetMinutes;
+    
+    // Kurangi waktu sesuai total offset.
+    now.setTime(now.getTime() - totalOffsetMinutes * 60 * 1000);
 
     const year = now.getUTCFullYear();
     const month = (now.getUTCMonth() + 1).toString().padStart(2, '0');
     const day = now.getUTCDate().toString().padStart(2, '0');
-    // --- PERBAIKAN FATAL DI SINI ---
-    const hours = now.getUTCHours().toString().padStart(2, '0'); // Menggunakan getUTCHours yang benar
+    const hours = now.getUTCHours().toString().padStart(2, '0');
     const minutes = now.getUTCMinutes();
     
     // Bulatkan menit ke bawah ke kelipatan 5 terdekat
@@ -31,11 +32,16 @@ export async function onRequestGet(context) {
         const x = searchParams.get('x');
         const y = searchParams.get('y');
 
+        // --- INI PERUBAHANNYA ---
+        // Ambil parameter 'offset', default-nya 0 jika tidak ada.
+        const offset = parseInt(searchParams.get('offset')) || 0;
+
         if (!z || !x || !y) {
             return new Response('Bad Request: Parameter z, x, y dibutuhkan.', { status: 400 });
         }
 
-        const latestTimestamp = getLatestBMKGTimestamp();
+        // Panggil fungsi timestamp dengan menyertakan offset
+        const latestTimestamp = getLatestBMKGTimestamp(offset);
         const bmkgUrl = `https://inasiam.bmkg.go.id/api23/mpl_req/radar/radar/0/${latestTimestamp}/${latestTimestamp}/${z}/${x}/${y}.png?overlays=contourf`;
 
         const requestHeaders = {
@@ -48,18 +54,12 @@ export async function onRequestGet(context) {
         });
 
         if (!bmkgResponse.ok) {
-            // Jika BMKG merespon 204 No Content, kita teruskan saja.
-            // Browser akan menampilkan tile kosong, yang lebih baik daripada error.
-            if (bmkgResponse.status === 204) {
-                return new Response(null, { status: 204 });
-            }
-            return new Response(`Gagal mengambil data dari BMKG: ${bmkgResponse.statusText}`, {
-                status: bmkgResponse.status
-            });
+            if (bmkgResponse.status === 204) { return new Response(null, { status: 204 }); }
+            return new Response(`Gagal mengambil data dari BMKG: ${bmkgResponse.statusText}`, { status: bmkgResponse.status });
         }
 
         const response = new Response(bmkgResponse.body, bmkgResponse);
-        response.headers.set('Cache-Control', 'public, max-age=300'); // Cache 5 menit
+        response.headers.set('Cache-Control', 'public, max-age=300');
         
         return response;
 
