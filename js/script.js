@@ -420,7 +420,7 @@ cropImageButton.addEventListener('click', () => {
         var esriImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution:  'Base map &copy; Esri, DigitalGlobe, GeoEye, Earthstar Geographics' });
         var cartoPositron = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: 'Base map &copy; CartoDB' }).addTo(map);
         var topoMap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: 'Base map &copy; <a href="https://opentopomap.org/">OpenTopoMap</a> contributors' });
-        var lulcMap = L.tileLayer.wms("/api/lulc-wms", {layers: 'WORLDCOVER_2021_MAP', format: 'image/png', transparent: true, attribution: 'Base map &copy; ESA WorldCover 2021' });
+        var lulcMap = L.tileLayer.wms("/lulc-wms", {layers: 'WORLDCOVER_2021_MAP', format: 'image/png', transparent: true, attribution: 'Base map &copy; ESA WorldCover 2021' });
         var radarLayer = L.tileLayer('', { opacity: 0.8, attribution: 'Radar data &copy; RainViewer' }); 
         var IRsatelliteLayer = L.tileLayer('', { opacity: 0.7, attribution: 'Satellite data &copy; Accuweather' }); 
 	var WVsatelliteLayer = L.tileLayer('', { opacity: 0.6, attribution: 'Satellite data &copy; Accuweather' });
@@ -1245,7 +1245,7 @@ airports.forEach(airport => {
             });
         });
     function fetchSIGMET(icao) {
-            let url = "/api/sigmet";
+            let url = "/sigmet";
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
@@ -1469,7 +1469,7 @@ function parseMultiPolygonSigmet(rawText, firToIntersectWith) {
 // -------------------------------------------------------------------------
 
 function fetchSIGMET(firIcao) {
-    let url = "/api/sigmet";
+    let url = "/sigmet";
     const hazardPriority = {'VA': 1, 'TS': 2, 'ICE': 3, 'TURB': 3, 'default': 4};
 
     fetch(url)
@@ -2138,7 +2138,7 @@ var vaaPolygonPreviewLayer = L.layerGroup();
 let vaaCheckerInterval = null;
 let lastAdvisoryData = null;
 let isFirstCheck = true;
-const vaacApiUrl = '/api/check-vaac';
+const vaacApiUrl = '/check-vaac';
 const debugStatusElement = document.getElementById('va-debug-status');
 
 // --- Fungsi Helper ---
