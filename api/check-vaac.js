@@ -98,7 +98,8 @@ module.exports = async (req, res) => {
             console.log(`[Proxy VAAC-FTP] Tidak ada file PNG yang cocok untuk timestamp ${latestTimestamp}`);
         }
 
-        res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate');
+        res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=30');
+        res.setHeader('Access-Control-Allow-Origin', '*');
         
         res.status(200).json({
           advisoryNumber: advisoryNumber,
