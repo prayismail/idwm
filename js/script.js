@@ -12,8 +12,23 @@
             ]
         }
     );
-var map = L.map('map', { crs: crs, center: [-2.5, 118], zoom: 5, attributionControl: false });
-        L.control.attribution({ position: 'bottomright' }).addAttribution('Proposed by <a href="https://mail.google.com/mail/?view=cm&fs=1&to=prayoga.ismail@bmkg.go.id" target="_blank">Prayoga Ismail</a>').addTo(map);
+//var map = L.map('map', { crs: crs, center: [-2.5, 118], zoom: 5, attributionControl: false });
+// Inisialisasi Peta dengan CRS yang baru
+    const map = L.map('map', {
+        crs: crs
+    }).setView([-2.5, 118.0], 5);
+
+    // =======================================================
+    //          SOLUSI: GUNAKAN BASEMAP WMS YANG KOMPATIBEL
+    // =======================================================
+    const baseLayer = L.tileLayer.wms('https://ows.mundialis.de/services/service?', {
+        layers: 'OSM-WMS',
+        format: 'image/png',
+        transparent: true,
+        attribution: 'Peta Dasar &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Mundialis'
+    }).addTo(map);  
+
+L.control.attribution({ position: 'bottomright' }).addAttribution('Proposed by <a href="https://mail.google.com/mail/?view=cm&fs=1&to=prayoga.ismail@bmkg.go.id" target="_blank">Prayoga Ismail</a>').addTo(map);
         document.getElementById("legend").style.display = "none";
 document.getElementById("webmap-title").addEventListener("click", function() {
     location.reload(); });
