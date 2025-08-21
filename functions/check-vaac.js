@@ -1,9 +1,8 @@
-// File: functions/check-vaac.js (Cloudflare Pages Functions)
+
+// File: functions/check-vaac.js (Cloudflare Pages Functions - VERSI FINAL)
 
 // Helper function untuk mengambil timestamp dari nama file
 function getTimestampFromAnyFilename(filename) {
-    // PERBAIKAN 1: Regex disederhanakan untuk menangkap 12 digit.
-    // Format nama file di href HTML tidak memiliki titik di sekitar timestamp.
     const match = filename.match(/(\d{12})/);
     return match ? match[1] : null;
 }
@@ -12,15 +11,13 @@ function getTimestampFromAnyFilename(filename) {
 function arrayBufferToBase64(buffer) {
     let binary = '';
     const bytes = new Uint8Array(buffer);
-    const len = bytes.byteLength;
-    for (let i = 0; i < len; i++) {
+    for (let i = 0; i < bytes.byteLength; i++) {
         binary += String.fromCharCode(bytes[i]);
     }
     return btoa(binary);
 }
 
 export async function onRequest(context) {
-    // Hanya izinkan metode GET
     if (context.request.method !== 'GET') {
         return new Response(`Method ${context.request.method} Not Allowed`, { status: 405, headers: { 'Allow': 'GET' } });
     }
@@ -29,25 +26,32 @@ export async function onRequest(context) {
         const currentYear = new Date().getFullYear();
         const directoryUrl = `http://ftp.bom.gov.au/anon/gen/vaac/${currentYear}/`;
 
-        // 1. Ambil daftar file dengan fetch
+        // 1. Ambil daftar file dari direktori web
         const dirResponse = await fetch(directoryUrl);
         if (!dirResponse.ok) {
-            throw new Error(`Gagal mengakses direktori: ${dirResponse.status}`);
+            throw new Error(`Gagal mengakses direktori: Status ${dirResponse.status}`);
         }
         const dirHtml = await dirResponse.text();
 
-        // 2. Parse HTML untuk mendapatkan nama file
-        // PERBAIKAN 2: Regex ini jauh lebih kuat.
-        // Hanya akan menangkap link yang dimulai dengan "IDY" dan diakhiri dengan ".txt" atau ".png".
-        // Ini menghindari link lain di halaman seperti "?C=N;O=D".
-        const filenameRegex = /href="(IDY[^"]+\.(?:txt|png))"/g;
-        let match;
+        // 2. LOGIKA PARSING BARU: Pecah HTML per baris untuk stabilitas
         const allFiles = [];
-        while ((match = filenameRegex.exec(dirHtml)) !== null) {
-            allFiles.push(match[1]);
+        const lines = dirHtml.split('\n');
+        // Regex ini mencari tag <a> yang berisi link ke file IDY...
+        const lineRegex = /<a href="(IDY[^"]+\.(?:txt|png))">/i;
+
+        for (const line of lines) {
+            const match = line.match(lineRegex);
+            if (match && match[1]) {
+                allFiles.push(match[1]);
+            }
         }
         
-        // 3. Logika filter file
+        // Tambahkan check eksplisit jika parsing gagal total
+        if (allFiles.length === 0) {
+            return new Response(JSON.stringify({ error: "Parsing HTML direktori gagal: tidak ada file VAA yang ditemukan." }), { status: 404, headers: { 'Content-Type': 'application/json' }});
+        }
+
+        // 3. Filter file .txt dan cari yang terbaru
         const darwinTxtFiles = allFiles.filter(name => name.endsWith('.txt'));
         if (darwinTxtFiles.length === 0) {
             return new Response(JSON.stringify({ error: `Tidak ada file .txt ditemukan di direktori.` }), { status: 404, headers: { 'Content-Type': 'application/json' }});
@@ -55,20 +59,19 @@ export async function onRequest(context) {
 
         let latestFilename = null;
         let latestTimestamp = '0';
-        darwinTxtFiles.forEach(filename => {
+        for (const filename of darwinTxtFiles) {
             const timestamp = getTimestampFromAnyFilename(filename);
             if (timestamp && timestamp > latestTimestamp) {
                 latestTimestamp = timestamp;
                 latestFilename = filename;
             }
-        });
+        }
 
         if (!latestFilename) {
             return new Response(JSON.stringify({ error: `Tidak ada file .txt valid yang bisa diproses.` }), { status: 404, headers: { 'Content-Type': 'application/json' }});
         }
-        console.log(`[VAAC-HTTP] File TXT terbaru dipilih: ${latestFilename}`);
 
-        // 4. Ambil file .txt yang relevan
+        // 4. Ambil dan proses file .txt terbaru
         const txtUrl = `${directoryUrl}${latestFilename}`;
         const txtResponse = await fetch(txtUrl);
         const fullText = await txtResponse.text();
@@ -76,33 +79,28 @@ export async function onRequest(context) {
         // 5. Filter berdasarkan AREA INDONESIA
         const isIndonesiaArea = /^AREA:\s*INDONESIA/im.test(fullText);
         if (!isIndonesiaArea) {
-            console.log(`[VAAC-HTTP] VAA terbaru (${latestFilename}) bukan untuk area Indonesia.`);
             return new Response(JSON.stringify({
                 advisoryNumber: null,
                 message: "Latest VAA is not for Indonesia area.",
                 fullText: fullText,
                 imageBase64: null
-            }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, s-maxage=60' } });
         }
-        console.log(`[VAAC-HTTP] VAA terdeteksi untuk area Indonesia.`);
 
         const advisoryMatch = fullText.match(/ADVISORY\s+NR:\s*(\d{4}\/\d+)/i);
         const advisoryNumber = advisoryMatch ? advisoryMatch[1] : null;
 
-        // 6. Cari dan ambil file .png yang cocok
+        // 6. Cari dan proses file .png yang cocok
         let imageBase64 = null;
         const matchingPngFile = allFiles.find(name => 
             name.endsWith('.png') && getTimestampFromAnyFilename(name) === latestTimestamp
         );
 
         if (matchingPngFile) {
-            console.log(`[VAAC-HTTP] File PNG pasangan ditemukan: ${matchingPngFile}`);
             const pngUrl = `${directoryUrl}${matchingPngFile}`;
             const pngResponse = await fetch(pngUrl);
             const imageBuffer = await pngResponse.arrayBuffer();
             imageBase64 = `data:image/png;base64,${arrayBufferToBase64(imageBuffer)}`;
-        } else {
-            console.log(`[VAAC-HTTP] Tidak ada file PNG yang cocok untuk timestamp ${latestTimestamp}`);
         }
 
         // 7. Kirim respons yang berhasil
@@ -121,8 +119,13 @@ export async function onRequest(context) {
         });
 
     } catch (error) {
-        console.error('[VAAC-HTTP] Kesalahan internal:', error.stack);
-        return new Response(JSON.stringify({ error: 'Kesalahan internal pada server proxy.', details: error.message }), {
+        // Blok catch yang lebih informatif
+        console.error('[VAAC-HTTP] Kesalahan fatal:', error);
+        const errorDetails = {
+            message: error.message,
+            stack: error.stack ? error.stack.split('\n') : "No stack available",
+        };
+        return new Response(JSON.stringify({ error: 'Kesalahan internal pada server proxy.', details: errorDetails }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
         });
