@@ -1,16 +1,15 @@
 /**
  * File: /functions/radar.js
- *Menambahkan parameter 'offset' untuk mendukung slider waktu.
  */
 
-function getLatestBMKGTimestamp(offsetMinutes = 0) {
+function getBMKGTimestamp(offsetMinutes = 0) {
     const now = new Date();
     
-    // Total menit untuk mundur: 10 menit (buffer aman) + offset dari slider.
-    const totalOffsetMinutes = 10 + offsetMinutes;
-    
-    // Kurangi waktu sesuai total offset.
-    now.setTime(now.getTime() - totalOffsetMinutes * 60 * 1000);
+    // Kurangi waktu HANYA berdasarkan offset dari slider.
+    // Buffer 10 menit dihilangkan.
+    if (offsetMinutes > 0) {
+        now.setTime(now.getTime() - offsetMinutes * 60 * 1000);
+    }
 
     const year = now.getUTCFullYear();
     const month = (now.getUTCMonth() + 1).toString().padStart(2, '0');
@@ -31,9 +30,6 @@ export async function onRequestGet(context) {
         const z = searchParams.get('z');
         const x = searchParams.get('x');
         const y = searchParams.get('y');
-
-        // --- INI PERUBAHANNYA ---
-        // Ambil parameter 'offset', default-nya 0 jika tidak ada.
         const offset = parseInt(searchParams.get('offset')) || 0;
 
         if (!z || !x || !y) {
@@ -41,8 +37,8 @@ export async function onRequestGet(context) {
         }
 
         // Panggil fungsi timestamp dengan menyertakan offset
-        const latestTimestamp = getLatestBMKGTimestamp(offset);
-        const bmkgUrl = `https://inasiam.bmkg.go.id/api23/mpl_req/radar/radar/0/${latestTimestamp}/${latestTimestamp}/${z}/${x}/${y}.png?overlays=contourf`;
+        const timestamp = getBMKGTimestamp(offset);
+        const bmkgUrl = `https://inasiam.bmkg.go.id/api23/mpl_req/radar/radar/0/${timestamp}/${timestamp}/${z}/${x}/${y}.png?overlays=contourf`;
 
         const requestHeaders = {
             'Referer': 'https://inasiam.bmkg.go.id/',
@@ -59,7 +55,7 @@ export async function onRequestGet(context) {
         }
 
         const response = new Response(bmkgResponse.body, bmkgResponse);
-        response.headers.set('Cache-Control', 'public, max-age=300');
+        response.headers.set('Cache-Control', 'public, max-age=60'); // Kurangi cache menjadi 1 menit
         
         return response;
 
