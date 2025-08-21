@@ -574,9 +574,8 @@ function updateRadarBMKG(timeStep = 0) {
     // agar waktu yang ditampilkan akurat.
     const displayTime = new Date();
     
-    // Mundurkan waktu sesuai buffer (10 menit) + offset slider
-    const totalOffsetMinutes = 10 + offsetInMinutes;
-    displayTime.setTime(displayTime.getTime() - totalOffsetMinutes * 60 * 1000);
+    // Mundurkan waktu HANYA sesuai offset slider
+    displayTime.setTime(displayTime.getTime() - offsetInMinutes * 60 * 1000);
     
     // Bulatkan menit ke bawah ke kelipatan 5 terdekat, sama seperti server
     const minutes = displayTime.getUTCMinutes();
