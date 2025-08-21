@@ -555,7 +555,7 @@ function updateRadar(timeOffset = 0) {
     const radarBMKG = L.tileLayer(proxyRadarUrl, {
         attribution: 'Radar data &copy; <a href="https://bmkg.go.id/">BMKG</a>',
         opacity: 0.8, 
-		 tms: true
+		 tms: true, maxZoom: 8
     });
 
 function updateRadarBMKG(timeStep = 0) {
