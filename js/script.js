@@ -507,7 +507,8 @@ document.getElementById('locate-btn').addEventListener('click', addUserLocation)
             img.onload = callback;
             img.src = url;
         }
-        function updateRadar(timeOffset = 0) {
+/* ini Radar RainViewer
+function updateRadar(timeOffset = 0) {
     fetch('https://api.rainviewer.com/public/weather-maps.json')
         .then(response => response.json())
         .then(data => {
@@ -542,7 +543,68 @@ document.getElementById('locate-btn').addEventListener('click', addUserLocation)
             }
         })
         .catch(error => console.error("Gagal mengambil data radar:", error));}
-        
+  sampai sini Rainviewer
+  */ 
+/**
+ * Fungsi baru untuk update radar BMKG dengan slider waktu.
+ * @param {number} timeStep - Langkah slider (0 = saat ini, 1 = 10 menit lalu, dst.)
+ */
+// --- Layer Radar BMKG via Cloudflare Pages Function ---
+  
+    const proxyRadarUrl = `/radar?z={z}&x={x}&y={y}`;
+    const radarBMKG = L.tileLayer(proxyRadarUrl, {
+        attribution: 'Radar data &copy; <a href="https://bmkg.go.id/">BMKG</a>',
+        opacity: 0.8, 
+		 tms: true
+    });
+
+function updateRadarBMKG(timeStep = 0) {
+    // 1. Hitung offset dalam menit berdasarkan langkah slider
+    let offsetInMinutes = timeStep * 10;
+
+    // 2. Buat URL baru untuk proxy kita, sertakan offset
+    let newRadarUrl = `/radar?z={z}&x={x}&y={y}&offset=${offsetInMinutes}`;
+    
+    // 3. Perbarui layer radar dengan URL yang baru
+    // setUrl akan membuat Leaflet memuat ulang semua tile yang terlihat
+    radarBMKG.setUrl(newRadarUrl);
+
+    // 4. Hitung dan tampilkan waktu yang sesuai di indikator
+    // Kita harus melakukan perhitungan yang sama persis seperti di server
+    // agar waktu yang ditampilkan akurat.
+    const displayTime = new Date();
+    
+    // Mundurkan waktu sesuai buffer (10 menit) + offset slider
+    const totalOffsetMinutes = 10 + offsetInMinutes;
+    displayTime.setTime(displayTime.getTime() - totalOffsetMinutes * 60 * 1000);
+    
+    // Bulatkan menit ke bawah ke kelipatan 5 terdekat, sama seperti server
+    const minutes = displayTime.getUTCMinutes();
+    const roundedMinutes = Math.floor(minutes / 5) * 5;
+    displayTime.setUTCMinutes(roundedMinutes, 0, 0); // Set menit & reset detik/ms
+    
+    // Ambil waktu UTC yang sudah final
+    const utcTime = displayTime;
+
+    // Konversi ke waktu lokal untuk ditampilkan
+    let localTime = new Date(utcTime);
+    let localTimeString = localTime.toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+
+    // Format bulan dalam bahasa Indonesia
+    let bulanIndonesia = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+    let bulan = bulanIndonesia[utcTime.getUTCMonth()];
+
+    // Tampilkan waktu UTC dan waktu lokal
+    document.getElementById('time-indicator').innerHTML = `
+        <strong>${utcTime.getUTCDate()} ${bulan} ${utcTime.getUTCFullYear()}</strong><br>
+        <span style="color: #FFD700;">${utcTime.getUTCHours().toString().padStart(2, '0')}:${utcTime.getUTCMinutes().toString().padStart(2, '0')} UTC</span><br>
+        <span style="color: #00FF00;">${localTimeString} Waktu Setempat</span>
+    `;
+}
+
 // --- Konfigurasi Umum AccuWeather ---
 const ACCUWEATHER_API_KEY = 'de13920f574d420984d3080b1fa6132b'; 
 const RADAR_TIME_INTERVAL_MINUTES = 5; // AccuWeather radar biasanya memiliki interval 5 menit. Sesuaikan jika perlu.
@@ -815,8 +877,15 @@ updateRadar();
         updateIRSatellite();
 	updateWVSatellite();
 	updateVISSatellite();
-setInterval(updateRadar, 600000);
+
+//setInterval(updateRadar, 600000); //ini radar rainviewer
 //	setInterval(updateRadarAccuweather, 300000);
+setInterval(() => {
+    // Hanya update jika slider berada di posisi "Saat Ini"
+    if (parseInt(timeSlider.value) === 12) { // Asumsi 12 adalah nilai maks slider
+         updateRadarBMKG(0); 
+    }
+}, 600000);
         setInterval(updateIRSatellite, 600000);
 	setInterval(updateWVSatellite, 600000); 
 	setInterval(updateVISSatellite, 600000); // 10 menit
@@ -895,8 +964,9 @@ function addTimeControls() {
         else timeLabel.textContent = `${step * 10} menit lalu`;}
 
     function updateLayers(timeOffset) {
-        updateRadar(timeOffset);
-		//updateRadarAccuweather(timeOffset);
+        //updateRadar(timeOffset); //INI RADAR RAINVIEWER
+		//updateRadarAccuweather(timeOffset); //INI RADAR ACCUWEATHER
+		updateRadarBMKG(timeOffset);
         updateIRSatellite(timeOffset);
 	updateWVSatellite(timeOffset);
 	updateVISSatellite(timeOffset);
@@ -1937,7 +2007,7 @@ var vaAdvisoryLayer = L.layerGroup();
             "Satelit Visible": VISsatelliteLayer,
             "Satelit Inframerah": IRsatelliteLayer,
 	    "Satelit Uap Air": WVsatelliteLayer,
-	     "Radar Cuaca": radarLayer,
+	     "Radar Cuaca": radarBMKG,
             "Cuaca Bandara": airportLayer,
 	    "Tropical Waves": TropicalLayer,
 	     "VA Advisory": vaAdvisoryLayer
@@ -2556,15 +2626,3 @@ function updateDebugStatus(message, isError = false) {
 }
 // ========================= AKHIR KODE VAA =========================
 
-// --- Layer Radar BMKG via Cloudflare Pages Function ---
-  
-    const proxyRadarUrl = `/radar?z={z}&x={x}&y={y}`;
-    const radarBMKG = L.tileLayer(proxyRadarUrl, {
-        attribution: 'Radar &copy; <a href="https://bmkg.go.id/">BMKG</a>',
-        opacity: 0.8, 
-		 tms: true
-    });
-
-    radarBMKG.addTo(map);
-
-    console.log("Menggunakan URL Proxy Radar:", proxyRadarUrl);
