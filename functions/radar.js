@@ -1,14 +1,25 @@
 // File: /functions/radar.js
+// Versi 4: Menambahkan buffer waktu untuk menjamin data sudah ada.
 
 function getLatestBMKGTimestamp() {
+    // Mulai dengan waktu saat ini
     const now = new Date();
+    
+    // --- SOLUSI DI SINI: Kurangi waktu sebanyak 10 menit ---
+    // Ini untuk memastikan kita meminta data yang sudah pasti diunggah oleh BMKG.
+    // 10 menit = 10 * 60 detik * 1000 milidetik
+    now.setTime(now.getTime() - 10 * 60 * 1000);
+
     const year = now.getUTCFullYear();
     const month = (now.getUTCMonth() + 1).toString().padStart(2, '0');
     const day = now.getUTCDate().toString().padStart(2, '0');
-    const hours = now.getUTCHours().toString().padStart(2, '0');
+    const hours = now.getUTCFours().toString().padStart(2, '0');
     const minutes = now.getUTCMinutes();
+    
+    // Bulatkan menit ke bawah ke kelipatan 5 terdekat
     const roundedMinutes = Math.floor(minutes / 5) * 5;
     const formattedMinutes = roundedMinutes.toString().padStart(2, '0');
+    
     return `${year}${month}${day}${hours}${formattedMinutes}`;
 }
 
