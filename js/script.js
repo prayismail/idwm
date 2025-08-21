@@ -2561,7 +2561,8 @@ function updateDebugStatus(message, isError = false) {
     const proxyRadarUrl = `/radar?z={z}&x={x}&y={y}`;
     const radarBMKG = L.tileLayer(proxyRadarUrl, {
         attribution: 'Radar &copy; <a href="https://bmkg.go.id/">BMKG</a>',
-        opacity: 0.8
+        opacity: 0.8, 
+		 tms: true
     });
 
     radarBMKG.addTo(map);
