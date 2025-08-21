@@ -1,19 +1,20 @@
-// File: /functions/radar.js
-// Versi 4: Menambahkan buffer waktu untuk menjamin data sudah ada.
+/**
+ * File: /functions/radar.js
+  */
 
 function getLatestBMKGTimestamp() {
     // Mulai dengan waktu saat ini
     const now = new Date();
     
-    // --- SOLUSI DI SINI: Kurangi waktu sebanyak 10 menit ---
-    // Ini untuk memastikan kita meminta data yang sudah pasti diunggah oleh BMKG.
+    // Kurangi waktu sebanyak 10 menit untuk memastikan data sudah ada di server BMKG.
     // 10 menit = 10 * 60 detik * 1000 milidetik
     now.setTime(now.getTime() - 10 * 60 * 1000);
 
     const year = now.getUTCFullYear();
     const month = (now.getUTCMonth() + 1).toString().padStart(2, '0');
     const day = now.getUTCDate().toString().padStart(2, '0');
-    const hours = now.getUTCFours().toString().padStart(2, '0');
+    // --- PERBAIKAN FATAL DI SINI ---
+    const hours = now.getUTCHours().toString().padStart(2, '0'); // Menggunakan getUTCHours yang benar
     const minutes = now.getUTCMinutes();
     
     // Bulatkan menit ke bawah ke kelipatan 5 terdekat
@@ -23,7 +24,6 @@ function getLatestBMKGTimestamp() {
     return `${year}${month}${day}${hours}${formattedMinutes}`;
 }
 
-// PASTIKAN FUNGSI DI-EXPORT DENGAN BENAR SEPERTI INI
 export async function onRequestGet(context) {
     try {
         const { searchParams } = new URL(context.request.url);
@@ -48,18 +48,23 @@ export async function onRequestGet(context) {
         });
 
         if (!bmkgResponse.ok) {
+            // Jika BMKG merespon 204 No Content, kita teruskan saja.
+            // Browser akan menampilkan tile kosong, yang lebih baik daripada error.
+            if (bmkgResponse.status === 204) {
+                return new Response(null, { status: 204 });
+            }
             return new Response(`Gagal mengambil data dari BMKG: ${bmkgResponse.statusText}`, {
                 status: bmkgResponse.status
             });
         }
 
         const response = new Response(bmkgResponse.body, bmkgResponse);
-        response.headers.set('Cache-Control', 'public, max-age=300');
+        response.headers.set('Cache-Control', 'public, max-age=300'); // Cache 5 menit
         
         return response;
 
     } catch (error) {
-        console.error(error);
+        console.error('Function Crash:', error);
         return new Response('Terjadi kesalahan internal pada server fungsi.', { status: 500 });
     }
 }
