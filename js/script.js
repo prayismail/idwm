@@ -2554,3 +2554,15 @@ function updateDebugStatus(message, isError = false) {
     }
 }
 // ========================= AKHIR KODE VAA =========================
+
+// --- Layer Radar BMKG via Cloudflare Pages Function ---
+  
+    const proxyRadarUrl = `/radar?z={z}&x={x}&y={y}`;
+    const radarBMKG = L.tileLayer(proxyRadarUrl, {
+        attribution: 'Radar &copy; <a href="https://bmkg.go.id/">BMKG</a>',
+        opacity: 0.8
+    });
+
+    radarBMKG.addTo(map);
+
+    console.log("Menggunakan URL Proxy Radar:", proxyRadarUrl);
