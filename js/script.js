@@ -1,5 +1,18 @@
-
-var map = L.map('map', { center: [-2.5, 118], zoom: 5, attributionControl: false });
+// LANGKAH 2: Definisikan sistem koordinat (CRS) EPSG:4326
+    // Ini memberitahu Proj4Leaflet cara kerja proyeksi geografis standar.
+    const crs = new L.Proj.CRS('EPSG:4326',
+        '+proj=longlat +datum=WGS84 +no_defs', // Definisi proyeksi
+        {
+            origin: [-180, 90], // Titik awal grid tile [bujur, lintang]
+            // Resolusi untuk setiap level zoom, ini penting agar skala peta benar
+            resolutions: [
+                0.5625, 0.28125, 0.140625, 0.0703125, 0.03515625, 0.017578125,
+                0.0087890625, 0.00439453125, 0.002197265625, 0.0010986328125,
+                0.00054931640625, 0.000274658203125, 0.0001373291015625
+            ]
+        }
+    );
+var map = L.map('map', { crs: crs, center: [-2.5, 118], zoom: 5, attributionControl: false });
         L.control.attribution({ position: 'bottomright' }).addAttribution('Proposed by <a href="https://mail.google.com/mail/?view=cm&fs=1&to=prayoga.ismail@bmkg.go.id" target="_blank">Prayoga Ismail</a>').addTo(map);
         document.getElementById("legend").style.display = "none";
 document.getElementById("webmap-title").addEventListener("click", function() {
