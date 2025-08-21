@@ -99,7 +99,7 @@ module.exports = async (req, res) => {
         }
 
         res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=30');
-        res.setHeader('Access-Control-Allow-Origin', '*');
+
         
         res.status(200).json({
           advisoryNumber: advisoryNumber,
