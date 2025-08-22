@@ -507,7 +507,7 @@ document.getElementById('locate-btn').addEventListener('click', addUserLocation)
             img.onload = callback;
             img.src = url;
         }
-/* ini Radar RainViewer
+// ini Radar RainViewer
 function updateRadar(timeOffset = 0) {
     fetch('https://api.rainviewer.com/public/weather-maps.json')
         .then(response => response.json())
@@ -543,12 +543,12 @@ function updateRadar(timeOffset = 0) {
             }
         })
         .catch(error => console.error("Gagal mengambil data radar:", error));}
-  sampai sini Rainviewer
-  */ 
+  //sampai sini Rainviewer
+   
 /**
  * Fungsi baru untuk update radar BMKG dengan slider waktu.
  * @param {number} timeStep - Langkah slider (0 = saat ini, 1 = 10 menit lalu, dst.)
- */
+ 
 // --- Layer Radar BMKG via Cloudflare Pages Function ---
   
     const proxyRadarUrl = `/radar?z={z}&x={x}&y={y}`;
@@ -603,6 +603,7 @@ function updateRadarBMKG(timeStep = 0) {
         <span style="color: #00FF00;">${localTimeString} Waktu Setempat</span>
     `;
 }
+sampai sini radar BMKG */ 
 
 // --- Konfigurasi Umum AccuWeather ---
 const ACCUWEATHER_API_KEY = 'de13920f574d420984d3080b1fa6132b'; 
@@ -668,7 +669,7 @@ function getAccuweatherPastTimestamp(offsetIntervals = 0) {
 /**
  * Fungsi untuk memperbarui layer Radar menggunakan data historis AccuWeather.
  * @param {number} timeOffset - Jumlah interval yang akan dihitung mundur (0 = citra terbaru, 1 = 10 menit lalu, dst.)
- */
+ 
 function updateRadarAccuweather(timeOffset = 0) {
     try {
         // 1. Dapatkan timestamp untuk data radar di masa lalu
@@ -717,7 +718,8 @@ function updateRadarAccuweather(timeOffset = 0) {
         }
     }
 }
-	
+*/
+
 // --- Konfigurasi Umum AccuWeather ---
 //const ACCUWEATHER_API_KEY = 'de13920f574d420984d3080b1fa6132b'; // GANTI DENGAN API KEY ANDA YANG VALID!
 const TIME_INTERVAL_MINUTES = 10; // Asumsi update citra setiap 10 menit
@@ -871,21 +873,19 @@ updateWVSatellite();
 updateVISSatellite();
 
 // Set interval untuk pembaruan otomatis
-//updateRadar(); ini radar rainviewer	
+updateRadar(); ini radar rainviewer	
 //updateRadarAccuweather();
-updateRadarBMKG();
+//updateRadarBMKG();
         updateIRSatellite();
 	updateWVSatellite();
 	updateVISSatellite();
 
-//setInterval(updateRadar, 600000); //ini radar rainviewer
+setInterval(updateRadar, 600000); //ini radar rainviewer
 //	setInterval(updateRadarAccuweather, 300000);
-setInterval(() => {
-    // Hanya update jika slider berada di posisi "Saat Ini"
-    if (parseInt(timeSlider.value) === 12) { // Asumsi 12 adalah nilai maks slider
-         updateRadarBMKG(0); 
-    }
-}, 600000);
+//setInterval(() => {
+    // Hanya update jika slider berada di posisi "Saat Ini" - Radar BMKG
+  //  if (parseInt(timeSlider.value) === 12) { // Asumsi 12 adalah nilai maks slider
+    //     updateRadarBMKG(0);   }}, 600000);
         setInterval(updateIRSatellite, 600000);
 	setInterval(updateWVSatellite, 600000); 
 	setInterval(updateVISSatellite, 600000); // 10 menit
@@ -964,9 +964,9 @@ function addTimeControls() {
         else timeLabel.textContent = `${step * 10} menit lalu`;}
 
     function updateLayers(timeOffset) {
-        //updateRadar(timeOffset); //INI RADAR RAINVIEWER
+        updateRadar(timeOffset); //INI RADAR RAINVIEWER
 		//updateRadarAccuweather(timeOffset); //INI RADAR ACCUWEATHER
-		updateRadarBMKG(timeOffset);
+		//updateRadarBMKG(timeOffset);
         updateIRSatellite(timeOffset);
 	updateWVSatellite(timeOffset);
 	updateVISSatellite(timeOffset);
@@ -2007,7 +2007,7 @@ var vaAdvisoryLayer = L.layerGroup();
             "Satelit Visible": VISsatelliteLayer,
             "Satelit Inframerah": IRsatelliteLayer,
 	    "Satelit Uap Air": WVsatelliteLayer,
-	     "Radar Cuaca": radarBMKG,
+	     "Radar Cuaca": radarLayer,
             "Cuaca Bandara": airportLayer,
 	    "Tropical Waves": TropicalLayer,
 	     "VA Advisory": vaAdvisoryLayer
