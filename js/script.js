@@ -2405,8 +2405,111 @@ function generateSigmet(vaaFullText) {
 }
 
 /**
- * 4. Fungsi utama untuk menampilkan notifikasi di peta.
- * (VERSI FINAL LENGKAP DENGAN TOMBOL VIEW POLYGON)
+ * 5. Fungsi untuk menerjemahkan teks SIGMET ke dalam format Bahasa Indonesia.
+ */
+function generateSigmetTranslation(sigmetText) {
+    if (sigmetText.startsWith("Error:")) return "Gagal membuat terjemahan karena SIGMET tidak valid.";
+
+    try {
+        // --- Helper Functions ---
+        const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+        function parseSigmetDateTime(dateTimeStr) {
+            const now = new Date();
+            const day = parseInt(dateTimeStr.substring(0, 2));
+            const hour = parseInt(dateTimeStr.substring(2, 4));
+            const minute = parseInt(dateTimeStr.substring(4, 6));
+            return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), day, hour, minute));
+        }
+
+        function formatDateTime(date) {
+            const localDate = new Date(date.getTime() + (7 * 3600 * 1000)); // Hardcoded UTC+7
+            return {
+                date: `${date.getUTCDate()} ${monthNames[date.getUTCMonth()]} ${date.getUTCFullYear()}`,
+                utcTime: `${String(date.getUTCHours()).padStart(2, '0')}.${String(date.getUTCMinutes()).padStart(2, '0')}Z`,
+                localTime: `${String(localDate.getUTCHours()).padStart(2, '0')}.${String(localDate.getUTCMinutes()).padStart(2, '0')} Waktu Setempat`
+            };
+        }
+
+        const translateDirection = (dir) => ({
+            "N": "utara", "NE": "timur laut", "E": "timur", "SE": "tenggara",
+            "S": "selatan", "SW": "barat daya", "W": "barat", "NW": "barat laut"
+        })[dir.toUpperCase()] || `arah ${dir}`;
+
+        const translateIntensity = (intensity) => ({
+            "INTSF": "dengan intensitas meningkat",
+            "WKN": "dengan intensitas melemah",
+            "NC": "dengan intensitas tetap"
+        })[intensity] || "dengan intensitas tetap";
+
+        // --- Ekstraksi Informasi Utama ---
+        const volcano = (sigmetText.match(/MT\s+([\w\s-]+?)\s+PSN/i) || [])[1]?.trim();
+        const validityMatch = sigmetText.match(/VALID\s+(\d{6})\/(\d{6})/i);
+        const obsTimeMatch = sigmetText.match(/OBS\s+AT\s+(\d{4}Z)/i);
+
+        if (!volcano || !validityMatch || !obsTimeMatch) return "Gagal mem-parsing informasi dasar dari SIGMET.";
+        
+        const startTime = parseSigmetDateTime(validityMatch[1]);
+        const endTime = parseSigmetDateTime(validityMatch[2]);
+        const obsTimeStr = obsTimeMatch[1].replace('Z', '');
+        const obsDateTime = parseSigmetDateTime(`${startTime.getUTCDate()}${obsTimeStr}`);
+
+        const formattedStart = formatDateTime(startTime);
+        const formattedEnd = formatDateTime(endTime);
+        const formattedObs = formatDateTime(obsDateTime);
+        
+        // --- Ekstraksi Layer Abu Vulkanik (Iteratif) ---
+        const phenomenonBlock = (sigmetText.split(/WAAF UJUNG PANDANG FIR/i)[1] || "");
+        const cloudChunks = phenomenonBlock.split(/AND\s+OBS\s+AT/i);
+        
+        const translatedClouds = cloudChunks.map(chunk => {
+            const flMatch = chunk.match(/SFC\/FL(\d{3})/);
+            const moveMatch = chunk.match(/MOV\s+(\w+)\s+(\d+)KT/);
+            const intensityMatch = chunk.match(/(INTSF|WKN|NC)/);
+
+            if (!flMatch) return null;
+
+            const flightLevel = parseInt(flMatch[1]) * 100;
+            const intensity = translateIntensity(intensityMatch ? intensityMatch[0] : "NC");
+            
+            if (moveMatch) {
+                const direction = translateDirection(moveMatch[1]);
+                const speed = moveMatch[2];
+                return `terdapat sebaran abu vulkanik pada ketinggian hingga ${flightLevel} feet yang bergerak ke arah ${direction} dengan kecepatan ${speed} knot, ${intensity}`;
+            } else if (chunk.includes("STNR")) {
+                 return `terdapat sebaran abu vulkanik pada ketinggian hingga ${flightLevel} feet yang stasioner (tidak bergerak), ${intensity}`;
+            }
+            return `terdapat sebaran abu vulkanik pada ketinggian hingga ${flightLevel} feet, ${intensity}`;
+        }).filter(Boolean);
+
+        // Gabungkan deskripsi awan dengan logika "Kemudian..."
+        const cloudDescription = translatedClouds.map((desc, index) => {
+            if (index === 0) return desc;
+            if (index > 0 && index < translatedClouds.length) return `. Kemudian, ${desc}`;
+            return desc;
+        }).join('');
+        
+        // --- Merakit Terjemahan Final ---
+        return `Mohon izin update Aktivitas VA Gunung ${volcano.toUpperCase()}
+Berikut berita SIGMET:
+${sigmetText}
+
+Berdasarkan pada berita SIGMET WV yang dikeluarkan oleh MWO Ujung Pandang (WAAA) yang berlaku pada tanggal ${formattedStart.date} mulai pukul ${formattedStart.utcTime} (${formattedStart.localTime}) hingga ${formattedEnd.date} pukul ${formattedEnd.utcTime} (${formattedEnd.localTime}), teramati pada pukul ${formattedObs.utcTime} (${formattedObs.localTime}), ${cloudDescription}.
+
+Demikian dilaporkan. Terima kasih atas perhatiannya.
+
+- Darwin VAAC
+- Forecaster MWO Ujung Pandang`;
+
+    } catch (error) {
+        console.error("[Translation Generator] Error:", error);
+        return `Terjadi error internal saat menerjemahkan SIGMET: ${error.message}`;
+    }
+}
+
+
+/**
+ * 6. Fungsi utama untuk menampilkan notifikasi di peta.
  */
 function showVaaNotificationOnMap(vaaData) {
     console.log("[VAA] Data diterima oleh Frontend");
@@ -2417,7 +2520,6 @@ function showVaaNotificationOnMap(vaaData) {
     }
 
     vaAdvisoryLayer.clearLayers();
-    // --- MODIFIKASI: Bersihkan juga layer preview poligon sebelumnya ---
     vaaPolygonPreviewLayer.clearLayers();
 
     const alertSound = document.getElementById('vaa-alert-sound');
@@ -2435,10 +2537,9 @@ function showVaaNotificationOnMap(vaaData) {
 	downloadBtn.className = 'download-btn';
     buttonContainer.appendChild(downloadBtn);
 
-    // --- BARU: Membuat tombol "View Polygon" ---
     const viewPolygonBtn = document.createElement('button');
     viewPolygonBtn.innerText = 'View Polygon';
-    viewPolygonBtn.className = 'view-polygon-btn'; // Tambahkan class untuk styling jika perlu
+    viewPolygonBtn.className = 'view-polygon-btn';
     buttonContainer.appendChild(viewPolygonBtn);
 
     const generateSigmetBtn = document.createElement('button');
@@ -2473,79 +2574,84 @@ function showVaaNotificationOnMap(vaaData) {
     const sigmetContainer = document.createElement('div');
     sigmetContainer.className = 'sigmet-output-container';
     sigmetContainer.style.display = 'none';
-    sigmetContainer.innerHTML = `<textarea readonly rows="8"></textarea><button>Salin Teks SIGMET</button>`;
+    sigmetContainer.innerHTML = `
+        <label><b>Kode SIGMET VA:</b></label>
+        <textarea id="sigmet-code-output" readonly rows="8"></textarea>
+        <button id="copy-sigmet-code-btn">Salin Kode SIGMET</button>
+        <label style="margin-top: 15px; display: block;"><b>Terjemahan SIGMET VA:</b></label>
+        <textarea id="sigmet-translation-output" readonly rows="12"></textarea>
+        <button id="copy-sigmet-translation-btn">Salin Terjemahan</button>
+    `;
 
-    // --- BARU: Logika untuk tombol "View Polygon" ---
     viewPolygonBtn.onclick = () => {
-        // Hapus preview lama sebelum menampilkan yang baru
         vaaPolygonPreviewLayer.clearLayers();
-
         const polygons = parseVaaForPolygons(vaaData.fullText);
         if (polygons.length > 0) {
             polygons.forEach(polyData => {
                 if (polyData.coordinates.length > 1) {
                     const polygon = L.polygon(polyData.coordinates, {
-                        color: '#ff4000', // Warna oranye-merah
-                        weight: 2,
-                        opacity: 0.8,
-                        fillOpacity: 0.3
+                        color: '#ff4000', weight: 2, opacity: 0.8, fillOpacity: 0.3
                     }).addTo(vaaPolygonPreviewLayer);
-
-                    // Tambahkan tooltip yang menunjukkan Flight Level
                     polygon.bindTooltip(`SFC/FL${polyData.flightLevel}`, {
-                        permanent: true, // Selalu tampil
-                        direction: 'center',
-                        className: 'vaa-polygon-fl-label' // Class untuk styling
+                        permanent: true, direction: 'center', className: 'vaa-polygon-fl-label'
                     }).openTooltip();
                 }
             });
-            // Sembunyikan tombol setelah diklik untuk menghindari klik ganda
             viewPolygonBtn.style.display = 'none'; 
         } else {
             alert("Tidak dapat menemukan data poligon yang valid di dalam VAA.");
         }
     };
 
-    // --- MODIFIKASI: Logika tombol "Buat SIGMET" ditambahkan cleanup ---
     generateSigmetBtn.onclick = () => {
-        // --- BARU: Sembunyikan layer preview saat SIGMET dibuat ---
         vaaPolygonPreviewLayer.clearLayers();
         
         const sigmetText = generateSigmet(vaaData.fullText);
-        const textarea = sigmetContainer.querySelector('textarea');
-        textarea.value = sigmetText;
+        const translationText = generateSigmetTranslation(sigmetText);
+
+        const codeTextarea = sigmetContainer.querySelector('#sigmet-code-output');
+        const translationTextarea = sigmetContainer.querySelector('#sigmet-translation-output');
+        
+        codeTextarea.value = sigmetText;
+        translationTextarea.value = translationText;
+
         sigmetContainer.style.display = 'block';
         generateSigmetBtn.style.display = 'none';
-        viewPolygonBtn.style.display = 'none'; // Sembunyikan juga tombol view polygon
+        viewPolygonBtn.style.display = 'none';
         volcanoMarker.getPopup().update();
     };
     
-    sigmetContainer.querySelector('button').onclick = () => {
-        const textarea = sigmetContainer.querySelector('textarea');
-        navigator.clipboard.writeText(textarea.value).then(() => {
-            const btn = sigmetContainer.querySelector('button');
-            btn.innerText = 'Tersalin!';
-            setTimeout(() => { btn.innerText = 'Salin Teks SIGMET'; }, 2000);
-        });
-    };
+    sigmetContainer.addEventListener('click', function(e) {
+        let targetTextarea = null, button = null;
+        if (e.target.id === 'copy-sigmet-code-btn') {
+            targetTextarea = sigmetContainer.querySelector('#sigmet-code-output');
+            button = e.target;
+        } else if (e.target.id === 'copy-sigmet-translation-btn') {
+            targetTextarea = sigmetContainer.querySelector('#sigmet-translation-output');
+            button = e.target;
+        }
+
+        if (targetTextarea && button) {
+            navigator.clipboard.writeText(targetTextarea.value).then(() => {
+                const originalText = button.innerText;
+                button.innerText = 'Tersalin!';
+                setTimeout(() => { button.innerText = originalText; }, 2000);
+            });
+        }
+    });
 
     popupContainer.appendChild(buttonContainer);
     popupContainer.appendChild(sigmetContainer);
 
-    volcanoMarker.bindPopup(popupContainer, { minWidth: 320 }); // Lebarkan sedikit pop-up
+    volcanoMarker.bindPopup(popupContainer, { minWidth: 350, maxHeight: 500 });
     vaAdvisoryLayer.addLayer(volcanoMarker);
     vaAdvisoryLayer.addTo(map);
-
-    // --- BARU: Tambahkan layer preview ke peta ---
     vaaPolygonPreviewLayer.addTo(map);
 
     map.panTo([mapInfo.lat, mapInfo.lon]);
     volcanoMarker.openPopup();
-    if (alertSound) {
-        alertSound.play().catch(e => console.warn("[VAA] Autoplay suara diblokir oleh browser.", e));
-    }
+    if (alertSound) alertSound.play().catch(e => console.warn("[VAA] Autoplay suara diblokir oleh browser.", e));
 
-    // --- MODIFIKASI: Event saat pop-up ditutup ditambahkan cleanup ---
     volcanoMarker.on('popupclose', () => {
         console.log("[VAA] Pop-up ditutup, alarm dihentikan.");
         if (alertSound) {
@@ -2553,12 +2659,12 @@ function showVaaNotificationOnMap(vaaData) {
             alertSound.currentTime = 0;
         }
         vaAdvisoryLayer.clearLayers();
-        // --- BARU: Hapus juga poligon preview saat pop-up ditutup ---
         vaaPolygonPreviewLayer.clearLayers();
     });
 }
+
 /**
- * 5. Fungsi Pengecek Utama yang berjalan periodik.
+ * 7. Fungsi Pengecek Utama yang berjalan periodik.
  */
 async function checkForNewVAA() {
     const data = await fetchLatestVAA();
@@ -2584,7 +2690,7 @@ async function checkForNewVAA() {
         showVaaNotificationOnMap(data);
     } else {
         const logMsg = `Status OK. Masih di advisory #${lastAdvisoryData.advisoryNumber}`;
-        console.log(`[VAA] ${logMsg}`);
+        // console.log(`[VAA] ${logMsg}`); // Bisa di-disable agar tidak terlalu 'berisik' di console
         updateDebugStatus(logMsg);
     }
 }
@@ -2599,7 +2705,7 @@ document.addEventListener('DOMContentLoaded', function() {
             isFirstCheck = true;
             checkForNewVAA();
             if (vaaCheckerInterval) clearInterval(vaaCheckerInterval);
-            vaaCheckerInterval = setInterval(checkForNewVAA, 10000);
+            vaaCheckerInterval = setInterval(checkForNewVAA, 10000); // Cek setiap 10 detik
         }
     });
 
@@ -2609,7 +2715,6 @@ document.addEventListener('DOMContentLoaded', function() {
             clearInterval(vaaCheckerInterval);
             vaaCheckerInterval = null;
             vaAdvisoryLayer.clearLayers();
-            // --- BARU: Pastikan layer preview juga bersih saat fitur dinonaktifkan ---
             vaaPolygonPreviewLayer.clearLayers();
             const alertSound = document.getElementById('vaa-alert-sound');
             if (alertSound) { alertSound.pause(); alertSound.currentTime = 0; }
