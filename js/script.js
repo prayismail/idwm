@@ -2705,7 +2705,7 @@ document.addEventListener('DOMContentLoaded', function() {
             isFirstCheck = true;
             checkForNewVAA();
             if (vaaCheckerInterval) clearInterval(vaaCheckerInterval);
-            vaaCheckerInterval = setInterval(checkForNewVAA, 10000); // Cek setiap 10 detik
+            vaaCheckerInterval = setInterval(checkForNewVAA, 30000); // Cek setiap 30 detik
         }
     });
 
