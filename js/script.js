@@ -2406,13 +2406,28 @@ function generateSigmet(vaaFullText) {
 
 /**
  * 5. Fungsi untuk menerjemahkan teks SIGMET ke dalam format Bahasa Indonesia.
+ *    (VERSI DENGAN ZONA WAKTU DINAMIS)
  */
-function generateSigmetTranslation(sigmetText) {
+function generateSigmetTranslation(sigmetText, volcanoLon) {
     if (sigmetText.startsWith("Error:")) return "Gagal membuat terjemahan karena SIGMET tidak valid.";
 
     try {
         // --- Helper Functions ---
         const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+        // BARU: Fungsi untuk menentukan zona waktu berdasarkan longitude
+        function getTimezoneInfo(longitude) {
+            const lon = parseFloat(longitude);
+            if (lon < 115) {
+                return { offset: 7, name: 'WIB' }; // Sumatra, Jawa, Kalbar, Kalteng
+            } else if (lon >= 115 && lon < 128) {
+                return { offset: 8, name: 'WITA' }; // Kalsel, Kaltim, Bali, NTB, NTT, Sulawesi
+            } else {
+                return { offset: 9, name: 'WIT' }; // Maluku, Papua
+            }
+        }
+        
+        const timezoneInfo = getTimezoneInfo(volcanoLon);
 
         function parseSigmetDateTime(dateTimeStr) {
             const now = new Date();
@@ -2422,12 +2437,13 @@ function generateSigmetTranslation(sigmetText) {
             return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), day, hour, minute));
         }
 
+        // MODIFIKASI: Menggunakan timezoneInfo dinamis
         function formatDateTime(date) {
-            const localDate = new Date(date.getTime() + (7 * 3600 * 1000)); // Hardcoded UTC+7
+            const localDate = new Date(date.getTime() + (timezoneInfo.offset * 3600 * 1000));
             return {
                 date: `${date.getUTCDate()} ${monthNames[date.getUTCMonth()]} ${date.getUTCFullYear()}`,
                 utcTime: `${String(date.getUTCHours()).padStart(2, '0')}.${String(date.getUTCMinutes()).padStart(2, '0')}Z`,
-                localTime: `${String(localDate.getUTCHours()).padStart(2, '0')}.${String(localDate.getUTCMinutes()).padStart(2, '0')} Waktu Setempat`
+                localTime: `${String(localDate.getUTCHours()).padStart(2, '0')}.${String(localDate.getUTCMinutes()).padStart(2, '0')} ${timezoneInfo.name}`
             };
         }
 
@@ -2437,12 +2453,9 @@ function generateSigmetTranslation(sigmetText) {
         })[dir.toUpperCase()] || `arah ${dir}`;
 
         const translateIntensity = (intensity) => ({
-            "INTSF": "dengan intensitas meningkat",
-            "WKN": "dengan intensitas melemah",
-            "NC": "dengan intensitas tetap"
+            "INTSF": "dengan intensitas meningkat", "WKN": "dengan intensitas melemah", "NC": "dengan intensitas tetap"
         })[intensity] || "dengan intensitas tetap";
 
-        // --- Ekstraksi Informasi Utama ---
         const volcano = (sigmetText.match(/MT\s+([\w\s-]+?)\s+PSN/i) || [])[1]?.trim();
         const validityMatch = sigmetText.match(/VALID\s+(\d{6})\/(\d{6})/i);
         const obsTimeMatch = sigmetText.match(/OBS\s+AT\s+(\d{4}Z)/i);
@@ -2458,7 +2471,6 @@ function generateSigmetTranslation(sigmetText) {
         const formattedEnd = formatDateTime(endTime);
         const formattedObs = formatDateTime(obsDateTime);
         
-        // --- Ekstraksi Layer Abu Vulkanik (Iteratif) ---
         const phenomenonBlock = (sigmetText.split(/WAAF UJUNG PANDANG FIR/i)[1] || "");
         const cloudChunks = phenomenonBlock.split(/AND\s+OBS\s+AT/i);
         
@@ -2466,12 +2478,9 @@ function generateSigmetTranslation(sigmetText) {
             const flMatch = chunk.match(/SFC\/FL(\d{3})/);
             const moveMatch = chunk.match(/MOV\s+(\w+)\s+(\d+)KT/);
             const intensityMatch = chunk.match(/(INTSF|WKN|NC)/);
-
             if (!flMatch) return null;
-
             const flightLevel = parseInt(flMatch[1]) * 100;
             const intensity = translateIntensity(intensityMatch ? intensityMatch[0] : "NC");
-            
             if (moveMatch) {
                 const direction = translateDirection(moveMatch[1]);
                 const speed = moveMatch[2];
@@ -2482,14 +2491,12 @@ function generateSigmetTranslation(sigmetText) {
             return `terdapat sebaran abu vulkanik pada ketinggian hingga ${flightLevel} feet, ${intensity}`;
         }).filter(Boolean);
 
-        // Gabungkan deskripsi awan dengan logika "Kemudian..."
         const cloudDescription = translatedClouds.map((desc, index) => {
             if (index === 0) return desc;
             if (index > 0 && index < translatedClouds.length) return `. Kemudian, ${desc}`;
             return desc;
         }).join('');
         
-        // --- Merakit Terjemahan Final ---
         return `Mohon izin update Aktivitas VA Gunung ${volcano.toUpperCase()}
 Berikut berita SIGMET:
 ${sigmetText}
@@ -2500,7 +2507,6 @@ Demikian dilaporkan. Terima kasih atas perhatiannya.
 
 - Darwin VAAC
 - Forecaster MWO Ujung Pandang`;
-
     } catch (error) {
         console.error("[Translation Generator] Error:", error);
         return `Terjadi error internal saat menerjemahkan SIGMET: ${error.message}`;
@@ -2603,11 +2609,13 @@ function showVaaNotificationOnMap(vaaData) {
         }
     };
 
+    // MODIFIKASI: Pemanggilan fungsi terjemahan sekarang menyertakan longitude
     generateSigmetBtn.onclick = () => {
         vaaPolygonPreviewLayer.clearLayers();
         
         const sigmetText = generateSigmet(vaaData.fullText);
-        const translationText = generateSigmetTranslation(sigmetText);
+        // Di sini kita passing mapInfo.lon ke fungsi terjemahan
+        const translationText = generateSigmetTranslation(sigmetText, mapInfo.lon);
 
         const codeTextarea = sigmetContainer.querySelector('#sigmet-code-output');
         const translationTextarea = sigmetContainer.querySelector('#sigmet-translation-output');
