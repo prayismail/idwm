@@ -1538,7 +1538,6 @@ function parseMultiPolygonSigmet(rawText, firToIntersectWith) {
 
 // BAGIAN 3: FUNGSI FETCH UTAMA - DENGAN LOGIKA FILTER YANG DISEMPURNAKAN
 // -------------------------------------------------------------------------
-
 function fetchSIGMET(firIcao) {
     let url = "/sigmet";
     const hazardPriority = {'VA': 1, 'TS': 2, 'ICE': 3, 'TURB': 3, 'default': 4};
@@ -1556,20 +1555,30 @@ function fetchSIGMET(firIcao) {
             let relevantSigmets;
             let firToUseForClipping;
 
-            // === INI ADALAH PERBAIKAN KUNCI ===
-            // Filter berdasarkan ICAO yang di-klik, dengan memeriksa DUA kemungkinan identifier
+            // Filter berdasarkan ICAO yang di-klik, dengan pengecekan keamanan
             if (firIcao === 'WIII') { // FIR Jakarta
-                
-                relevantSigmets = data.filter(sigmet => 
-                    sigmet.rawSigmet.includes('WSID20') || sigmet.rawSigmet.includes('WVID20')
-                );
+                relevantSigmets = data.filter(sigmet => {
+                    // SAFETY CHECK: Pastikan sigmet dan sigmet.rawSigmet valid
+                    if (!sigmet || typeof sigmet.rawSigmet !== 'string') {
+                        // Untuk debugging, Anda bisa log data yang bermasalah
+                        // console.warn('Melewatkan data SIGMET tidak valid:', sigmet);
+                        return false; 
+                    }
+                    return sigmet.rawSigmet.includes('WSID20') || sigmet.rawSigmet.includes('WVID20');
+                });
                 firToUseForClipping = firJakarta_geojson;
+
             } else if (firIcao === 'WAAA') { // FIR Ujung Pandang
-                
-                relevantSigmets = data.filter(sigmet => 
-                    sigmet.rawSigmet.includes('WSID21') || sigmet.rawSigmet.includes('WVID21')
-                );
+                relevantSigmets = data.filter(sigmet => {
+                    // SAFETY CHECK: Pastikan sigmet dan sigmet.rawSigmet valid
+                    if (!sigmet || typeof sigmet.rawSigmet !== 'string') {
+                        // console.warn('Melewatkan data SIGMET tidak valid:', sigmet);
+                        return false;
+                    }
+                    return sigmet.rawSigmet.includes('WSID21') || sigmet.rawSigmet.includes('WVID21');
+                });
                 firToUseForClipping = firUPG_geojson;
+
             } else {
                 return; // Jika ICAO tidak dikenal, jangan lakukan apa-apa
             }
@@ -1582,7 +1591,6 @@ function fetchSIGMET(firIcao) {
             relevantSigmets.sort((a, b) => (hazardPriority[b.hazard] || 4) - (hazardPriority[a.hazard] || 4));
             
             relevantSigmets.forEach(sigmet => {
-                // Gunakan GeoJSON yang sudah ditentukan di atas
                 const parsedPolygons = parseMultiPolygonSigmet(sigmet.rawSigmet, firToUseForClipping);
                 
                 if (parsedPolygons.length === 0) return;
