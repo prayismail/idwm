@@ -2509,12 +2509,12 @@ function generateSigmetTranslation(sigmetText, volcanoLon) {
 Berikut berita SIGMET:
 ${sigmetText}
 
-Berdasarkan pada berita SIGMET WV yang dikeluarkan oleh MWO Ujung Pandang (WAAA) yang berlaku pada tanggal ${formattedStart.date} mulai pukul ${formattedStart.utcTime} (${formattedStart.localTime}) hingga ${formattedEnd.date} pukul ${formattedEnd.utcTime} (${formattedEnd.localTime}), teramati pada pukul ${formattedObs.utcTime} (${formattedObs.localTime}), ${cloudDescription}.
+Berdasarkan pada berita SIGMET WV Gunung ${volcano.toUpperCase()} yang dikeluarkan oleh MWO Ujung Pandang (WAAA) yang berlaku pada tanggal ${formattedStart.date} mulai pukul ${formattedStart.utcTime} (${formattedStart.localTime}) hingga ${formattedEnd.date} pukul ${formattedEnd.utcTime} (${formattedEnd.localTime}), teramati pada pukul ${formattedObs.utcTime} (${formattedObs.localTime}), ${cloudDescription}.
 
 Demikian dilaporkan. Terima kasih atas perhatiannya.
-
+Sumber informasi:
 - Darwin VAAC
-- Forecaster MWO Ujung Pandang`;
+- Sultan Hasanuddin Meteorological Station`;
     } catch (error) {
         console.error("[Translation Generator] Error:", error);
         return `Terjadi error internal saat menerjemahkan SIGMET: ${error.message}`;
