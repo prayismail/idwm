@@ -40,10 +40,7 @@
             left: 0;
             z-index: 0;
         }
-/* Trik untuk membuat peta dasar menjadi hitam-putih kontras tinggi */
-.leaflet-tile-pane {
-    filter: invert(1) grayscale(1) contrast(1.2);
-}
+
         @media screen and (max-width: 768px) {
             #map { height: 90vh; }
         }
