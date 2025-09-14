@@ -420,7 +420,18 @@ cropImageButton.addEventListener('click', () => {
         var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'Base map &copy; OpenStreetMap contributors' });
         var esriImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution:  'Base map &copy; Esri, DigitalGlobe, GeoEye, Earthstar Geographics' });
         var cartoPositron = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: 'Base map &copy; CartoDB' }).addTo(map);
-        var topoMap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: 'Base map &copy; <a href="https://opentopomap.org/">OpenTopoMap</a> contributors' });
+        // URL Template untuk CARTO Positron (versi tanpa label agar lebih bersih)
+		var cartoUrl = 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
+// Atribusi yang wajib dicantumkan
+var cartoAttrib = 'Peta Dasar &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+
+// Tambahkan tile layer ke peta
+L.tileLayer(cartoUrl, {
+    attribution: cartoAttrib,
+    subdomains: 'abcd',
+    maxZoom: 20
+});		
+var topoMap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: 'Base map &copy; <a href="https://opentopomap.org/">OpenTopoMap</a> contributors' });
         var lulcMap = L.tileLayer.wms("/lulc-wms", {layers: 'WORLDCOVER_2021_MAP', format: 'image/png', transparent: true, attribution: 'Base map &copy; ESA WorldCover 2021' });
         var radarLayer = L.tileLayer('', { opacity: 0.8, attribution: 'Radar data &copy; RainViewer' }); 
         var IRsatelliteLayer = L.tileLayer('', { opacity: 0.7, attribution: 'Satellite data &copy; Accuweather' }); 
@@ -2004,6 +2015,7 @@ map.on('overlayremove', (e) => {
 var vaAdvisoryLayer = L.layerGroup();
         var baseMaps = {
             "Peta CartoDB": cartoPositron,
+			"Peta Garis Pantai": cartoUrl,
 			"Peta OSM": osmLayer,
             "Peta Esri Imagery": esriImagery,
             "Peta Topografi": topoMap,
