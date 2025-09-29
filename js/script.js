@@ -450,10 +450,15 @@ function closeFullscreen() {
     document.querySelector(".fullscreen-img").remove();}
 map.on('overlayadd', function(eventLayer) {
     if (eventLayer.layer === TropicalLayer) {
-        showPopup(zonalWindUrl);} });
+               showPopup(olrUrl); 
+    } 
+});
+
 map.on('overlayremove', function(eventLayer) {
     if (eventLayer.layer === TropicalLayer) {
-        map.closePopup();} });
+        map.closePopup();
+    } 
+});
         var precipitationLayer = L.tileLayer('https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=62ac6e2d12bbaaa3de6bf9f57fe1cc00', { attribution: 'Precipitation data &copy; OpenWeatherMap', opacity: 1 });
         var pressureLayer = L.tileLayer('https://tile.openweathermap.org/map/pressure_new/{z}/{x}/{y}.png?appid=62ac6e2d12bbaaa3de6bf9f57fe1cc00', { attribution: 'Pressure data &copy; OpenWeatherMap', opacity: 1 });
         // === PERUBAHAN PADA FUNGSI GEOLOKASI (TIDAK OTOMATIS LAGI) ===
