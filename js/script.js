@@ -2015,6 +2015,49 @@ var vaAdvisoryLayer = L.layerGroup();
             "Peta Topografi": topoMap,
             "Peta Tutupan Lahan": lulcMap
         };
+// =====================================================================
+// MENAMBAHKAN LAYER TITIK NAVIGASI (NAV POINTS) DARI FILE
+// =====================================================================
+
+// 1. Buat sebuah layer group kosong sebagai placeholder
+var navPointsLayer = L.layerGroup();
+
+// 3. Dapatkan URL "Raw" dari file nav-points.geojson Anda di GitHub
+const navPointsUrl = 'https://raw.githubusercontent.com/prayismail/idwm/refs/heads/main/data/nav-points.geojson';
+
+// 4. Gunakan 'fetch' untuk mengambil data dan menambahkannya ke peta
+fetch(navPointsUrl)
+    .then(response => response.json())
+    .then(data => {
+        // Buat layer GeoJSON setelah data berhasil diambil
+        var geojsonLayer = L.geoJSON(data, {
+            pointToLayer: function(feature, latlng) {
+                return L.circleMarker(latlng, {
+                    radius: 4,
+                    fillColor: "#ff7800",
+                    color: "#000",
+                    weight: 1,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                });
+            },
+            onEachFeature: function(feature, layer) {
+                if (feature.properties && feature.properties.name_rep) {
+                    var popupContent = `
+                        <strong>${feature.properties.name_rep}</strong><br>
+                        Tipe: ${feature.properties.type_rep}
+                    `;
+                    layer.bindPopup(popupContent);
+                }
+            }
+        });
+        
+        // Tambahkan layer GeoJSON yang sudah jadi ke dalam layer group placeholder
+        geojsonLayer.addTo(navPointsLayer);
+    })
+    .catch(error => console.error('Error memuat data NAV POINTS:', error));
+
+
         var overlayMaps = {
 			"Prakiraan Cuaca": weatherForecastLayer,
 	    "Turbulence (EDR)": turbulenceLayerGroup,
@@ -2755,49 +2798,4 @@ function updateDebugStatus(message, isError = false) {
 }
 // ========================= AKHIR KODE VAA =========================
 
-// =====================================================================
-// MENAMBAHKAN LAYER TITIK NAVIGASI (NAV POINTS) DARI FILE
-// =====================================================================
-
-// 1. Buat sebuah layer group kosong sebagai placeholder
-var navPointsLayer = L.layerGroup();
-
-// 2. Tambahkan placeholder ini ke kontrol layer Anda
-// Ini memungkinkan Anda untuk mengaktifkan/menonaktifkan layer bahkan sebelum datanya dimuat.
-overlayMaps["NAV POINTS"] = navPointsLayer;
-
-// 3. Dapatkan URL "Raw" dari file nav-points.geojson Anda di GitHub
-const navPointsUrl = 'https://raw.githubusercontent.com/prayismail/idwm/refs/heads/main/data/nav-points.geojson';
-
-// 4. Gunakan 'fetch' untuk mengambil data dan menambahkannya ke peta
-fetch(navPointsUrl)
-    .then(response => response.json())
-    .then(data => {
-        // Buat layer GeoJSON setelah data berhasil diambil
-        var geojsonLayer = L.geoJSON(data, {
-            pointToLayer: function(feature, latlng) {
-                return L.circleMarker(latlng, {
-                    radius: 4,
-                    fillColor: "#ff7800",
-                    color: "#000",
-                    weight: 1,
-                    opacity: 1,
-                    fillOpacity: 0.8
-                });
-            },
-            onEachFeature: function(feature, layer) {
-                if (feature.properties && feature.properties.name_rep) {
-                    var popupContent = `
-                        <strong>${feature.properties.name_rep}</strong><br>
-                        Tipe: ${feature.properties.type_rep}
-                    `;
-                    layer.bindPopup(popupContent);
-                }
-            }
-        });
-        
-        // Tambahkan layer GeoJSON yang sudah jadi ke dalam layer group placeholder
-        geojsonLayer.addTo(navPointsLayer);
-    })
-    .catch(error => console.error('Error memuat data NAV POINTS:', error));
 
