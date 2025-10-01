@@ -2024,10 +2024,8 @@ var vaAdvisoryLayer = L.layerGroup();
 	     "Radar Cuaca": radarLayer,
             "Cuaca Bandara": airportLayer,
 	    "Tropical Waves": TropicalLayer,
-	     "VA Advisory": vaAdvisoryLayer
-      
-// Pastikan layer "NAV POINTS" baru Anda ditambahkan di sini
-overlayMaps["NAV POINTS"] = navPointsLayer;
+	     "VA Advisory": vaAdvisoryLayer,
+			"NAV POINTS" = navPointsLayer;
   };
 
         setTimeout(() => {
