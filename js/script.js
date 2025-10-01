@@ -2025,7 +2025,7 @@ var vaAdvisoryLayer = L.layerGroup();
             "Cuaca Bandara": airportLayer,
 	    "Tropical Waves": TropicalLayer,
 	     "VA Advisory": vaAdvisoryLayer,
-			"NAV POINTS" = navPointsLayer;
+			"NAV POINTS" = navPointsLayer
   };
 
         setTimeout(() => {
