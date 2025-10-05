@@ -2016,78 +2016,88 @@ var vaAdvisoryLayer = L.layerGroup();
             "Peta Tutupan Lahan": lulcMap
         };
 // =====================================================================
-// MENAMBAHKAN LAYER TITIK NAVIGASI DENGAN LABEL DAN PENCARIAN
+// MENAMBAHKAN LAYER TITIK NAVIGASI DENGAN LABEL DAN PENCARIAN (FIXED)
 // =====================================================================
 
 // 1. Buat layer group kosong sebagai placeholder
 var navPointsLayer = L.layerGroup();
 
-// Variabel global untuk menyimpan objek kontrol pencarian
+// Variabel global untuk menyimpan objek kontrol pencarian dan data GeoJSON
 let searchControl = null;
+let navPointsGeoJsonLayer = null; // Variabel untuk menyimpan data layer agar tidak di-fetch ulang
 
 // URL "Raw" yang benar dari file nav-points.geojson Anda di GitHub
 const navPointsUrl = 'https://raw.githubusercontent.com/prayismail/idwm/main/data/nav-points.geojson';
 
+// Fungsi terpisah untuk membuat dan menambahkan kontrol pencarian
+function createAndAddSearchControl() {
+    // Pastikan tidak ada kontrol duplikat dan data sudah siap
+    if (searchControl) {
+        map.removeControl(searchControl);
+    }
+    
+    if (navPointsGeoJsonLayer) {
+        searchControl = new L.Control.Search({
+            layer: navPointsGeoJsonLayer,
+            propertyName: 'name_rep',
+            initial: false,
+            zoom: 13,
+            marker: false,
+            textPlaceholder: 'Cari NAV Point...'
+        });
+
+        searchControl.on('search:locationfound', function(e) {
+            e.layer.openPopup();
+        });
+
+        map.addControl(searchControl);
+    }
+}
+
 // Event listener saat layer "NAV POINTS" diaktifkan
 map.on('overlayadd', function(e) {
     if (e.name === 'NAV POINTS') {
-        // Hanya jalankan fetch jika layer belum terisi
-        if (navPointsLayer.getLayers().length === 0) {
+        // Cek apakah data sudah pernah dimuat sebelumnya
+        if (!navPointsGeoJsonLayer) {
+            // JIKA BELUM: fetch data, buat layer, lalu buat kontrol pencarian
+            console.log("Memuat data NAV POINTS untuk pertama kali...");
             fetch(navPointsUrl)
                 .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Gagal memuat GeoJSON dari URL. Status: ${response.status}.`);
-                    }
+                    if (!response.ok) throw new Error(`Gagal memuat GeoJSON. Status: ${response.status}.`);
                     return response.json();
                 })
                 .then(data => {
-                    var geojsonLayer = L.geoJSON(data, {
+                    // Buat layer GeoJSON dan SIMPAN ke variabel global
+                    navPointsGeoJsonLayer = L.geoJSON(data, {
                         pointToLayer: function(feature, latlng) {
                             return L.circleMarker(latlng, {
-                                radius: 4,
-                                fillColor: "#ff7800",
-                                color: "#000",
-                                weight: 1,
-                                opacity: 1,
-                                fillOpacity: 0.8
+                                radius: 4, fillColor: "#ff7800", color: "#000",
+                                weight: 1, opacity: 1, fillOpacity: 0.8
                             });
                         },
                         onEachFeature: function(feature, layer) {
                             if (feature.properties && feature.properties.name_rep) {
                                 var navPointName = feature.properties.name_rep;
                                 layer.bindTooltip(navPointName, {
-                                    permanent: true,
-                                    direction: 'right',
-                                    offset: [10, 0],
-                                    className: 'nav-point-label'
+                                    permanent: true, direction: 'right', offset: [10, 0], className: 'nav-point-label'
                                 });
                                 var popupContent = `<strong>${navPointName}</strong><br>Tipe: ${feature.properties.type_rep}`;
                                 layer.bindPopup(popupContent);
                             }
                         }
                     });
-
-                    // Tambahkan layer GeoJSON ke dalam layer group placeholder
-                    geojsonLayer.addTo(navPointsLayer);
-
-                    // --- INI BAGIAN BARU: BUAT DAN TAMBAHKAN KONTROL PENCARIAN ---
-                    searchControl = new L.Control.Search({
-                        layer: geojsonLayer,           // Layer yang akan dicari
-                        propertyName: 'name_rep',      // Properti di GeoJSON yang berisi nama
-                        initial: false,                // Jangan lakukan pencarian saat halaman dimuat
-                        zoom: 13,                      // Level zoom saat hasil ditemukan
-                        marker: false,                 // Jangan buat marker baru, cukup pindah ke yang sudah ada
-                        textPlaceholder: 'Cari NAV Point...'
-                    });
                     
-                    // Event saat lokasi ditemukan
-                    searchControl.on('search:locationfound', function(e) {
-                        e.layer.openPopup(); // Otomatis buka popup saat hasil ditemukan
-                    });
-
-                    map.addControl(searchControl);
+                    // Tambahkan data ke layer group yang akan ditampilkan di peta
+                    navPointsGeoJsonLayer.addTo(navPointsLayer);
+                    
+                    // Setelah data siap, panggil fungsi untuk membuat kontrol pencarian
+                    createAndAddSearchControl();
                 })
                 .catch(error => console.error('Error memuat data NAV POINTS:', error));
+        } else {
+            // JIKA DATA SUDAH ADA: langsung panggil fungsi untuk membuat kontrol pencarian
+            console.log("Data sudah ada. Menampilkan kembali alat pencarian.");
+            createAndAddSearchControl();
         }
     }
 });
@@ -2095,10 +2105,11 @@ map.on('overlayadd', function(e) {
 // Event listener saat layer "NAV POINTS" dinonaktifkan
 map.on('overlayremove', function(e) {
     if (e.name === 'NAV POINTS') {
+        console.log("Menghapus alat pencarian.");
         // Hapus kontrol pencarian jika ada
         if (searchControl) {
             map.removeControl(searchControl);
-            searchControl = null; // Reset variabel
+            searchControl = null; // <-- INI KUNCI PERBAIKANNYA: Reset variabel menjadi null
         }
     }
 });
