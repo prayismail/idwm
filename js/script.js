@@ -2016,16 +2016,21 @@ var vaAdvisoryLayer = L.layerGroup();
             "Peta Tutupan Lahan": lulcMap
         };
 // =====================================================================
-// MENAMBAHKAN LAYER NAV POINTS - VERSI FINAL UNTUK RULER SEKALI PAKAI
+// MENAMBAHKAN LAYER NAV POINTS - RULER BERHENTI SETELAH KLIK KEDUA
 // =====================================================================
 
+// 1. Buat layer group kosong sebagai placeholder
 var navPointsLayer = L.layerGroup();
+
+// Variabel global
 let searchControl = null;
 let rulerControl = null;
 let navPointsGeoJsonLayer = null;
+
+// URL GeoJSON
 const navPointsUrl = 'https://raw.githubusercontent.com/prayismail/idwm/main/data/nav-points.geojson';
 
-// Fungsi untuk membuat dan menambahkan kontrol pencarian (tidak ada perubahan)
+// Fungsi untuk membuat kontrol pencarian
 function createAndAddSearchControl() {
     if (searchControl) map.removeControl(searchControl);
     if (navPointsGeoJsonLayer) {
@@ -2038,39 +2043,25 @@ function createAndAddSearchControl() {
     }
 }
 
-// --- FUNGSI RULER YANG DIPERBARUI TOTAL ---
+// Fungsi untuk membuat alat ukur
 function createAndAddRulerControl() {
-    // Hapus kontrol lama jika ada
-    if (rulerControl) {
-        map.removeControl(rulerControl);
-        rulerControl = null;
-    }
-
-    // Buat opsi untuk ruler
-    const rulerOptions = {
+    if (rulerControl) map.removeControl(rulerControl);
+    
+    rulerControl = L.control.ruler({
         position: 'topright',
         lengthUnit: { display: 'NM', factor: 0.539957, decimal: 2, label: 'Jarak:' },
-        angleUnit: { display: '&deg;', decimal: 2, factor: null, label: 'Arah:' }
-    };
+        angleUnit: { display: '&deg;', decimal: 2, factor: null, label: 'Arah:' },
+        // --- PERUBAHAN UTAMA ADA DI SINI ---
+        maxPoints: 2 // Batasi pengukuran hanya untuk 2 titik (awal dan akhir)
+    }).addTo(map);
 
-    // Buat kontrol ruler baru
-    rulerControl = L.control.ruler(rulerOptions);
-    rulerControl.addTo(map);
-
-    // Saat pengguna mengaktifkan ruler dengan mengklik tombolnya...
-    map.on('ruler:show', function() {
-        // ...dengarkan event saat pengukuran selesai
-        map.on('ruler:result', function handleResult() {
-            // Hapus semua garis yang ada
-            rulerControl.clear();
-            // Hapus event listener ini agar tidak terpicu lagi
-            map.off('ruler:result', handleResult);
-            // Buat ulang kontrol ruler dari awal untuk reset total
-            createAndAddRulerControl();
-        });
+    // Saat pengukuran selesai (setelah klik kedua karena maxPoints: 2)...
+    map.on('ruler:result', function() {
+        // ...secara programmatic nonaktifkan mode menggambar.
+        // Ini akan menghentikan garis agar tidak mengikuti kursor lagi.
+        rulerControl.toggle();
     });
 }
-
 
 // Event listener saat layer "NAV POINTS" diaktifkan
 map.on('overlayadd', function(e) {
@@ -2115,14 +2106,14 @@ map.on('overlayremove', function(e) {
             searchControl = null;
         }
         if (rulerControl) {
-            map.off('ruler:show');
+            // Hapus semua event listener ruler sebelum menghapus kontrol
             map.off('ruler:result');
             map.removeControl(rulerControl);
             rulerControl = null;
         }
     }
 });
-        var overlayMaps = {
+var overlayMaps = {
 			"Prakiraan Cuaca": weatherForecastLayer,
 	    "Turbulence (EDR)": turbulenceLayerGroup,
             "Satelit Visible": VISsatelliteLayer,
