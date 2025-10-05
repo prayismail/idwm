@@ -2016,22 +2016,30 @@ var vaAdvisoryLayer = L.layerGroup();
             "Peta Tutupan Lahan": lulcMap
         };
 // =====================================================================
-// MENAMBAHKAN LAYER TITIK NAVIGASI (NAV POINTS) DARI FILE
+// MENAMBAHKAN LAYER TITIK NAVIGASI (NAV POINTS) DENGAN LABEL PERMANEN
 // =====================================================================
 
 // 1. Buat sebuah layer group kosong sebagai placeholder
 var navPointsLayer = L.layerGroup();
 
-// 3. Dapatkan URL "Raw" dari file nav-points.geojson Anda di GitHub
-const navPointsUrl = 'https://raw.githubusercontent.com/prayismail/idwm/refs/heads/main/data/nav-points.geojson';
+// 2. Dapatkan URL "Raw" yang BENAR dari file nav-points.geojson Anda di GitHub
+// URL yang lama menggunakan '/refs/heads/' yang bisa menyebabkan error.
+const navPointsUrl = 'https://raw.githubusercontent.com/prayismail/idwm/main/data/nav-points.geojson';
 
-// 4. Gunakan 'fetch' untuk mengambil data dan menambahkannya ke peta
+// 3. Gunakan 'fetch' untuk mengambil data dan menambahkannya ke peta
 fetch(navPointsUrl)
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            // Jika file tidak ditemukan, berikan pesan error yang jelas di console
+            throw new Error(`Gagal memuat GeoJSON dari URL. Status: ${response.status}. Pastikan URL "Raw" sudah benar.`);
+        }
+        return response.json();
+    })
     .then(data => {
         // Buat layer GeoJSON setelah data berhasil diambil
         var geojsonLayer = L.geoJSON(data, {
             pointToLayer: function(feature, latlng) {
+                // Kita tetap menggunakan circleMarker untuk visual titiknya
                 return L.circleMarker(latlng, {
                     radius: 4,
                     fillColor: "#ff7800",
@@ -2043,8 +2051,22 @@ fetch(navPointsUrl)
             },
             onEachFeature: function(feature, layer) {
                 if (feature.properties && feature.properties.name_rep) {
+                    var navPointName = feature.properties.name_rep;
+                    
+                    // --- INI BAGIAN BARU UNTUK LABEL PERMANEN ---
+                    layer.bindTooltip(
+                        navPointName, // Konten tooltip adalah nama titiknya
+                        {
+                            permanent: true,      // Membuat label selalu terlihat
+                            direction: 'right',   // Arah label (bisa 'top', 'bottom', 'left')
+                            offset: [10, 0],      // Jarak dari titik (10px ke kanan)
+                            className: 'nav-point-label' // Kelas CSS kustom untuk styling
+                        }
+                    );
+
+                    // Kita tetap mempertahankan popup untuk detail tambahan saat di-klik
                     var popupContent = `
-                        <strong>${feature.properties.name_rep}</strong><br>
+                        <strong>${navPointName}</strong><br>
                         Tipe: ${feature.properties.type_rep}
                     `;
                     layer.bindPopup(popupContent);
@@ -2056,7 +2078,6 @@ fetch(navPointsUrl)
         geojsonLayer.addTo(navPointsLayer);
     })
     .catch(error => console.error('Error memuat data NAV POINTS:', error));
-
 
         var overlayMaps = {
 			"Prakiraan Cuaca": weatherForecastLayer,
