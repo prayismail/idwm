@@ -2016,21 +2016,15 @@ var vaAdvisoryLayer = L.layerGroup();
             "Peta Tutupan Lahan": lulcMap
         };
 // =====================================================================
-// MENAMBAHKAN LAYER NAV POINTS - RULER BERHENTI SETELAH KLIK KEDUA
+// MENAMBAHKAN LAYER NAV POINTS - VERSI FINAL DENGAN PEMBERSIHAN EVENT LISTENER
 // =====================================================================
 
-// 1. Buat layer group kosong sebagai placeholder
 var navPointsLayer = L.layerGroup();
-
-// Variabel global
 let searchControl = null;
 let rulerControl = null;
 let navPointsGeoJsonLayer = null;
-
-// URL GeoJSON
 const navPointsUrl = 'https://raw.githubusercontent.com/prayismail/idwm/main/data/nav-points.geojson';
 
-// Fungsi untuk membuat kontrol pencarian
 function createAndAddSearchControl() {
     if (searchControl) map.removeControl(searchControl);
     if (navPointsGeoJsonLayer) {
@@ -2043,24 +2037,28 @@ function createAndAddSearchControl() {
     }
 }
 
-// Fungsi untuk membuat alat ukur
+// --- FUNGSI RULER DIPERBAIKI LAGI ---
 function createAndAddRulerControl() {
     if (rulerControl) map.removeControl(rulerControl);
-    
+
     rulerControl = L.control.ruler({
         position: 'topright',
         lengthUnit: { display: 'NM', factor: 0.539957, decimal: 2, label: 'Jarak:' },
         angleUnit: { display: '&deg;', decimal: 2, factor: null, label: 'Arah:' },
-        // --- PERUBAHAN UTAMA ADA DI SINI ---
-        maxPoints: 2 // Batasi pengukuran hanya untuk 2 titik (awal dan akhir)
+        maxPoints: 2
     }).addTo(map);
 
-    // Saat pengukuran selesai (setelah klik kedua karena maxPoints: 2)...
-    map.on('ruler:result', function() {
-        // ...secara programmatic nonaktifkan mode menggambar.
-        // Ini akan menghentikan garis agar tidak mengikuti kursor lagi.
+    // Saat pengukuran selesai, nonaktifkan ruler
+    map.on('ruler:result', handleRulerResult);
+}
+
+// Fungsi terpisah untuk menangani hasil ruler, agar bisa dihapus nanti
+function handleRulerResult() {
+    // Cukup nonaktifkan mode menggambar.
+    // Tidak perlu menghapus dan membuat ulang kontrol di sini.
+    if (rulerControl) {
         rulerControl.toggle();
-    });
+    }
 }
 
 // Event listener saat layer "NAV POINTS" diaktifkan
@@ -2101,13 +2099,17 @@ map.on('overlayadd', function(e) {
 map.on('overlayremove', function(e) {
     if (e.name === 'NAV POINTS') {
         console.log("Menghapus alat bantu...");
+        
         if (searchControl) {
             map.removeControl(searchControl);
             searchControl = null;
         }
+        
         if (rulerControl) {
-            // Hapus semua event listener ruler sebelum menghapus kontrol
-            map.off('ruler:result');
+            // --- INI PERBAIKAN UTAMA ---
+            // Hapus event listener 'ruler:result' secara spesifik
+            map.off('ruler:result', handleRulerResult);
+            
             map.removeControl(rulerControl);
             rulerControl = null;
         }
