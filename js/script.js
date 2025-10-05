@@ -2016,68 +2016,92 @@ var vaAdvisoryLayer = L.layerGroup();
             "Peta Tutupan Lahan": lulcMap
         };
 // =====================================================================
-// MENAMBAHKAN LAYER TITIK NAVIGASI (NAV POINTS) DENGAN LABEL PERMANEN
+// MENAMBAHKAN LAYER TITIK NAVIGASI DENGAN LABEL DAN PENCARIAN
 // =====================================================================
 
-// 1. Buat sebuah layer group kosong sebagai placeholder
+// 1. Buat layer group kosong sebagai placeholder
 var navPointsLayer = L.layerGroup();
 
-// 2. Dapatkan URL "Raw" yang BENAR dari file nav-points.geojson Anda di GitHub
-// URL yang lama menggunakan '/refs/heads/' yang bisa menyebabkan error.
+// Variabel global untuk menyimpan objek kontrol pencarian
+let searchControl = null;
+
+// URL "Raw" yang benar dari file nav-points.geojson Anda di GitHub
 const navPointsUrl = 'https://raw.githubusercontent.com/prayismail/idwm/main/data/nav-points.geojson';
 
-// 3. Gunakan 'fetch' untuk mengambil data dan menambahkannya ke peta
-fetch(navPointsUrl)
-    .then(response => {
-        if (!response.ok) {
-            // Jika file tidak ditemukan, berikan pesan error yang jelas di console
-            throw new Error(`Gagal memuat GeoJSON dari URL. Status: ${response.status}. Pastikan URL "Raw" sudah benar.`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        // Buat layer GeoJSON setelah data berhasil diambil
-        var geojsonLayer = L.geoJSON(data, {
-            pointToLayer: function(feature, latlng) {
-                // Kita tetap menggunakan circleMarker untuk visual titiknya
-                return L.circleMarker(latlng, {
-                    radius: 4,
-                    fillColor: "#ff7800",
-                    color: "#000",
-                    weight: 1,
-                    opacity: 1,
-                    fillOpacity: 0.8
-                });
-            },
-            onEachFeature: function(feature, layer) {
-                if (feature.properties && feature.properties.name_rep) {
-                    var navPointName = feature.properties.name_rep;
-                    
-                    // --- INI BAGIAN BARU UNTUK LABEL PERMANEN ---
-                    layer.bindTooltip(
-                        navPointName, // Konten tooltip adalah nama titiknya
-                        {
-                            permanent: true,      // Membuat label selalu terlihat
-                            direction: 'right',   // Arah label (bisa 'top', 'bottom', 'left')
-                            offset: [10, 0],      // Jarak dari titik (10px ke kanan)
-                            className: 'nav-point-label' // Kelas CSS kustom untuk styling
+// Event listener saat layer "NAV POINTS" diaktifkan
+map.on('overlayadd', function(e) {
+    if (e.name === 'NAV POINTS') {
+        // Hanya jalankan fetch jika layer belum terisi
+        if (navPointsLayer.getLayers().length === 0) {
+            fetch(navPointsUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Gagal memuat GeoJSON dari URL. Status: ${response.status}.`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    var geojsonLayer = L.geoJSON(data, {
+                        pointToLayer: function(feature, latlng) {
+                            return L.circleMarker(latlng, {
+                                radius: 4,
+                                fillColor: "#ff7800",
+                                color: "#000",
+                                weight: 1,
+                                opacity: 1,
+                                fillOpacity: 0.8
+                            });
+                        },
+                        onEachFeature: function(feature, layer) {
+                            if (feature.properties && feature.properties.name_rep) {
+                                var navPointName = feature.properties.name_rep;
+                                layer.bindTooltip(navPointName, {
+                                    permanent: true,
+                                    direction: 'right',
+                                    offset: [10, 0],
+                                    className: 'nav-point-label'
+                                });
+                                var popupContent = `<strong>${navPointName}</strong><br>Tipe: ${feature.properties.type_rep}`;
+                                layer.bindPopup(popupContent);
+                            }
                         }
-                    );
+                    });
 
-                    // Kita tetap mempertahankan popup untuk detail tambahan saat di-klik
-                    var popupContent = `
-                        <strong>${navPointName}</strong><br>
-                        Tipe: ${feature.properties.type_rep}
-                    `;
-                    layer.bindPopup(popupContent);
-                }
-            }
-        });
-        
-        // Tambahkan layer GeoJSON yang sudah jadi ke dalam layer group placeholder
-        geojsonLayer.addTo(navPointsLayer);
-    })
-    .catch(error => console.error('Error memuat data NAV POINTS:', error));
+                    // Tambahkan layer GeoJSON ke dalam layer group placeholder
+                    geojsonLayer.addTo(navPointsLayer);
+
+                    // --- INI BAGIAN BARU: BUAT DAN TAMBAHKAN KONTROL PENCARIAN ---
+                    searchControl = new L.Control.Search({
+                        layer: geojsonLayer,           // Layer yang akan dicari
+                        propertyName: 'name_rep',      // Properti di GeoJSON yang berisi nama
+                        initial: false,                // Jangan lakukan pencarian saat halaman dimuat
+                        zoom: 13,                      // Level zoom saat hasil ditemukan
+                        marker: false,                 // Jangan buat marker baru, cukup pindah ke yang sudah ada
+                        textPlaceholder: 'Cari NAV Point...'
+                    });
+                    
+                    // Event saat lokasi ditemukan
+                    searchControl.on('search:locationfound', function(e) {
+                        e.layer.openPopup(); // Otomatis buka popup saat hasil ditemukan
+                    });
+
+                    map.addControl(searchControl);
+                })
+                .catch(error => console.error('Error memuat data NAV POINTS:', error));
+        }
+    }
+});
+
+// Event listener saat layer "NAV POINTS" dinonaktifkan
+map.on('overlayremove', function(e) {
+    if (e.name === 'NAV POINTS') {
+        // Hapus kontrol pencarian jika ada
+        if (searchControl) {
+            map.removeControl(searchControl);
+            searchControl = null; // Reset variabel
+        }
+    }
+});
 
         var overlayMaps = {
 			"Prakiraan Cuaca": weatherForecastLayer,
