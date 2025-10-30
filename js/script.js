@@ -2617,7 +2617,7 @@ function generateSigmetTranslation(sigmetText, volcanoLon) {
 
 ${sigmetText}
 
-Berikut SIGMET WV terbaru Gunung ${volcano.toUpperCase()} berdasarkan informasi VAAC Darwin, yang berlaku pada tanggal ${formattedStart.date} mulai pukul ${formattedStart.utcTime} (${formattedStart.localTime}) hingga ${formattedEnd.date} pukul ${formattedEnd.utcTime} (${formattedEnd.localTime}). Teramati sebaran abu vulkanik pada pukul ${formattedObs.utcTime} (${formattedObs.localTime}), ${cloudDescription}.
+Berikut SIGMET WV terbaru Gunung ${volcano.toUpperCase()} berdasarkan informasi VAAC Darwin, yang berlaku pada tanggal ${formattedStart.date} mulai pukul ${formattedStart.utcTime} (${formattedStart.localTime}) hingga ${formattedEnd.date} pukul ${formattedEnd.utcTime} (${formattedEnd.localTime}). Teramati pada pukul ${formattedObs.utcTime} (${formattedObs.localTime}), ${cloudDescription}.
 
 Demikian dilaporkan. Terima kasih atas perhatiannya.
 Sumber informasi:
