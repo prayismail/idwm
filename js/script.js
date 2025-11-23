@@ -2052,7 +2052,7 @@ function createAndAddRulerControl() {
         lengthUnit: { 
             display: 'km',      // Teks yang muncul di layar
             decimal: 2,         // Jumlah angka belakang koma
-            factor: 0.001,      // Rumus: 1 Meter dikali 0.001 = KM
+            factor: 1,      // Rumus: 1 Meter dikali 0.001 = KM
             label: 'Jarak:'     // Label
         },
         angleUnit: { 
