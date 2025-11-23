@@ -2016,7 +2016,7 @@ var vaAdvisoryLayer = L.layerGroup();
             "Peta Tutupan Lahan": lulcMap
         };
 // =====================================================================
-// LAYER NAV POINTS + RULER (FIX: INLINE KM PASTI MUNCUL)
+// LAYER NAV POINTS + RULER (VERSI "FORCE UPDATE" KM)
 // =====================================================================
 
 var navPointsLayer = L.layerGroup();
@@ -2048,7 +2048,7 @@ function createAndAddRulerControl() {
 
     rulerControl = L.control.ruler({
         position: 'topright',
-        // Tetap gunakan NM sebagai basis agar angka utama sesuai standar
+        // Tetap gunakan NM sebagai basis
         lengthUnit: { display: 'NM', factor: 0.539957, decimal: 2, label: 'Jarak:' },
         angleUnit: { display: '&deg;', decimal: 2, factor: null, label: 'Arah:' },
         maxPoints: 2
@@ -2059,42 +2059,64 @@ function createAndAddRulerControl() {
     map.on('ruler:result', handleRulerResult);
 }
 
-// --- FUNGSI UPDATE TAMPILAN HASIL (LOGIKA DIPERBAIKI) ---
+// --- FUNGSI UPDATE TAMPILAN HASIL (LOGIKA "CHECK & RETRY") ---
 function handleRulerResult(e) {
     // 1. Matikan mode menggambar
     if (rulerControl) {
         rulerControl.toggle();
     }
 
-    // 2. Ambil layer garis yang baru dibuat
     var layer = e.layer; 
     if (layer) {
         var latlngs = layer.getLatLngs();
         
         // Hitung jarak Meter dan KM
         var distMeters = latlngs[0].distanceTo(latlngs[1]);
-        var distKM = (distMeters / 1000).toFixed(2); // 2 angka di belakang koma
+        // Hitung nilai yang sama persis dengan yang ditampilkan plugin (NM) untuk pencocokan
+        var distNM_Value = (distMeters * 0.000539957).toFixed(2); 
+        var distKM_Value = (distMeters / 1000).toFixed(2);
         
-        // 3. INJEKSI TEKS KM (DENGAN DELAY AGAR AMAN)
-        // Kita beri waktu 200ms agar elemen HTML benar-benar selesai dibuat oleh Plugin
-        setTimeout(function() {
-            // Cari SEMUA elemen tooltip yang ada di peta
-            var tooltips = document.querySelectorAll('.result-tooltip');
+        // Teks yang akan kita cari di HTML (Contoh: "45.34 NM")
+        var targetText = distNM_Value + " NM";
+        
+        // 2. LOGIKA PENGULANGAN (INTERVAL)
+        // Cek setiap 100ms, maksimal 20 kali (total 2 detik)
+        var attempts = 0;
+        var checkInterval = setInterval(function() {
+            attempts++;
             
-            // Loop semua tooltip untuk memastikan yang baru juga ke-update
+            // Ambil semua tooltip yang ada
+            var tooltips = document.querySelectorAll('.result-tooltip');
+            var foundAndFixed = false;
+
+            // Loop semua tooltip
             tooltips.forEach(function(tooltip) {
-                // Cek: Jika ada tulisan "NM" TAPI belum ada tulisan "KM"
-                if (tooltip.innerHTML.includes('NM') && !tooltip.innerHTML.includes('KM')) {
+                // Jika tooltip ini berisi angka NM yang benar TAPI belum ada KM-nya
+                if (tooltip.innerHTML.includes(targetText) && !tooltip.innerHTML.includes('KM')) {
                     
-                    // Tambahkan styling agar rapi
-                    var textKM = ` <span style="font-weight:normal; color:#333; font-size: 0.9em;">(${distKM} KM)</span>`;
+                    // 3. UPDATE CSS LANGSUNG DI SINI (Biar kotaknya pasti lebar)
+                    tooltip.style.minWidth = "180px";
+                    tooltip.style.width = "auto";
+                    tooltip.style.paddingRight = "10px";
+
+                    // 4. SISIPKAN JARAK KM
+                    // Ganti "XX.XX NM" menjadi "XX.XX NM (YY.YY KM)"
+                    var newHtml = tooltip.innerHTML.replace(
+                        "NM", 
+                        `NM <span style="font-weight:normal; color:#555; font-size:0.9em;">(${distKM_Value} KM)</span>`
+                    );
                     
-                    // Ganti teks "NM" menjadi "NM (xx KM)"
-                    tooltip.innerHTML = tooltip.innerHTML.replace('NM', 'NM' + textKM);
+                    tooltip.innerHTML = newHtml;
+                    foundAndFixed = true;
                 }
             });
+
+            // Jika sudah berhasil diubah, atau sudah mencoba 20 kali, hentikan pengecekan
+            if (foundAndFixed || attempts >= 20) {
+                clearInterval(checkInterval);
+            }
             
-        }, 200); // Delay ditingkatkan jadi 200ms
+        }, 100); // Cek setiap 100 milidetik
     }
 }
 
@@ -2134,20 +2156,16 @@ map.on('overlayadd', function(e) {
 // --- EVENT LISTENER SAAT LAYER "NAV POINTS" DINONAKTIFKAN ---
 map.on('overlayremove', function(e) {
     if (e.name === 'NAV POINTS') {
-        console.log("Menghapus alat bantu...");
-        
         if (searchControl) {
             map.removeControl(searchControl);
             searchControl = null;
         }
-        
         if (rulerControl) {
             map.off('ruler:result', handleRulerResult);
             map.removeControl(rulerControl);
             rulerControl = null;
         }
-        
-        // Hapus sisa elemen di peta
+        // Bersihkan elemen sisa
         document.querySelectorAll('.result-tooltip').forEach(el => el.remove());
         document.querySelectorAll('.leaflet-ruler-layer').forEach(el => el.remove());
     }
