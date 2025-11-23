@@ -2016,7 +2016,7 @@ var vaAdvisoryLayer = L.layerGroup();
             "Peta Tutupan Lahan": lulcMap
         };
 // =====================================================================
-// LAYER NAV POINTS + RULER (INLINE NM & KM)
+// LAYER NAV POINTS + RULER (FIX: INLINE KM PASTI MUNCUL)
 // =====================================================================
 
 var navPointsLayer = L.layerGroup();
@@ -2048,55 +2048,53 @@ function createAndAddRulerControl() {
 
     rulerControl = L.control.ruler({
         position: 'topright',
-        // Satuan utama NM (Nautical Miles)
-        // 1 Meter = 0.000539957 NM
+        // Tetap gunakan NM sebagai basis agar angka utama sesuai standar
         lengthUnit: { display: 'NM', factor: 0.539957, decimal: 2, label: 'Jarak:' },
         angleUnit: { display: '&deg;', decimal: 2, factor: null, label: 'Arah:' },
         maxPoints: 2
     }).addTo(map);
 
-    // Reset event listener
+    // Hapus listener lama dan pasang yang baru
     map.off('ruler:result', handleRulerResult);
     map.on('ruler:result', handleRulerResult);
 }
 
-// --- FUNGSI MENANGANI HASIL UKUR (INLINE KM) ---
+// --- FUNGSI UPDATE TAMPILAN HASIL (LOGIKA DIPERBAIKI) ---
 function handleRulerResult(e) {
-    // 1. Matikan mode menggambar agar cursor kembali normal
+    // 1. Matikan mode menggambar
     if (rulerControl) {
         rulerControl.toggle();
     }
 
-    // 2. Ambil data garis untuk menghitung KM
+    // 2. Ambil layer garis yang baru dibuat
     var layer = e.layer; 
     if (layer) {
         var latlngs = layer.getLatLngs();
         
-        // Hitung jarak Meter -> KM
+        // Hitung jarak Meter dan KM
         var distMeters = latlngs[0].distanceTo(latlngs[1]);
-        var distKM = (distMeters / 1000).toFixed(2); // 2 desimal
+        var distKM = (distMeters / 1000).toFixed(2); // 2 angka di belakang koma
         
-        // 3. EDIT TAMPILAN KOTAK (INLINE)
-        // Gunakan setTimeout agar kode berjalan SETELAH plugin selesai membuat kotak HTML
+        // 3. INJEKSI TEKS KM (DENGAN DELAY AGAR AMAN)
+        // Kita beri waktu 200ms agar elemen HTML benar-benar selesai dibuat oleh Plugin
         setTimeout(function() {
-            // Cari semua elemen tooltip ruler
+            // Cari SEMUA elemen tooltip yang ada di peta
             var tooltips = document.querySelectorAll('.result-tooltip');
             
-            if (tooltips.length > 0) {
-                // Ambil tooltip terakhir (yang baru saja muncul)
-                var lastTooltip = tooltips[tooltips.length - 1];
-                
-                // Cek apakah sudah ada teks KM (biar tidak dobel jika event fired 2x)
-                if (!lastTooltip.innerHTML.includes('KM)')) {
-                    // Kita ganti teks "NM" menjadi "NM (xx KM)"
-                    // Menggunakan replace() pada string HTML
-                    lastTooltip.innerHTML = lastTooltip.innerHTML.replace(
-                        'NM', 
-                        `NM <span style="font-weight:normal; color:#444;">(${distKM} KM)</span>`
-                    );
+            // Loop semua tooltip untuk memastikan yang baru juga ke-update
+            tooltips.forEach(function(tooltip) {
+                // Cek: Jika ada tulisan "NM" TAPI belum ada tulisan "KM"
+                if (tooltip.innerHTML.includes('NM') && !tooltip.innerHTML.includes('KM')) {
+                    
+                    // Tambahkan styling agar rapi
+                    var textKM = ` <span style="font-weight:normal; color:#333; font-size: 0.9em;">(${distKM} KM)</span>`;
+                    
+                    // Ganti teks "NM" menjadi "NM (xx KM)"
+                    tooltip.innerHTML = tooltip.innerHTML.replace('NM', 'NM' + textKM);
                 }
-            }
-        }, 50); 
+            });
+            
+        }, 200); // Delay ditingkatkan jadi 200ms
     }
 }
 
@@ -2148,8 +2146,8 @@ map.on('overlayremove', function(e) {
             map.removeControl(rulerControl);
             rulerControl = null;
         }
-
-        // Opsional: Hapus sisa kotak di peta saat layer dimatikan
+        
+        // Hapus sisa elemen di peta
         document.querySelectorAll('.result-tooltip').forEach(el => el.remove());
         document.querySelectorAll('.leaflet-ruler-layer').forEach(el => el.remove());
     }
