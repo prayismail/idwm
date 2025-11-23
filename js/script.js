@@ -2016,7 +2016,7 @@ var vaAdvisoryLayer = L.layerGroup();
             "Peta Tutupan Lahan": lulcMap
         };
 // =====================================================================
-// MENAMBAHKAN LAYER NAV POINTS - VERSI FINAL DENGAN PEMBERSIHAN EVENT LISTENER
+// MENAMBAHKAN LAYER NAV POINTS - VERSI DUAL UNIT (NM & KM)
 // =====================================================================
 
 var navPointsLayer = L.layerGroup();
@@ -2025,47 +2025,89 @@ let rulerControl = null;
 let navPointsGeoJsonLayer = null;
 const navPointsUrl = 'https://raw.githubusercontent.com/prayismail/idwm/main/data/nav-points.geojson';
 
+// --- FUNGSI PENCARIAN (SEARCH CONTROL) ---
 function createAndAddSearchControl() {
     if (searchControl) map.removeControl(searchControl);
     if (navPointsGeoJsonLayer) {
         searchControl = new L.Control.Search({
-            layer: navPointsGeoJsonLayer, propertyName: 'name_rep', initial: false,
-            zoom: 13, marker: false, textPlaceholder: 'Cari NAV Point...'
+            layer: navPointsGeoJsonLayer, 
+            propertyName: 'name_rep', 
+            initial: false,
+            zoom: 13, 
+            marker: false, 
+            textPlaceholder: 'Cari NAV Point...'
         });
         searchControl.on('search:locationfound', function(e) { e.layer.openPopup(); });
         map.addControl(searchControl);
     }
 }
 
-// --- FUNGSI RULER DIPERBAIKI LAGI ---
+// --- FUNGSI RULER (PENGGARIS) ---
 function createAndAddRulerControl() {
     if (rulerControl) map.removeControl(rulerControl);
 
     rulerControl = L.control.ruler({
         position: 'topright',
+        // Set satuan utama ke Nautical Miles (NM)
+        // Factor: 1 Meter = 0.000539957 NM
         lengthUnit: { display: 'NM', factor: 0.539957, decimal: 2, label: 'Jarak:' },
         angleUnit: { display: '&deg;', decimal: 2, factor: null, label: 'Arah:' },
         maxPoints: 2
     }).addTo(map);
 
-    // Saat pengukuran selesai, nonaktifkan ruler
+    // Pastikan event listener lama dibersihkan sebelum membuat yang baru
+    map.off('ruler:result', handleRulerResult);
     map.on('ruler:result', handleRulerResult);
 }
 
-// Fungsi terpisah untuk menangani hasil ruler, agar bisa dihapus nanti
-function handleRulerResult() {
-    // Cukup nonaktifkan mode menggambar.
-    // Tidak perlu menghapus dan membuat ulang kontrol di sini.
+// --- FUNGSI MENANGANI HASIL UKUR (TAMPILKAN NM & KM) ---
+function handleRulerResult(e) {
+    // Nonaktifkan mode menggambar agar tidak lanjut membuat garis
     if (rulerControl) {
         rulerControl.toggle();
     }
+
+    // Mengambil layer garis yang baru saja digambar
+    var layer = e.layer; 
+
+    if (layer) {
+        // Mendapatkan koordinat titik awal dan akhir
+        var latlngs = layer.getLatLngs();
+        
+        if (latlngs.length >= 2) {
+            // Hitung jarak asli dalam meter (fungsi bawaan Leaflet)
+            var distMeters = latlngs[0].distanceTo(latlngs[1]);
+            
+            // Konversi ke NM dan KM
+            var distNM = (distMeters * 0.000539957).toFixed(2); // Meter ke NM
+            var distKM = (distMeters / 1000).toFixed(2);       // Meter ke KM
+            
+            // Ambil titik akhir untuk posisi Popup
+            var endPoint = latlngs[1];
+
+            // Tampilkan Popup dengan kedua satuan
+            L.popup({ closeButton: true, autoClose: false, closeOnClick: false })
+                .setLatLng(endPoint)
+                .setContent(`
+                    <div style="text-align:center; font-family: Arial, sans-serif;">
+                        <strong style="font-size:14px;">Hasil Pengukuran</strong><br>
+                        <hr style="margin:5px 0;">
+                        <span style="color:#d32f2f; font-weight:bold; font-size:13px;">${distNM} NM</span><br>
+                        <span style="color:#1976d2; font-weight:bold; font-size:13px;">${distKM} KM</span>
+                    </div>
+                `)
+                .openOn(map);
+        }
+    }
 }
 
-// Event listener saat layer "NAV POINTS" diaktifkan
+// --- EVENT LISTENER SAAT LAYER "NAV POINTS" DIAKTIFKAN ---
 map.on('overlayadd', function(e) {
     if (e.name === 'NAV POINTS') {
+        // 1. Tambahkan Ruler
         createAndAddRulerControl();
 
+        // 2. Muat Data GeoJSON jika belum ada
         if (!navPointsGeoJsonLayer) {
             console.log("Memuat data NAV POINTS...");
             fetch(navPointsUrl)
@@ -2090,29 +2132,32 @@ map.on('overlayadd', function(e) {
                 })
                 .catch(error => console.error('Error memuat data NAV POINTS:', error));
         } else {
+            // Jika data sudah ada, cukup tambahkan search control
             createAndAddSearchControl();
         }
     }
 });
 
-// Event listener saat layer "NAV POINTS" dinonaktifkan
+// --- EVENT LISTENER SAAT LAYER "NAV POINTS" DINONAKTIFKAN ---
 map.on('overlayremove', function(e) {
     if (e.name === 'NAV POINTS') {
         console.log("Menghapus alat bantu...");
         
+        // Hapus Search Control
         if (searchControl) {
             map.removeControl(searchControl);
             searchControl = null;
         }
         
+        // Hapus Ruler Control dan Event Listener-nya
         if (rulerControl) {
-            // --- INI PERBAIKAN UTAMA ---
-            // Hapus event listener 'ruler:result' secara spesifik
-            map.off('ruler:result', handleRulerResult);
-            
+            map.off('ruler:result', handleRulerResult); // Penting: Hapus event agar tidak menumpuk
             map.removeControl(rulerControl);
             rulerControl = null;
         }
+        
+        // Opsional: Tutup popup jika masih terbuka
+        map.closePopup(); 
     }
 });
 var overlayMaps = {
