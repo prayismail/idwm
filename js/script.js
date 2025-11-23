@@ -2016,7 +2016,7 @@ var vaAdvisoryLayer = L.layerGroup();
             "Peta Tutupan Lahan": lulcMap
         };
 // =====================================================================
-// MENAMBAHKAN LAYER NAV POINTS - VERSI DUAL UNIT (NM & KM)
+// LAYER NAV POINTS + RULER DENGAN INJEKSI KM KE DALAM KOTAK
 // =====================================================================
 
 var navPointsLayer = L.layerGroup();
@@ -2025,7 +2025,7 @@ let rulerControl = null;
 let navPointsGeoJsonLayer = null;
 const navPointsUrl = 'https://raw.githubusercontent.com/prayismail/idwm/main/data/nav-points.geojson';
 
-// --- FUNGSI PENCARIAN (SEARCH CONTROL) ---
+// --- FUNGSI PENCARIAN ---
 function createAndAddSearchControl() {
     if (searchControl) map.removeControl(searchControl);
     if (navPointsGeoJsonLayer) {
@@ -2048,66 +2048,70 @@ function createAndAddRulerControl() {
 
     rulerControl = L.control.ruler({
         position: 'topright',
-        // Set satuan utama ke Nautical Miles (NM)
-        // Factor: 1 Meter = 0.000539957 NM
+        // Satuan utama tetap NM agar perhitungan plugin sesuai standar
         lengthUnit: { display: 'NM', factor: 0.539957, decimal: 2, label: 'Jarak:' },
         angleUnit: { display: '&deg;', decimal: 2, factor: null, label: 'Arah:' },
         maxPoints: 2
     }).addTo(map);
 
-    // Pastikan event listener lama dibersihkan sebelum membuat yang baru
+    // Hapus listener lama biar tidak double, lalu pasang yang baru
     map.off('ruler:result', handleRulerResult);
     map.on('ruler:result', handleRulerResult);
 }
 
-// --- FUNGSI MENANGANI HASIL UKUR (TAMPILKAN NM & KM) ---
+// --- FUNGSI UTAMA: EDIT TAMPILAN KOTAK HASIL ---
 function handleRulerResult(e) {
-    // Nonaktifkan mode menggambar agar tidak lanjut membuat garis
+    // 1. Matikan mode menggambar
     if (rulerControl) {
         rulerControl.toggle();
     }
 
-    // Mengambil layer garis yang baru saja digambar
+    // 2. Ambil data garis yang baru digambar
     var layer = e.layer; 
-
     if (layer) {
-        // Mendapatkan koordinat titik awal dan akhir
         var latlngs = layer.getLatLngs();
         
-        if (latlngs.length >= 2) {
-            // Hitung jarak asli dalam meter (fungsi bawaan Leaflet)
-            var distMeters = latlngs[0].distanceTo(latlngs[1]);
+        // Hitung jarak dalam Meter & KM
+        var distMeters = latlngs[0].distanceTo(latlngs[1]);
+        var distKM = (distMeters / 1000).toFixed(2);
+        
+        // 3. TEKNIK INJEKSI DOM
+        // Kita mencari elemen HTML "result-tooltip" yang baru saja dibuat plugin
+        // dan menambahkan teks KM ke dalamnya.
+        setTimeout(function() {
+            // Cari semua elemen tooltip hasil ruler
+            var tooltips = document.querySelectorAll('.result-tooltip');
             
-            // Konversi ke NM dan KM
-            var distNM = (distMeters * 0.000539957).toFixed(2); // Meter ke NM
-            var distKM = (distMeters / 1000).toFixed(2);       // Meter ke KM
-            
-            // Ambil titik akhir untuk posisi Popup
-            var endPoint = latlngs[1];
-
-            // Tampilkan Popup dengan kedua satuan
-            L.popup({ closeButton: true, autoClose: false, closeOnClick: false })
-                .setLatLng(endPoint)
-                .setContent(`
-                    <div style="text-align:center; font-family: Arial, sans-serif;">
-                        <strong style="font-size:14px;">Hasil Pengukuran</strong><br>
-                        <hr style="margin:5px 0;">
-                        <span style="color:#d32f2f; font-weight:bold; font-size:13px;">${distNM} NM</span><br>
-                        <span style="color:#1976d2; font-weight:bold; font-size:13px;">${distKM} KM</span>
-                    </div>
-                `)
-                .openOn(map);
-        }
+            if (tooltips.length > 0) {
+                // Ambil tooltip terakhir (yang baru saja muncul)
+                var lastTooltip = tooltips[tooltips.length - 1];
+                
+                // Cek biar tidak nambahin dobel
+                if (!lastTooltip.innerHTML.includes('KM)')) {
+                    // Tambahkan baris baru berisi KM dengan styling yang rapi
+                    lastTooltip.innerHTML += `
+                        <div style="
+                            margin-top: 4px; 
+                            padding-top: 4px; 
+                            border-top: 1px solid #ccc; 
+                            font-size: 11px; 
+                            color: #333;
+                            font-weight: bold;">
+                            (${distKM} KM)
+                        </div>`;
+                }
+            }
+        }, 50); // Delay 50ms untuk memastikan elemen HTML sudah dirender browser
     }
 }
 
 // --- EVENT LISTENER SAAT LAYER "NAV POINTS" DIAKTIFKAN ---
 map.on('overlayadd', function(e) {
     if (e.name === 'NAV POINTS') {
-        // 1. Tambahkan Ruler
+        // Tambahkan Ruler
         createAndAddRulerControl();
 
-        // 2. Muat Data GeoJSON jika belum ada
+        // Muat Data GeoJSON
         if (!navPointsGeoJsonLayer) {
             console.log("Memuat data NAV POINTS...");
             fetch(navPointsUrl)
@@ -2132,7 +2136,6 @@ map.on('overlayadd', function(e) {
                 })
                 .catch(error => console.error('Error memuat data NAV POINTS:', error));
         } else {
-            // Jika data sudah ada, cukup tambahkan search control
             createAndAddSearchControl();
         }
     }
@@ -2143,21 +2146,22 @@ map.on('overlayremove', function(e) {
     if (e.name === 'NAV POINTS') {
         console.log("Menghapus alat bantu...");
         
-        // Hapus Search Control
+        // Hapus Search
         if (searchControl) {
             map.removeControl(searchControl);
             searchControl = null;
         }
         
-        // Hapus Ruler Control dan Event Listener-nya
+        // Hapus Ruler
         if (rulerControl) {
-            map.off('ruler:result', handleRulerResult); // Penting: Hapus event agar tidak menumpuk
+            map.off('ruler:result', handleRulerResult); 
             map.removeControl(rulerControl);
             rulerControl = null;
         }
         
-        // Opsional: Tutup popup jika masih terbuka
-        map.closePopup(); 
+        // Bersihkan sisa-sisa tooltip ruler yang ada di peta (Opsional)
+        document.querySelectorAll('.result-tooltip').forEach(el => el.remove());
+        document.querySelectorAll('.leaflet-ruler-layer').forEach(el => el.remove());
     }
 });
 var overlayMaps = {
