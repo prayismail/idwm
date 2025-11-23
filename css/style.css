@@ -898,3 +898,22 @@
             border-top: 1px solid #eee;
             margin: 8px 0;
         }
+/* untuk kotak Ruler/ Distance */
+
+.result-tooltip {
+    /* 1. MENGATUR LEBAR (PANJANG KESAMPING) */
+    min-width: 180px !important;  /* Ubah angka ini agar kotak lebih lebar */
+    width: auto !important;       /* Membiarkan melebar otomatis mengikuti teks */
+    
+    /* 2. MENGATUR TINGGI (JARAK DALAM KOTAK) */
+    padding: 8px 12px !important; /* 8px (atas-bawah), 12px (kiri-kanan) */
+    
+    /* 3. MENGATUR UKURAN HURUF */
+    font-size: 13px !important;   /* Ubah jika teks terlalu kecil/besar */
+    line-height: 1.6 !important;  /* Jarak antar baris "Arah" dan "Jarak" */
+    
+    /* Opsional: Mempercantik tampilan */
+    background-color: white !important;
+    border-radius: 4px !important; /* Membuat sudut tumpul */
+    box-shadow: 0 1px 5px rgba(0,0,0,0.4) !important; /* Bayangan kotak */
+}
