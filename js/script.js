@@ -2016,7 +2016,7 @@ var vaAdvisoryLayer = L.layerGroup();
             "Peta Tutupan Lahan": lulcMap
         };
 // =====================================================================
-// LAYER NAV POINTS + RULER (VERSI "BACA LAYAR" & REGEX)
+// LAYER NAV POINTS + RULER (VERSI FINAL - VARIABEL AMAN)
 // =====================================================================
 
 var navPointsLayer = L.layerGroup();
@@ -2025,18 +2025,18 @@ let rulerControl = null;
 let navPointsGeoJsonLayer = null;
 const navPointsUrl = 'https://raw.githubusercontent.com/prayismail/idwm/main/data/nav-points.geojson';
 
-// --- TAMBAHKAN CSS SECARA OTOMATIS ---
-// Kita suntikkan CSS langsung agar kotak pasti melebar
-const style = document.createElement('style');
-style.innerHTML = `
+// --- TAMBAHKAN CSS SECARA OTOMATIS (NAMA VARIABEL DIGANTI) ---
+// Menggunakan nama 'rulerCustomStyle' agar tidak bentrok dengan kode lain
+const rulerCustomStyle = document.createElement('style');
+rulerCustomStyle.innerHTML = `
   .result-tooltip {
-      min-width: 180px !important;
+      min-width: 180px !important;   /* Paksa kotak lebih lebar */
       width: auto !important;
-      white-space: nowrap !important; /* Mencegah teks turun baris acak */
+      white-space: nowrap !important; /* Teks dilarang turun baris */
       padding-right: 15px !important;
   }
 `;
-document.head.appendChild(style);
+document.head.appendChild(rulerCustomStyle);
 
 
 // --- FUNGSI PENCARIAN ---
@@ -2079,8 +2079,7 @@ function handleRulerResult(e) {
     }
 
     // 2. GUNAKAN INTERVAL UNTUK MEMANTAU ELEMEN BARU
-    // Kita akan cek setiap 200ms sebanyak 15 kali (total 3 detik)
-    // Ini memastikan walaupun browser lambat, teks tetap akan terganti.
+    // Kita cek setiap 200ms sebanyak 15 kali (total 3 detik)
     let attempts = 0;
     const fixInterval = setInterval(() => {
         attempts++;
@@ -2089,17 +2088,15 @@ function handleRulerResult(e) {
         const tooltips = document.querySelectorAll('.result-tooltip');
         
         tooltips.forEach(div => {
-            // Cek apakah kotak ini SUDAH kita perbaiki (ada tulisan KM)
+            // Cek apakah kotak ini SUDAH ada KM-nya? Jika ya, lewati.
             if (div.innerHTML.includes('KM)')) return;
 
             // AMBIL HTML ASLI
             const originalHTML = div.innerHTML;
 
-            // GUNAKAN REGEX (Pola Pencarian Cerdas)
-            // Pola: Cari kata "Jarak:", diikuti karakter apa saja, lalu Angka, lalu "NM"
-            // Contoh text asli: "Jarak: <b>25.4</b> NM"
-            // Regex akan menangkap angka "25.4"
-            const regexPattern = /Jarak:.*?([\d\.]+)\s*NM/;
+            // REGEX: Cari angka desimal sebelum kata "NM"
+            // Menangkap angka seperti "25.4", "100.05", dll
+            const regexPattern = /([\d\.]+)\s*NM/;
             const match = originalHTML.match(regexPattern);
 
             if (match && match[1]) {
@@ -2109,19 +2106,13 @@ function handleRulerResult(e) {
                 // Hitung ke KM (1 NM = 1.852 KM)
                 const valKM = (valNM * 1.852).toFixed(2);
 
-                // Buat HTML baru
-                // Kita ganti "NM" dengan "NM (xx KM)"
-                // Kita replace string "NM" terakhir di baris itu
+                // Siapkan HTML tambahan untuk KM
+                // Style disesuaikan agar terlihat rapi di samping NM
+                const htmlKM = `NM <span style="color:#444; font-weight:normal; font-size:0.9em;">(${valKM} KM)</span>`;
                 
-                // Cari posisi teks "NM" agar tidak salah replace
-                // Kita tambahkan styling agar warna KM agak beda
-                const htmlKM = `NM <span style="color:#333; font-weight:normal; font-size:0.9em;">(${valKM} KM)</span>`;
-                
-                // Replace hanya "NM" yang ada di dekat angka
-                const newHTML = originalHTML.replace(/NM(?![^<]*>)/, htmlKM); 
-                // Regex sederhana untuk replace "NM" tapi mengabaikan tag HTML jika ada
-
-                div.innerHTML = newHTML;
+                // Ganti "NM" dengan "NM (xx KM)"
+                // Kita replace hanya pada bagian yang cocok
+                div.innerHTML = originalHTML.replace(/NM(?![^<]*>)/, htmlKM); 
             }
         });
 
@@ -2168,7 +2159,7 @@ map.on('overlayremove', function(e) {
             map.off('ruler:result', handleRulerResult);
             map.removeControl(rulerControl); rulerControl = null; 
         }
-        // Bersihkan sampah DOM
+        // Bersihkan elemen sisa
         document.querySelectorAll('.result-tooltip').forEach(el => el.remove());
         document.querySelectorAll('.leaflet-ruler-layer').forEach(el => el.remove());
     }
