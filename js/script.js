@@ -2016,7 +2016,7 @@ var vaAdvisoryLayer = L.layerGroup();
             "Peta Tutupan Lahan": lulcMap
         };
 // =====================================================================
-// LAYER NAV POINTS + RULER (VERSI FINAL - VARIABEL AMAN)
+// LAYER NAV POINTS + RULER (VERSI FINAL: SATUAN KILOMETER / KM)
 // =====================================================================
 
 var navPointsLayer = L.layerGroup();
@@ -2024,20 +2024,6 @@ let searchControl = null;
 let rulerControl = null;
 let navPointsGeoJsonLayer = null;
 const navPointsUrl = 'https://raw.githubusercontent.com/prayismail/idwm/main/data/nav-points.geojson';
-
-// --- TAMBAHKAN CSS SECARA OTOMATIS (NAMA VARIABEL DIGANTI) ---
-// Menggunakan nama 'rulerCustomStyle' agar tidak bentrok dengan kode lain
-const rulerCustomStyle = document.createElement('style');
-rulerCustomStyle.innerHTML = `
-  .result-tooltip {
-      min-width: 180px !important;   /* Paksa kotak lebih lebar */
-      width: auto !important;
-      white-space: nowrap !important; /* Teks dilarang turun baris */
-      padding-right: 15px !important;
-  }
-`;
-document.head.appendChild(rulerCustomStyle);
-
 
 // --- FUNGSI PENCARIAN ---
 function createAndAddSearchControl() {
@@ -2056,86 +2042,58 @@ function createAndAddSearchControl() {
     }
 }
 
-// --- FUNGSI RULER ---
+// --- FUNGSI RULER (SETTING KM) ---
 function createAndAddRulerControl() {
     if (rulerControl) map.removeControl(rulerControl);
 
     rulerControl = L.control.ruler({
         position: 'topright',
-        lengthUnit: { display: 'NM', factor: 0.539957, decimal: 2, label: 'Jarak:' },
-        angleUnit: { display: '&deg;', decimal: 2, factor: null, label: 'Arah:' },
-        maxPoints: 2
+        // PENGATURAN DIUBAH KE KILOMETER (KM)
+        lengthUnit: { 
+            display: 'km',      // Teks yang muncul di layar
+            decimal: 2,         // Jumlah angka belakang koma
+            factor: 0.001,      // Rumus: 1 Meter dikali 0.001 = KM
+            label: 'Jarak:'     // Label
+        },
+        angleUnit: { 
+            display: '&deg;', 
+            decimal: 2, 
+            factor: null, 
+            label: 'Arah:' 
+        },
+        maxPoints: 2 // Hanya mengukur garis lurus (2 titik)
     }).addTo(map);
 
+    // Pasang event listener sederhana
     map.off('ruler:result', handleRulerResult);
     map.on('ruler:result', handleRulerResult);
 }
 
-// --- FUNGSI UTAMA: PARSE TEKS DAN SISIPKAN KM ---
-function handleRulerResult(e) {
-    // 1. Matikan mode gambar
+// --- FUNGSI HANDLER SEDERHANA ---
+function handleRulerResult() {
+    // Hanya matikan mode gambar setelah garis dibuat
+    // Tidak ada lagi kode rumit inject CSS/HTML
     if (rulerControl) {
         rulerControl.toggle();
     }
-
-    // 2. GUNAKAN INTERVAL UNTUK MEMANTAU ELEMEN BARU
-    // Kita cek setiap 200ms sebanyak 15 kali (total 3 detik)
-    let attempts = 0;
-    const fixInterval = setInterval(() => {
-        attempts++;
-        
-        // Ambil semua kotak tooltip
-        const tooltips = document.querySelectorAll('.result-tooltip');
-        
-        tooltips.forEach(div => {
-            // Cek apakah kotak ini SUDAH ada KM-nya? Jika ya, lewati.
-            if (div.innerHTML.includes('KM)')) return;
-
-            // AMBIL HTML ASLI
-            const originalHTML = div.innerHTML;
-
-            // REGEX: Cari angka desimal sebelum kata "NM"
-            // Menangkap angka seperti "25.4", "100.05", dll
-            const regexPattern = /([\d\.]+)\s*NM/;
-            const match = originalHTML.match(regexPattern);
-
-            if (match && match[1]) {
-                // Kita dapat angkanya! (misal: 45.34)
-                const valNM = parseFloat(match[1]);
-                
-                // Hitung ke KM (1 NM = 1.852 KM)
-                const valKM = (valNM * 1.852).toFixed(2);
-
-                // Siapkan HTML tambahan untuk KM
-                // Style disesuaikan agar terlihat rapi di samping NM
-                const htmlKM = `NM <span style="color:#444; font-weight:normal; font-size:0.9em;">(${valKM} KM)</span>`;
-                
-                // Ganti "NM" dengan "NM (xx KM)"
-                // Kita replace hanya pada bagian yang cocok
-                div.innerHTML = originalHTML.replace(/NM(?![^<]*>)/, htmlKM); 
-            }
-        });
-
-        // Berhenti mencoba setelah 3 detik (15 kali)
-        if (attempts >= 15) {
-            clearInterval(fixInterval);
-        }
-
-    }, 200);
 }
 
-// --- EVENT LISTENER LAYER ---
+// --- EVENT LISTENER SAAT LAYER "NAV POINTS" DIAKTIFKAN ---
 map.on('overlayadd', function(e) {
     if (e.name === 'NAV POINTS') {
         createAndAddRulerControl();
 
         if (!navPointsGeoJsonLayer) {
+            console.log("Memuat data NAV POINTS...");
             fetch(navPointsUrl)
                 .then(response => response.json())
                 .then(data => {
                     navPointsGeoJsonLayer = L.geoJSON(data, {
                         pointToLayer: function(feature, latlng) {
-                            return L.circleMarker(latlng, { radius: 4, fillColor: "#ff7800", color: "#000", weight: 1, opacity: 1, fillOpacity: 0.8 });
+                            return L.circleMarker(latlng, {
+                                radius: 4, fillColor: "#ff7800", color: "#000",
+                                weight: 1, opacity: 1, fillOpacity: 0.8
+                            });
                         },
                         onEachFeature: function(feature, layer) {
                             if (feature.properties && feature.properties.name_rep) {
@@ -2145,21 +2103,31 @@ map.on('overlayadd', function(e) {
                     });
                     navPointsGeoJsonLayer.addTo(navPointsLayer);
                     createAndAddSearchControl();
-                });
+                })
+                .catch(error => console.error('Error memuat data NAV POINTS:', error));
         } else {
             createAndAddSearchControl();
         }
     }
 });
 
+// --- EVENT LISTENER SAAT LAYER "NAV POINTS" DINONAKTIFKAN ---
 map.on('overlayremove', function(e) {
     if (e.name === 'NAV POINTS') {
-        if (searchControl) { map.removeControl(searchControl); searchControl = null; }
-        if (rulerControl) { 
-            map.off('ruler:result', handleRulerResult);
-            map.removeControl(rulerControl); rulerControl = null; 
+        console.log("Menghapus alat bantu...");
+        
+        if (searchControl) {
+            map.removeControl(searchControl);
+            searchControl = null;
         }
-        // Bersihkan elemen sisa
+        
+        if (rulerControl) {
+            map.off('ruler:result', handleRulerResult);
+            map.removeControl(rulerControl);
+            rulerControl = null;
+        }
+        
+        // Bersihkan tampilan sisa jika ada
         document.querySelectorAll('.result-tooltip').forEach(el => el.remove());
         document.querySelectorAll('.leaflet-ruler-layer').forEach(el => el.remove());
     }
