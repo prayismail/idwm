@@ -1402,10 +1402,10 @@ function fetchOPMET() {
             // Header Popup
             let content = `<b>${airport.name} (${airport.code})</b><br>`;
             
-            // --- BAGIAN METAR (6 Terakhir) ---
+            // --- BAGIAN METAR (4 Terakhir) ---
             if (metarData[airport.code]) {
                 // Tampilkan apa adanya tanpa prefix "METAR" tambahan
-                content += metarData[airport.code].slice(-6).join('<br>');
+                content += metarData[airport.code].slice(-4).join('<br>');
             } else {
                 content += "<i>Data METAR tidak tersedia.</i>";
             }
