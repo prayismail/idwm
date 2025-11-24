@@ -1298,7 +1298,11 @@ var airports = [
 			{ code: "WIEE", name: "Minangkabau", lat: -0.79, lon: 100.28 },
         ];
         
-        var markers = {};
+        // =====================================================================
+// UPDATE: FETCH OPMET (METAR 6 TERAKHIR & TAF 1 TERBARU)
+// =====================================================================
+
+var markers = {};
 var airportLayer = L.layerGroup();
 
 // Tambahkan Marker untuk Setiap Bandara
@@ -1310,77 +1314,126 @@ airports.forEach(airport => {
         fillOpacity: 0.5
     }).bindPopup(`
         <b>${airport.name} (${airport.code})</b><br>
-        Memuat data METAR/ SPECI...<br>
+        Memuat data OPMET...<br>
         <a href='#' class="awos-link" onclick='showAWOS("${airport.code}")'>AWOS REALTIME</a>
     `);
     markers[airport.code] = marker;
-            airportLayer.addLayer(marker);
-            
-            marker.on('click', function () {
-                fetchMETAR();
-                fetchSIGMET(airport.code);
+    airportLayer.addLayer(marker);
+
+    // Event Listener saat marker diklik
+    marker.on('click', function () {
+        fetchOPMET(); // Metar, Speci, dan Taf
+        fetchSIGMET(airport.code);
+    });
+});
+
+// Fungsi Fetch SIGMET (Tetap sama)
+function fetchSIGMET(icao) {
+    let url = "/sigmet";
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            map.eachLayer(layer => {
+                if (layer instanceof L.Polygon) map.removeLayer(layer);
             });
-        });
-    function fetchSIGMET(icao) {
-            let url = "/sigmet";
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    // Hapus SIGMET lama
-                    map.eachLayer(layer => {
-                        if (layer instanceof L.Polygon) {
-                            map.removeLayer(layer);
-                        }
-                    });
 
-                    let sigmets = data.filter(sigmet => sigmet.icaoId === icao);
-                    sigmets.forEach(sigmet => {
-                        let coords = sigmet.coords.map(coord => [coord.lat, coord.lon]);
-                        let color = getSigmetColor(sigmet.hazard);
-                        L.polygon(coords, { color: color }).addTo(map)
-                            .bindPopup(`<b>SIGMET:</b> ${sigmet.rawSigmet}`);
-                    });
-                })
-                .catch(error => console.error("Error mengambil data SIGMET:", error));
-        }
+            let sigmets = data.filter(sigmet => sigmet.icaoId === icao);
+            sigmets.forEach(sigmet => {
+                let coords = sigmet.coords.map(coord => [coord.lat, coord.lon]);
+                // Pastikan fungsi getSigmetColor tersedia di kode Anda
+                let color = (typeof getSigmetColor === 'function') ? getSigmetColor(sigmet.hazard) : 'red'; 
+                L.polygon(coords, { color: color }).addTo(map)
+                    .bindPopup(`<b>SIGMET:</b> ${sigmet.rawSigmet}`);
+            });
+        })
+        .catch(error => console.error("Error mengambil data SIGMET:", error));
+}
 
-
-        // Fungsi Menampilkan Popup AWOS
+// Fungsi Menampilkan Popup AWOS
 function showAWOS(code) {
     var url = `http://${code.toLowerCase()}.awosnet.com`;
-    window.open(url, "_blank"); // Buka di tab baru
+    window.open(url, "_blank");
 }
-        // Fungsi Menampilkan atau Menutup Popup
-        function toggleAWOS(show) {
-            document.getElementById("popupAWOS").style.display = show ? "flex" : "none";
-        }
-        // Ambil Data METAR
-        function fetchMETAR() {
-            var icaoCodes = airports.map(a => a.code).join("%2C");
-            var apiUrl = `/metar?icao=${icaoCodes}`;
 
-            fetch(apiUrl, { headers: { 'User-Agent': 'IDWM/prayoga.ismail@bmkg.go.id' } })
-                .then(response => response.text())
-                .then(text => {
-                    var metarData = {};
-                    text.split("\n").forEach(entry => {
-                        if (entry.trim() === "") return;
-                        var parts = entry.split(" ");
-                        var icaoCode = parts[0];
-                        if (!metarData[icaoCode]) metarData[icaoCode] = [];
-                        metarData[icaoCode].push(entry);
-                    });
+function toggleAWOS(show) {
+    var el = document.getElementById("popupAWOS");
+    if(el) el.style.display = show ? "flex" : "none";
+}
 
-                    airports.forEach(airport => {
-                        if (metarData[airport.code]) {
-                            markers[airport.code].bindPopup(
-                                `<b>${airport.name} (${airport.code})</b><br>${metarData[airport.code].slice(-6).join('<br>')}<br><a href='#' class="awos-link" onclick='showAWOS("${airport.code}")'>AWOS REALTIME</a>`
-                            );
-                        }
-                    });
-                })
-                .catch(error => console.error("Gagal mengambil data METAR", error));
-        }
+// ---------------------------------------------------------------------
+// FUNGSI BARU: fetchOPMET
+// ---------------------------------------------------------------------
+function fetchOPMET() {
+    var icaoCodes = airports.map(a => a.code).join("%2C");
+    
+    // Siapkan 2 URL: Satu untuk METAR, satu untuk TAF
+    var urlMetar = `/metar?icao=${icaoCodes}`;           
+    var urlTaf   = `/metar?icao=${icaoCodes}&type=taf`; 
+
+    // Ambil keduanya secara bersamaan (Parallel Fetching)
+    Promise.all([
+        fetch(urlMetar).then(res => res.text()),
+        fetch(urlTaf).then(res => res.text())
+    ])
+    .then(([textMetar, textTaf]) => {
+        
+        // 1. Parsing Data METAR
+        var metarData = {};
+        textMetar.split("\n").forEach(entry => {
+            if (entry.trim() === "") return;
+            var parts = entry.split(" ");
+            var icao = parts[0];
+            if (!metarData[icao]) metarData[icao] = [];
+            metarData[icao].push(entry);
+        });
+
+        // 2. Parsing Data TAF
+        var tafData = {};
+        textTaf.split("\n").forEach(entry => {
+            if (entry.trim() === "") return;
+            var parts = entry.split(" ");
+            var icao = parts[0]; 
+            if (!tafData[icao]) tafData[icao] = [];
+            tafData[icao].push(entry);
+        });
+
+        // 3. Update Popup Marker
+        airports.forEach(airport => {
+            // Header Popup
+            let content = `<b>${airport.name} (${airport.code})</b><br>`;
+            
+            // --- BAGIAN METAR (6 Terakhir) ---
+            if (metarData[airport.code]) {
+                // Tampilkan apa adanya tanpa prefix "METAR" tambahan
+                content += metarData[airport.code].slice(-6).join('<br>');
+            } else {
+                content += "<i>Data METAR tidak tersedia.</i>";
+            }
+
+            // --- BAGIAN PEMBATAS (GARIS) ---
+            content += `<hr style="margin: 8px 0; border: 0; border-top: 1px solid #ccc;">`;
+
+            // --- BAGIAN TAF (1 Terbaru) ---
+            if (tafData[airport.code] && tafData[airport.code].length > 0) {
+                // Ambil data paling terakhir (latest)
+                let latestTaf = tafData[airport.code].slice(-1)[0];
+                content += `<b>TAF:</b><br>${latestTaf}`;
+            } else {
+                content += `<i>Data TAF tidak tersedia.</i>`;
+            }
+
+            // --- BAGIAN LINK AWOS ---
+            content += `<br><br><a href='#' class="awos-link" onclick='showAWOS("${airport.code}")'>AWOS REALTIME</a>`;
+
+            // Update Popup
+            if (markers[airport.code]) {
+                markers[airport.code].bindPopup(content);
+            }
+        });
+
+    })
+    .catch(error => console.error("Gagal mengambil data OPMET:", error));
+}
 
 // Data poligon FIR UPG (WAAF)
     var firUPG_geojson = {
