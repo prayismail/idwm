@@ -1310,7 +1310,7 @@ airports.forEach(airport => {
         fillOpacity: 0.5
     }).bindPopup(`
         <b>${airport.name} (${airport.code})</b><br>
-        Memuat data METAR...<br>
+        Memuat data METAR/ SPECI...<br>
         <a href='#' class="awos-link" onclick='showAWOS("${airport.code}")'>AWOS REALTIME</a>
     `);
     markers[airport.code] = marker;
@@ -1374,7 +1374,7 @@ function showAWOS(code) {
                     airports.forEach(airport => {
                         if (metarData[airport.code]) {
                             markers[airport.code].bindPopup(
-                                `<b>${airport.name} (${airport.code})</b><br>${metarData[airport.code].slice(-6).map(entry => "METAR " + entry).join('<br>')}<br><a href='#' class="awos-link" onclick='showAWOS("${airport.code}")'>AWOS REALTIME</a>`
+                                `<b>${airport.name} (${airport.code})</b><br>${metarData[airport.code].slice(-6).join('<br>')}<br><a href='#' class="awos-link" onclick='showAWOS("${airport.code}")'>AWOS REALTIME</a>`
                             );
                         }
                     });
