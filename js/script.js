@@ -1,7 +1,7 @@
 
 var map = L.map('map', { center: [-2.5, 118], zoom: 5, attributionControl: false });
 
-   L.control.attribution({ position: 'bottomright' }).addAttribution('For experimental, not official. Proposed by <a href="https://mail.google.com/mail/?view=cm&fs=1&to=prayoga.ismail@bmkg.go.id" target="_blank">Prayoga Ismail</a>').addTo(map);
+   L.control.attribution({ position: 'bottomright' }).addAttribution('For experimental, not official. Proposed by <a href="https://mail.google.com/mail/?view=cm&fs=1&to=prayoga.ismail@bmkg.go.id" target="_blank">P. I.</a>').addTo(map);
         document.getElementById("legend").style.display = "none";
 document.getElementById("webmap-title").addEventListener("click", function() {
     location.reload(); });
