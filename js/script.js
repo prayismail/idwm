@@ -430,8 +430,8 @@ cropImageButton.addEventListener('click', () => {
         // Batas wilayah gambar satelit yang telah disesuaikan
         var imageBounds = [[-15, 90], [15, 150]];
         var VSsatelliteLayer = L.imageOverlay(imageUrl, imageBounds, { opacity: 0.8, attribution: 'Satellite data &copy; BMKG'});
-	var olrUrl = "https://ncics.org/pub/mjo/v2/map/olr.cfs.all.indonesia.1.png";
-	var zonalWindUrl = "https://ncics.org/pub/mjo/v2/map/uwnd850.cfs.all.indonesia.1.png";
+	var olrUrl = "https://ncics.org/pub/mjo/v2/map/olr.orig.all.indonesia.1.png";
+	var zonalWindUrl = "https://ncics.org/pub/mjo/v2/map/uwnd850.orig.all.indonesia.1.png";
 	var TropicalLayer= L.layerGroup().addLayer(L.tileLayer("",{attribution:"Tropical waves data &copy NCICS</a>"}) );
 var popup = L.popup({className: 'popup-tropical', maxWidth: 420});
 function showPopup(imageUrl) {
