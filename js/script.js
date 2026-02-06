@@ -2387,6 +2387,9 @@ let searchMarker;
 // =======================================================================
 // === FITUR NOTIFIKASI VA ADVISORY DENGAN INTEGRASI PETA (VERSI LENGKAP) ===
 // =======================================================================
+// PRASYARAT:
+// 1.  Pastikan API backend sudah di-update untuk mengirim 'advisoryHash'.
+// =======================================================================
 
 // --- Deklarasi Variabel Global ---
 var vaAdvisoryLayer = L.layerGroup();
@@ -2768,35 +2771,49 @@ function showVaaNotificationOnMap(vaaData) {
 }
 
 /**
- * 7. Fungsi Pengecek Utama yang berjalan periodik. (LOGIKA PERLU DIPERBAIKI)
+ * 7. Fungsi Pengecek Utama yang berjalan periodik.
+ *    (LOGIKA DIPERBARUI UNTUK MENGGUNAKAN HASH DAN FILTER INDONESIA)
  */
 async function checkForNewVAA() {
     const data = await fetchLatestVAA();
-    if (!data || !data.advisoryNumber) {
-        const errorMsg = 'Data VAA tidak lengkap atau gagal diambil.';
+    if (!data || !data.advisoryHash) {
+        const errorMsg = 'Data VAA tidak lengkap (hash tidak ada).';
         console.error(`[VAA] ${errorMsg}`);
         updateDebugStatus(errorMsg, true);
         return;
     }
+
     if (isFirstCheck) {
         lastAdvisoryData = data;
         isFirstCheck = false;
-        const logMsg = `Pengecekan awal OK. Advisory saat ini: #${lastAdvisoryData.advisoryNumber}`;
+        const logMsg = `Pengecekan awal OK. Hash: ${lastAdvisoryData.advisoryHash.substring(0, 7)}...`;
         console.log(`[VAA] ${logMsg}`);
         updateDebugStatus(logMsg);
         return;
     }
-    if (data.advisoryNumber !== lastAdvisoryData.advisoryNumber) {
-        const logMsg = `BARU: Advisory #${data.advisoryNumber} terdeteksi!`;
+
+    if (data.advisoryHash !== lastAdvisoryData.advisoryHash) {
+        const logMsg = `BARU: Hash baru terdeteksi! (${data.advisoryHash.substring(0, 7)}...)`;
         console.log(`[VAA] ${logMsg}`);
         updateDebugStatus(logMsg);
         lastAdvisoryData = data;
-        showVaaNotificationOnMap(data);
+
+        // --- INI ADALAH PERUBAHAN UTAMA ---
+        // Hanya panggil notifikasi jika VAA tidak memiliki pesan "not for Indonesia area".
+        // Backend Anda akan mengirim pesan ini jika AREA bukan INDONESIA.
+        if (data.message && data.message.includes("not for Indonesia area")) {
+            console.log("[VAA] VAA terbaru bukan untuk area Indonesia, notifikasi diabaikan.");
+            updateDebugStatus(`Status OK. VAA non-Indonesia terdeteksi.`);
+        } else {
+            showVaaNotificationOnMap(data);
+        }
+
     } else {
-        const logMsg = `Status OK. Masih di advisory #${lastAdvisoryData.advisoryNumber}`;
+        const logMsg = `Status OK. Hash masih sama: ${lastAdvisoryData.advisoryHash.substring(0, 7)}...`;
         updateDebugStatus(logMsg);
     }
 }
+
 
 // --- Event Listeners & Helper ---
 document.addEventListener('DOMContentLoaded', function() {
