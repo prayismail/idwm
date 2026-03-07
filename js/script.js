@@ -2212,7 +2212,7 @@ var overlayMaps = {
             }
         }, 100);
         L.control.layers(baseMaps, overlayMaps, { collapsed: true, position: 'bottomleft' }).addTo(map);
-        radarLayer.addTo(map);
+       // radarLayer.addTo(map);
         
 	function loadmaptiler() {
     if (window.maptilerInstance) {
