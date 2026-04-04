@@ -2186,7 +2186,7 @@ map.on('overlayremove', function(e) {
     }
 });
 
-var tafGeneratorLayer = L.layerGroup();
+
 
 
 var overlayMaps = {
@@ -2200,7 +2200,7 @@ var overlayMaps = {
 	    "Tropical Waves": TropicalLayer,
 	     "VA Advisory": vaAdvisoryLayer,
 			"NAV POINTS" : navPointsLayer,
-	"TAF Generator": tafGeneratorLayer
+	
   };
 
         setTimeout(() => {
@@ -2854,107 +2854,3 @@ function updateDebugStatus(message, isError = false) {
 }
 // ========================= AKHIR KODE VAA =========================
 
-// =======================================================================
-// === INTEGRASI LAYER: TAF GENERATOR TOOL ===
-// =======================================================================
-
-const tafToolPanel = document.getElementById('taf-tool');
-const tafCloseBtn = document.getElementById('taf-tool-close-btn');
-
-// Buka tutup UI saat layer dicentang
-map.on('overlayadd', function(e) {
-    if (e.name === 'TAF Generator') tafToolPanel.classList.remove('hidden');
-});
-map.on('overlayremove', function(e) {
-    if (e.name === 'TAF Generator') tafToolPanel.classList.add('hidden');
-});
-
-// Tombol tutup (X)
-tafCloseBtn.addEventListener('click', () => {
-    tafToolPanel.classList.add('hidden');
-    map.removeLayer(tafGeneratorLayer); // Hilangkan centang di layer control
-});
-
-// 1. Preview Sandi TAF
-document.getElementById('taf-generate-btn').addEventListener('click', function() {
-    const station = document.getElementById('taf-station').value;
-    const validity = document.getElementById('taf-validity').value.toUpperCase();
-    const isAmd = document.getElementById('taf-type').value === "AMD";
-    const wind = document.getElementById('taf-wind').value.toUpperCase();
-    const vis = document.getElementById('taf-vis').value.toUpperCase();
-    const wx = document.getElementById('taf-wx').value.toUpperCase();
-    const cloud = document.getElementById('taf-cloud').value.toUpperCase();
-    
-    // Header berdasar stasiun
-    let header = station === "WAAA" ? "FTID31" : "FTID40";
-    
-    // Buat waktu issue otomatis (saat ini UTC)
-    let now = new Date();
-    let issueTime = String(now.getUTCDate()).padStart(2, '0') + 
-                    String(now.getUTCHours()).padStart(2, '0') + "00Z";
-    
-    let tafBody = `TAF ${isAmd ? 'AMD ' : ''}${station} ${issueTime} ${validity} ${wind} ${vis}`;
-    if (wx) tafBody += ` ${wx}`;
-    tafBody += ` ${cloud}=`;
-
-    let fullTaf = `${header} ${station} ${issueTime.replace('Z','')} ${isAmd ? 'AAA' : ''}\n${tafBody}`;
-    document.getElementById('taf-output-text').value = fullTaf;
-});
-
-// 2. Visualisasi Meteogram TAF (Daur ulang #chart-popup Open-Meteo)
-document.getElementById('taf-chart-btn').addEventListener('click', function() {
-    const station = document.getElementById('taf-station').value;
-    const windStr = document.getElementById('taf-wind').value;
-    const visStr = document.getElementById('taf-vis').value;
-    
-    // Ekstraksi nilai
-    let speedMatch = windStr.match(/(\d{2,3})KT/i);
-    let speed = speedMatch ? parseInt(speedMatch[1]) : 0;
-    let visVal = visStr.toUpperCase() === "CAVOK" ? 10000 : parseInt(visStr);
-
-    // Dummy array tren untuk memantik Meteogram (Tentu bisa ditambah logika BECMG/TEMPO ke depannya)
-    let times = ["Base", "+3 Jam", "+6 Jam", "+9 Jam", "+12 Jam"];
-    let windData = [speed, speed + 2, speed - 1, speed + 4, speed];
-    let visData = [visVal, visVal, visVal >= 4000 ? visVal - 2000 : visVal, 8000, visVal];
-
-    // Gunakan kembali popup chart IDWM
-    document.getElementById('chart-popup').style.display = 'block';
-    document.getElementById('location-info').innerHTML = `Meteogram TAF: <b>${station}</b>`;
-
-    let ctx = document.getElementById('weatherChart').getContext('2d');
-    if (weatherChart) weatherChart.destroy();
-    
-    weatherChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: times,
-            datasets: [
-                {
-                    label: 'Wind Speed (KT)',
-                    data: windData,
-                    borderColor: '#fd7e14',
-                    backgroundColor: '#fd7e14',
-                    stepped: true, 
-                    yAxisID: 'y1'
-                },
-                {
-                    label: 'Visibilitas (M)',
-                    data: visData,
-                    borderColor: '#28a745',
-                    backgroundColor: '#28a745',
-                    stepped: true,
-                    yAxisID: 'y2'
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y1: { type: 'linear', position: 'left', title: {display: true, text: 'Speed (KT)'} },
-                y2: { type: 'linear', position: 'right', grid: {drawOnChartArea: false}, title: {display: true, text: 'Vis (M)'} }
-            },
-            plugins: { title: { display: false } }
-        }
-    });
-});
