@@ -108,39 +108,6 @@
         <textarea id="sigmet-output" readonly></textarea>
         <div class="sigmet-button-group"><button id="copy-sigmet-btn" class="btn btn-copy">Salin SIGMET</button></div>
     </div>
-<div id="taf-tool" class="hidden" style="position: absolute; top: 80px; left: 10px; width: 350px; background: rgba(255, 255, 255, 0.9); color: #333; z-index: 4001; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); font-size: 12px; max-height: 85vh; overflow-y: auto;">
-        <span id="taf-tool-close-btn" title="Tutup Panel" style="position: absolute; top: 10px; right: 15px; font-size: 24px; font-weight: bold; color: #aaa; cursor: pointer;">×</span>
-        <h3 style="text-align: center; margin: 0 0 15px 0; font-size: 16px; color: #0056b3;">TAF Generator Tool</h3>
-        
-        <div class="sigmet-form-group">
-            <label>Stasiun:</label>
-            <select id="taf-station">
-                <option value="WAAA">WAAA (Sultan Hasanuddin)</option>
-                <option value="WAWN">WAWN (Arung Palakka)</option>
-                <option value="WAWH">WAWH (H. Aroepala)</option>
-                <option value="WAWS">WAWS (Soroako Airport)</option>
-            </select>
-        </div>
-        <div class="sigmet-form-group sigmet-form-inline">
-            <div><label>Validitas:</label><input type="text" id="taf-validity" placeholder="Misal: 0406/0512"></div>
-            <div><label>Tipe:</label><select id="taf-type"><option value="ORI">ORIGINAL</option><option value="AMD">AMANDEMEN</option></select></div>
-        </div>
-        
-        <h4 style="margin: 5px 0; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Kondisi Umum</h4>
-        <div class="sigmet-form-group sigmet-form-inline">
-            <div><label>Wind:</label><input type="text" id="taf-wind" value="11005KT"></div>
-            <div><label>Vis (m):</label><input type="text" id="taf-vis" value="8000"></div>
-        </div>
-        <div class="sigmet-form-group sigmet-form-inline">
-            <div><label>Weather:</label><input type="text" id="taf-wx" placeholder="Kosongkan jika NSW"></div>
-            <div><label>Cloud:</label><input type="text" id="taf-cloud" value="SCT018"></div>
-        </div>
-
-        <button id="taf-generate-btn" class="btn btn-generate" style="width: 100%; margin-top: 10px; background-color: #28a745; color: white; padding: 8px; border: none; border-radius: 4px; cursor: pointer; font-weight:bold;">1. Preview Sandi TAF</button>
-        <textarea id="taf-output-text" readonly style="width: 100%; height: 80px; margin-top: 10px; font-family: 'Courier New', Courier, monospace; font-size: 11px; background: #2e2e2e; color: #f0f0f0; border-radius:4px; padding:8px; box-sizing:border-box;"></textarea>
-        
-        <button id="taf-chart-btn" class="btn" style="width: 100%; margin-top: 10px; background-color: #fd7e14; color: white; padding: 8px; border: none; border-radius: 4px; cursor: pointer; font-weight:bold;">2. Lihat Tren Meteogram</button>
-    </div>
 	
 <div id="controls">
         <button id="downloadCsv">Unduh CSV</button>
