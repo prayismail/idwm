@@ -2198,7 +2198,7 @@ var overlayMaps = {
 	     "Radar Cuaca": radarLayer,
             "Cuaca Bandara": airportLayer,
 	    "Tropical Waves": TropicalLayer,
-	     "VA Advisory": vaAdvisoryLayer,
+	     "VA Advisory": vaAdvisoryLayer.addTo(map),
 			"NAV POINTS" : navPointsLayer,
 	
   };
