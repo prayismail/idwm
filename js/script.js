@@ -2192,7 +2192,7 @@ map.on('overlayremove', function(e) {
 var overlayMaps = {
 			"Prakiraan Cuaca": weatherForecastLayer,
 	    "Turbulence (EDR)": turbulenceLayerGroup,
-            "Satelit Visible": VISsatelliteLayer,
+            "Satelit Visible": VISsatelliteLayer.addTo(map),
             "Satelit Inframerah": IRsatelliteLayer,
 	    "Satelit Uap Air": WVsatelliteLayer,
 	     "Radar Cuaca": radarLayer,
