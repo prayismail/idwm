@@ -2195,7 +2195,7 @@ var overlayMaps = {
             "Satelit Visible": VISsatelliteLayer,
             "Satelit Inframerah": IRsatelliteLayer,
 	    "Satelit Uap Air": WVsatelliteLayer,
-	     "Radar Cuaca": radarLayer,
+	    // "Radar Cuaca": radarLayer,
             "Cuaca Bandara": airportLayer,
 	    "Tropical Waves": TropicalLayer,
 	     "VA Advisory": vaAdvisoryLayer,
