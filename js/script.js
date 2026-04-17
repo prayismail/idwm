@@ -1706,7 +1706,7 @@ function getSigmetColor(hazard) {
     const prevButton = document.getElementById('slider-prev');
     const nextButton = document.getElementById('slider-next');
     
-    const imageBound2 = [[-85.05, -180], [85.05, 180]];
+    const imageBound2 = [[-75.0, -180], [75.0, 180]];
     const forecastHours = ['06', '09', '12', '15', '18', '21', '24'];
     const flightLevels = [
         { name: "Turb FL450/148mb", code: "148" }, { name: "Turb FL390/197mb", code: "197" },
@@ -1771,10 +1771,10 @@ function createLayersForFlightLevel(levelCode) {
     forecastHours.forEach(hour => {
         const imageUrl = `https://aviationweather.gov/data/products/wafs/${wafsInfo.dateString}/${wafsInfo.cycle}/${wafsInfo.dateString}_${wafsInfo.cycle}_F${hour}_wafs_${levelCode}_edr_m.png`;
         
-        // Opacity sedikit diturunkan menjadi 0.85 agar basemap/pulau lebih terlihat
+        // Opacity sedikit diturunkan menjadi 0.8 agar basemap/pulau lebih terlihat
         turbulenceLayers[hour] = L.imageOverlay(imageUrl, imageBound2, { 
-            opacity: 0.85, 
-            interactive: false 
+            opacity: 0.8, 
+            interactive: true 
         });
     });
 }
