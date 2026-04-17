@@ -1,138 +1,60 @@
 export async function onRequest(context) {
-  const url = new URL(context.request.url);
-  
-  // Ambil parameter icao (bisa berupa "WAAA" atau "WAAA,WABB,WADD")
-  const icaoParam = url.searchParams.get('icao');
-  const type = url.searchParams.get('type')?.toUpperCase() || 'METAR'; 
+  const url = new URL(context.request.url);
+  
+  // 1. Ambil parameter 'icao' dan 'type'
+  const icao = url.searchParams.get('icao');
+  // Default ke 'metar' jika parameter type tidak diisi
+  const type = url.searchParams.get('type') || 'metar'; 
 
-  if (!icaoParam || (type !== 'METAR' && type !== 'TAF')) {
-    return new Response(JSON.stringify({ error: 'Parameter icao atau type tidak valid.' }), { status: 400 });
-  }
+  // 2. Validasi Parameter
+  if (!icao) {
+    return new Response(JSON.stringify({ error: 'Parameter "icao" diperlukan.' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 
-  // Pecah ICAO menjadi array
-  const icaoList = icaoParam.split(',').map(code => code.trim().toUpperCase());
+  // Pastikan type hanya boleh 'metar' atau 'taf' agar aman
+  if (type !== 'metar' && type !== 'taf') {
+    return new Response(JSON.stringify({ error: 'Parameter "type" salah. Gunakan "metar" atau "taf".' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 
-  // --- KREDENSIAL LOGIN ---
-  const username = '97180';
-  const password = 'opr97180';
-  
-  // TEBAKAN 1: Mengubah loginUrl ke endpoint API auth (Mohon sesuaikan jika hasil cek Network Anda berbeda)
-  const loginUrl = 'https://bmkgsatu.bmkg.go.id/api/auth/login'; // Atau 'https://bmkgsatu.bmkg.go.id/login'
+  // 3. Tentukan Endpoint (metar.txt atau taf.txt)
+  // Endpoint resmi: https://api.met.no/weatherapi/tafmetar/1.0/{type}.txt
+  const targetUrl = `https://api.met.no/weatherapi/tafmetar/1.0/${type}.txt?icao=${encodeURIComponent(icao)}`;
 
-  try {
-    // ==========================================
-    // TAHAP 1: LOGIN UNTUK MENDAPATKAN COOKIE
-    // ==========================================
-    
-    // TEBAKAN 2: Menggunakan format JSON untuk payload login
-    const loginData = {
-        Station Id: username, // Jika di payload namanya station_id, ganti kata 'username' di sebelah kiri ini
-        Password: password
-    };
+  // 4. Lakukan Fetch ke API Sumber
+  try {
+    const response = await fetch(targetUrl, {
+      headers: { 
+        'User-Agent': 'IDWM/CloudflarePagesFunction (github.com/prayismail/idwm)' 
+      },
+    });
 
-    const loginResponse = await fetch(loginUrl, {
-      method: 'POST',
-      body: JSON.stringify(loginData),
-      headers: {
-        'Content-Type': 'application/json', // Menggunakan JSON
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-      },
-      redirect: 'manual' 
-    });
+    // Jika API mengembalikan error (misal 404 karena bandara tidak ada)
+    if (!response.ok) {
+       return new Response(`Gagal mengambil data ${type.toUpperCase()} untuk ${icao}. Status: ${response.status}`, {
+         status: response.status
+       });
+    }
+    
+    // 5. Kembalikan Response ke Client
+    const newResponse = new Response(response.body, { status: response.status, headers: response.headers });
+    
+    // Cache selama 5 menit (300 detik) agar tidak membebani API sumber
+    newResponse.headers.set('Cache-Control', 'public, max-age=300');
+    // Set content type text/plain agar browser membacanya sebagai teks biasa
+    newResponse.headers.set('Content-Type', 'text/plain; charset=utf-8');
 
-    const cookies = loginResponse.headers.get('set-cookie');
-    
-    if (!cookies) {
-        // Jika gagal, ini akan menampilkan 401 seperti di screenshot Anda.
-        return new Response("Gagal mendapatkan sesi login (Cookie) dari server BMKG.", { status: 401 });
-    }
+    return newResponse;
 
-    // ==========================================
-    // TAHAP 2: FETCH API SEARCH (HASIL JSON)
-    // ==========================================
-    const now = new Date();
-    const yesterday = new Date(now);
-    yesterday.setDate(now.getDate() - 1);
-    
-    const formatIso = (date) => date.toISOString().split('.')[0];
-    const lte = formatIso(now);
-    const gte = formatIso(yesterday);
-
-    // MENGHAPUS parameter &cccc= agar kita mengambil semua data (500 terbaru), 
-    // lalu kita filter secara mandiri di bawah.
-    const searchUrl = `https://bmkgsatu.bmkg.go.id/db/bmkgsatu//@search?type_name=GTSMessage&_metadata=type_message,sandi_gts,cccc&_size=500&timestamp_data__gte=${gte}&timestamp_data__lte=${lte}`;
-
-    const searchResponse = await fetch(searchUrl, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Cookie': cookies,
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-      }
-    });
-
-    if (!searchResponse.ok) {
-        return new Response(`Gagal mengakses data API BMKG. Status: ${searchResponse.status}`, { status: searchResponse.status });
-    }
-
-    const jsonData = await searchResponse.json();
-    const records = Array.isArray(jsonData) ? jsonData : (jsonData.data || jsonData.result || jsonData.items || []);
-
-    // ==========================================
-    // TAHAP 3: PARSING & FILTER MULTI-ICAO
-    // ==========================================
-    let resultString = "";
-    let foundIcaos = new Set(); // Menyimpan ICAO apa saja yang sudah ketemu
-
-    // Loop data dari BMKGSoft
-    for (const record of records) {
-        if (record && record.sandi_gts && record.type_message) {
-            const isTaf = type === 'TAF' && (record.type_message.includes('TAF') || record.type_message.includes('AERODROME'));
-            const isMetar = type === 'METAR' && record.type_message.includes('METAR');
-
-            if (isTaf || isMetar) {
-                const sandiRaw = record.sandi_gts.trim();
-                const recordIcao = record.cccc ? record.cccc.toUpperCase() : null;
-
-                // Cek apakah ICAO data ini termasuk dalam list yang kita request
-                // Dan pastikan kita belum memasukkan ICAO ini (karena kita hanya butuh 1 yang terbaru)
-                if (recordIcao && icaoList.includes(recordIcao) && !foundIcaos.has(recordIcao)) {
-                    
-                    let cleanSandi = "";
-                    const startIndex = sandiRaw.indexOf(type);
-                    
-                    if (startIndex !== -1) {
-                        cleanSandi = sandiRaw.substring(startIndex).replace(/\s+/g, ' ').trim();
-                    } else {
-                        cleanSandi = sandiRaw.replace(/\s+/g, ' ').trim();
-                    }
-
-                    if (!cleanSandi.endsWith('=')) cleanSandi += '=';
-                    
-                    // Gabungkan ke hasil akhir (dipisah dengan baris baru seperti format METAR/TAF standar)
-                    resultString += cleanSandi + "\n";
-                    foundIcaos.add(recordIcao);
-                }
-            }
-        }
-    }
-
-    // Jika tak satupun ICAO dari request ditemukan
-    if (resultString === "") {
-        return new Response(`NIL=`, { status: 404 });
-    }
-
-    // ==========================================
-    // KEMBALIKAN KE CLIENT
-    // ==========================================
-    const finalResponse = new Response(resultString.trim(), { status: 200 });
-    finalResponse.headers.set('Cache-Control', 'public, max-age=300');
-    finalResponse.headers.set('Content-Type', 'text/plain; charset=utf-8');
-
-    return finalResponse;
-
-  } catch (err) {
-    return new Response(JSON.stringify({ error: 'Kesalahan internal.', details: err.message }), { status: 500, headers: {'Content-Type': 'application/json'} });
-  }
+  } catch (err) {
+    return new Response(JSON.stringify({ error: 'Terjadi kesalahan internal server.', details: err.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 }
