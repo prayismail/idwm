@@ -1706,7 +1706,7 @@ function getSigmetColor(hazard) {
     const prevButton = document.getElementById('slider-prev');
     const nextButton = document.getElementById('slider-next');
     
-    const imageBound2 = [[-85.0511287798066, -180], [85.0511287798066, 180]];
+    const imageBound2 = [[-85.0, -180], [85.0, 180]];
     const forecastHours = ['06', '09', '12', '15', '18', '21', '24'];
     const flightLevels = [
         { name: "Turb FL450/148mb", code: "148" }, { name: "Turb FL390/197mb", code: "197" },
@@ -1764,38 +1764,20 @@ function getSigmetColor(hazard) {
     }
 
     // =====================================================================
-    // === FUNGSI YANG DIREVISI: Menggunakan WMS untuk Presisi Koordinat ===
-    // =====================================================================
-    function createLayersForFlightLevel(levelCode) {
-        // Reset object layer
-        turbulenceLayers = {};
+// FUNGSI DIKEMBALIKAN KE L.imageOverlay DENGAN BOUNDS TERKALIBRASI
+// =====================================================================
+function createLayersForFlightLevel(levelCode) {
+    turbulenceLayers = {};
+    forecastHours.forEach(hour => {
+        const imageUrl = `https://aviationweather.gov/data/products/wafs/${wafsInfo.dateString}/${wafsInfo.cycle}/${wafsInfo.dateString}_${wafsInfo.cycle}_F${hour}_wafs_${levelCode}_edr_m.png`;
         
-        forecastHours.forEach(hour => {
-            // 1. Hitung waktu valid (Valid Time) untuk diminta ke server WMS
-            const validTime = new Date(wafsInfo.baseDate);
-            validTime.setUTCHours(validTime.getUTCHours() + parseInt(hour));
-            
-            // WMS standar meminta format waktu ISO 8601 (Contoh: "2026-04-17T06:00:00Z")
-            const timeString = validTime.toISOString().split('.')[0] + 'Z';
-
-            // 2. URL Endpoint WMS AWC
-            // Catatan: Anda mungkin perlu mengecek GetCapabilities AWC 
-            // jika endpoint atau nama layer mereka berubah pada API terbaru.
-            const wmsUrl = 'https://aviationweather.gov/cgi-bin/wms'; 
-
-            // 3. Buat layer WMS
-            turbulenceLayers[hour] = L.tileLayer.wms(wmsUrl, {
-                layers: 'wafs_edr',         // Nama layer, sesuaikan jika AWC memakai nama spesifik (misal: wafs_turb)
-                format: 'image/png',
-                transparent: true,
-                version: '1.3.0',
-                time: timeString,           // Data berdasarkan slider waktu Anda
-                elevation: levelCode,       // Menginstruksikan server mengambil Flight Level tertentu
-                opacity: 0.85,
-                interactive: false
-            });
+        // Opacity sedikit diturunkan menjadi 0.85 agar basemap/pulau lebih terlihat
+        turbulenceLayers[hour] = L.imageOverlay(imageUrl, imageBound2, { 
+            opacity: 0.85, 
+            interactive: false 
         });
-    }
+    });
+}
     function updateMapAndUI(index) {
         if (currentTurbulenceLayer && map.hasLayer(currentTurbulenceLayer)) {
             map.removeLayer(currentTurbulenceLayer);
