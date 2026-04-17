@@ -1771,10 +1771,10 @@ function createLayersForFlightLevel(levelCode) {
     forecastHours.forEach(hour => {
         const imageUrl = `https://aviationweather.gov/data/products/wafs/${wafsInfo.dateString}/${wafsInfo.cycle}/${wafsInfo.dateString}_${wafsInfo.cycle}_F${hour}_wafs_${levelCode}_edr_m.png`;
         
-        // Opacity sedikit diturunkan menjadi 0.8 agar basemap/pulau lebih terlihat
+        // Opacity sedikit diturunkan menjadi 0.75 agar basemap/pulau lebih terlihat
         turbulenceLayers[hour] = L.imageOverlay(imageUrl, imageBound2, { 
-            opacity: 0.8, 
-            interactive: true 
+            opacity: 0.75, 
+            interactive: false 
         });
     });
 }
