@@ -2516,7 +2516,7 @@ function parseVaaForPolygons(vaaFullText) {
 /**
  * 4. Membuat string SIGMET WV dari teks VAA.
  */
-function generateSigmet(vaaFullText) {
+function generateSigmet(vaaFullText, seqNumber = 'XX') { // <-- Tambahan parameter di sini
     const cleanText = vaaFullText.replace(/\r/g, '');
     try {
         const extract = (regex) => (cleanText.match(regex) || [])[1]?.trim() || null;
@@ -2797,15 +2797,26 @@ function showVaaNotificationOnMap(vaaData) {
     };
     generateSigmetBtn.onclick = () => {
         vaaPolygonPreviewLayer.clearLayers();
-        const sigmetText = generateSigmet(vaaData.fullText);
+        
+        // 1. Ambil nilai angka dari kotak input
+        const seqNum = seqInput.value.trim().toUpperCase() || 'XX';
+        
+        // 2. Masukkan angka tersebut ke dalam fungsi
+        const sigmetText = generateSigmet(vaaData.fullText, seqNum);
+        
         const translationText = generateSigmetTranslation(sigmetText, mapInfo.lon);
         const codeTextarea = sigmetContainer.querySelector('#sigmet-code-output');
         const translationTextarea = sigmetContainer.querySelector('#sigmet-translation-output');
+        
         codeTextarea.value = sigmetText;
         translationTextarea.value = translationText;
         sigmetContainer.style.display = 'block';
+        
+        // 3. Sembunyikan tombol dan kotak input setelah selesai
         generateSigmetBtn.style.display = 'none';
+        seqInput.style.display = 'none'; 
         viewPolygonBtn.style.display = 'none';
+        
         volcanoMarker.getPopup().update();
     };
     sigmetContainer.addEventListener('click', function(e) {
