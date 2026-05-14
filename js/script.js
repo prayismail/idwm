@@ -2558,7 +2558,9 @@ function generateSigmet(vaaFullText) {
             return { flightLevel, coords, movementStr };
         }).filter(Boolean);
         if (parsedClouds.length === 0) return "Error: Gagal mem-parsing detail awan abu dari blok 'EST VA CLD'.";
-        const sigmetHeader = `WVID21 WAAA ${publicationTime}\nWAAF SIGMET XX VALID ${validStartTime}/${validEndTime} WAAA-\nWAAF UJUNG PANDANG FIR VA ERUPTION MT ${volcano} PSN ${position}\n`;
+        const sigmetHeader = `WVID21 WAAA ${publicationTime}\nWAAF SIGMET ${seqNumber} VALID ${validStartTime}/${validEndTime} WAAA-\nWAAF UJUNG PANDANG FIR VA ERUPTION MT ${volcano} PSN ${position}\n`;
+        // ----------------------------------------------------------------------------
+        
         const phenomenonDescription = parsedClouds.map((cloud, index) => {
             const prefix = (index === 0) ? `VA CLD OBS AT ${obsTime} WI ` : `AND OBS AT ${obsTime} WI `;
             const segment = `${prefix}${cloud.coords}\nSFC/FL${cloud.flightLevel} ${cloud.movementStr}`;
@@ -2568,6 +2570,7 @@ function generateSigmet(vaaFullText) {
                 return `${segment} NC`;
             }
         }).join(' ');
+        
         return `${sigmetHeader}${phenomenonDescription}`;
     } catch (error) {
         console.error("[SIGMET Generator] Terjadi error internal:", error);
@@ -2670,42 +2673,102 @@ function showVaaNotificationOnMap(vaaData) {
     const volcanoMarker = L.marker([mapInfo.lat, mapInfo.lon], { icon: volcanoIcon });
     const popupContainer = document.createElement('div');
     popupContainer.innerHTML = `<b>🚨 VA Advisory Baru! 🚨</b><br><b>Gunung:</b> ${mapInfo.volcanoName}<br><b>Posisi:</b> ${mapInfo.lat}, ${mapInfo.lon}`;
+    
     const buttonContainer = document.createElement('div');
     buttonContainer.className = 'vaa-popup-buttons';
+    
+    // --- 1. UBAH TEKS TOMBOL UNDUH ---
     const downloadBtn = document.createElement('button');
-    downloadBtn.innerText = vaaData.imageBase64 ? 'Unduh (Txt+Png)' : 'Unduh (.txt)';
+    downloadBtn.innerText = vaaData.imageBase64 ? 'Unduh 3 PDF' : 'Unduh PDF (.txt)';
     downloadBtn.className = 'download-btn';
     buttonContainer.appendChild(downloadBtn);
+    
     const viewPolygonBtn = document.createElement('button');
     viewPolygonBtn.innerText = 'View Polygon';
     viewPolygonBtn.className = 'view-polygon-btn';
     buttonContainer.appendChild(viewPolygonBtn);
+
+    // --- 2. TAMBAH KOTAK INPUT SEQUENCE NUMBER DI SINI ---
+    const seqInput = document.createElement('input');
+    seqInput.type = 'text';
+    seqInput.className = 'sigmet-seq-input';
+    seqInput.placeholder = 'No (cth: 01)';
+    seqInput.maxLength = 2;
+    buttonContainer.appendChild(seqInput); // Ditambahkan ke container
+    // -----------------------------------------------------
+
     const generateSigmetBtn = document.createElement('button');
     generateSigmetBtn.innerText = 'Buat SIGMET';
     generateSigmetBtn.className = 'sigmet-btn';
     buttonContainer.appendChild(generateSigmetBtn);
+
+    // --- 3. UBAH TOTAL LOGIKA TOMBOL UNDUH MENJADI PDF ---
     downloadBtn.onclick = function() {
-        console.log("[VAA] Tombol Unduh Gabungan diklik.");
+        console.log("[VAA] Tombol Unduh PDF diklik.");
+        
+        const { jsPDF } = window.jspdf;
+        if (!jsPDF) {
+            alert("Sistem gagal memuat modul jsPDF. Pastikan koneksi internet stabil.");
+            return;
+        }
+
+        const seqNum = seqInput.value.trim().toUpperCase() || 'XX';
+        
+        // Format Nama Gunung: Huruf besar semua dan spasi diganti garis bawah (Contoh: DUKONO)
+        const safeVolcanoName = mapInfo.volcanoName.toUpperCase().replace(/\s+/g, '_');
+
+        // --- LOGIKA BARU: Mengambil Waktu (DTG) dari teks VAA ---
+        let dtgString = "";
+        // Mencari pola seperti "DTG: 20260514/1300Z"
+        const dtgMatch = vaaData.fullText.match(/DTG:\s*(\d{8})\/(\d{4}Z)/i);
+        
+        if (dtgMatch) {
+            dtgString = `${dtgMatch[1]}_${dtgMatch[2]}`; // Hasil: 20260514_1300Z
+        } else {
+            // Fallback (cadangan) ke waktu komputer saat ini jika format DTG tidak ditemukan
+            const now = new Date();
+            const yyyy = now.getUTCFullYear();
+            const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
+            const dd = String(now.getUTCDate()).padStart(2, '0');
+            const hh = String(now.getUTCHours()).padStart(2, '0');
+            const mins = String(now.getUTCMinutes()).padStart(2, '0');
+            dtgString = `${yyyy}${mm}${dd}_${hh}${mins}Z`;
+        }
+
         try {
-            const blob = new Blob([vaaData.fullText], { type: 'text/plain' });
-            const txtUrl = URL.createObjectURL(blob);
-            const txtLink = document.createElement('a');
-            txtLink.href = txtUrl;
-            txtLink.download = `VAA_${vaaData.advisoryNumber}.txt`;
-            txtLink.click();
-            URL.revokeObjectURL(txtUrl);
-        } catch (e) { console.error("[VAA] Gagal mengunduh file TXT:", e); }
-        if (vaaData.imageBase64) {
-            setTimeout(() => {
-                try {
-                    const pngLink = document.createElement('a');
-                    pngLink.href = vaaData.imageBase64;
-                    pngLink.download = `VAA_MAP_${vaaData.advisoryNumber}.png`;
-                    pngLink.click();
-                } catch (e) { console.error("[VAA] Gagal mengunduh file PNG dari Base64:", e); }
-            }, 100);
+            // PDF 1: SIGMET VA
+            const sigmetText = generateSigmet(vaaData.fullText, seqNum); 
+            const docSigmet = new jsPDF();
+            docSigmet.setFont("courier", "normal");
+            docSigmet.setFontSize(11);
+            const splitSigmet = docSigmet.splitTextToSize(sigmetText, 180);
+            docSigmet.text(splitSigmet, 10, 20);
+            docSigmet.save(`SIGMET_${safeVolcanoName}_${dtgString}.pdf`);
+
+            // PDF 2: VA ADVISORY (Teks Asli)
+            // Sesuai gambar Anda, menggunakan spasi setelah VAA. 
+            // Jika ingin pakai underscore, ubah menjadi `VAA_${safeVolcanoName}...`
+            const docVAA = new jsPDF();
+            docVAA.setFont("courier", "normal");
+            docVAA.setFontSize(10);
+            const splitVaa = docVAA.splitTextToSize(vaaData.fullText, 180);
+            docVAA.text(splitVaa, 10, 20);
+            docVAA.save(`VAA ${safeVolcanoName}_${dtgString}.pdf`);
+
+            // PDF 3: GAMBAR VAG
+            if (vaaData.imageBase64) {
+                setTimeout(() => {
+                    const docImg = new jsPDF();
+                    docImg.addImage(vaaData.imageBase64, 'PNG', 10, 20, 190, 0); 
+                    docImg.save(`VAG_${safeVolcanoName}_${dtgString}.pdf`);
+                }, 600);
+            }
+        } catch (e) {
+            console.error("[VAA] Gagal membuat file PDF:", e);
         }
     };
+    // -----------------------------------------------------
+    
     const sigmetContainer = document.createElement('div');
     sigmetContainer.className = 'sigmet-output-container';
     sigmetContainer.style.display = 'none';
