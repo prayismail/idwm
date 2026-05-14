@@ -131,7 +131,22 @@
 .vaa-popup-buttons .sigmet-btn:hover {
     background-color: #218838;
 }
+/* Style tambahan untuk input Sequence Number */
+.sigmet-seq-input {
+    width: 90px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 12px;
+    text-transform: uppercase; /* Memaksa input menjadi huruf besar */
+    box-sizing: border-box;
+}
 
+.sigmet-seq-input:focus {
+    outline: none;
+    border-color: #28a745;
+    box-shadow: 0 0 3px rgba(40, 167, 69, 0.5);
+}
 
 /* Kontainer untuk output SIGMET yang muncul setelah tombol diklik */
 .sigmet-output-container {
