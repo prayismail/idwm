@@ -1110,6 +1110,8 @@ function fetchWeatherData(lat, lon) {
                             type: 'line',
                             tension: 0.3, // Membuat garis sedikit melengkung (smooth)
                             borderWidth: 2,
+							pointRadius: 0,
+                            pointHoverRadius: 5,
                             yAxisID: 'y1'
                         });
                     }
