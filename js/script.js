@@ -1069,16 +1069,64 @@ var isWeatherLayerActive = false;
 
 function fetchWeatherData(lat, lon) {
     let model = modelSelect.value;
-    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation,wind_speed_10m,wind_direction_10m&models=${model}&current=precipitation,wind_speed_10m,wind_direction_10m&timezone=auto&forecast_days=3&wind_speed_unit=kn`)
+    let isGabungan = model === 'gabungan';
+    
+    // Jika gabungan, kita panggil semua model sekaligus dalam satu URL
+    let allModels = "ecmwf_ifs,icon_seamless,ukmo_seamless,gfs_seamless,cma_grapes_global,meteofrance_seamless";
+    let modelsParam = isGabungan ? allModels : model;
+
+    // PERUBAHAN: timezone=auto diubah menjadi timezone=GMT agar data yang ditarik adalah murni UTC
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation,wind_speed_10m,wind_direction_10m&models=${modelsParam}&current=precipitation,wind_speed_10m,wind_direction_10m&timezone=GMT&forecast_days=3&wind_speed_unit=kn`)
         .then(response => response.json())
         .then(data => {
             let hourly = data.hourly;
             let times = hourly.time;
-            let precipitation = hourly.precipitation;
-            let windSpeed = hourly.wind_speed_10m;
-            let windDirection = hourly.wind_direction_10m;
-            currentData = { times, precipitation, windSpeed, windDirection };
-            fetchElevation(lat, lon, times, precipitation, windSpeed, windDirection);
+
+            if (isGabungan) {
+                // LOGIKA GABUNGAN MODEL (HANYA HUJAN - LINE CHART)
+                let combinedDatasets = [];
+                let modelNames = {
+                    'ecmwf_ifs': 'IFS-ECMWF',
+                    'icon_seamless': 'ICON-DWD',
+                    'ukmo_seamless': 'UK-MetOffice',
+                    'gfs_seamless': 'GFS-NCEP',
+                    'cma_grapes_global': 'GRAPES-CMA',
+                    'meteofrance_seamless': 'ARPEGE-MFI'
+                };
+                
+                // Warna beda untuk setiap model agar mudah dibedakan di line chart
+                let colors = ['#e6194B', '#3cb44b', '#4363d8', '#f58231', '#911eb4', '#000000'];
+                let i = 0;
+                
+                for (let m in modelNames) {
+                    let precipKey = `precipitation_${m}`;
+                    if (hourly[precipKey]) {
+                        combinedDatasets.push({
+                            label: modelNames[m],
+                            data: hourly[precipKey],
+                            borderColor: colors[i],
+                            backgroundColor: colors[i],
+                            fill: false,
+                            type: 'line',
+                            tension: 0.3, // Membuat garis sedikit melengkung (smooth)
+                            borderWidth: 2,
+                            yAxisID: 'y1'
+                        });
+                    }
+                    i++;
+                }
+                currentData = { times, isGabungan: true, datasets: combinedDatasets };
+                fetchElevation(lat, lon, times, null, null, null, combinedDatasets);
+                
+            } else {
+                // LOGIKA MODEL TUNGGAL (SEPERTI SEMULA: BAR HUJAN + LINE ANGIN)
+                let precipitation = hourly.precipitation;
+                let windSpeed = hourly.wind_speed_10m;
+                let windDirection = hourly.wind_direction_10m;
+                
+                currentData = { times, precipitation, windSpeed, windDirection, isGabungan: false };
+                fetchElevation(lat, lon, times, precipitation, windSpeed, windDirection, null);
+            }
         })
         .catch(error => {
             console.error('Gagal mengambil data cuaca:', error);
@@ -1086,24 +1134,21 @@ function fetchWeatherData(lat, lon) {
         });
 }
 
-function fetchElevation(lat, lon, times, precipitation, windSpeed, windDirection) {
+function fetchElevation(lat, lon, times, precipitation, windSpeed, windDirection, combinedDatasets) {
     fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lon}`)
         .then(response => response.json())
         .then(data => {
             let elevation = data.elevation;
             currentLocation = { lat: lat.toFixed(2), lon: lon.toFixed(2), elevation: elevation };
 
-            // === PERUBAHAN KUNCI ADA DI SINI ===
-            // Perbarui konten popup marker yang sudah ada dengan info elevasi.
-            if (marker) {
+            if (typeof marker !== 'undefined' && marker) {
                 marker.setPopupContent(`<b>Elevasi: ${elevation} m</b><br>Koordinat: ${currentLocation.lat}, ${currentLocation.lon}`);
             }
             
-            // Perbarui info di atas chart
             locationInfo.innerHTML = `Koordinat: ${currentLocation.lat}, ${currentLocation.lon} | Elevasi: ${currentLocation.elevation} m`;
             
-            // Tampilkan chart cuaca
-            showChart(times, precipitation, windSpeed, windDirection);
+            // Melempar combinedDatasets ke showChart
+            showChart(times, precipitation, windSpeed, windDirection, combinedDatasets);
         })
         .catch(error => {
             console.error('Gagal mengambil data elevasi:', error);
@@ -1111,59 +1156,93 @@ function fetchElevation(lat, lon, times, precipitation, windSpeed, windDirection
         });
 }
 
-function showChart(times, precipitation, windSpeed, windDirection) {
+function showChart(times, precipitation, windSpeed, windDirection, combinedDatasets) {
     chartPopup.style.display = 'block';
     let ctx = document.getElementById('weatherChart').getContext('2d');
-    if (weatherChart) weatherChart.destroy();
+    if (typeof weatherChart !== 'undefined' && weatherChart) weatherChart.destroy();
     
+    let isGabungan = combinedDatasets !== null;
+    let chartDatasets = [];
+    
+    if (isGabungan) {
+        chartDatasets = combinedDatasets;
+    } else {
+        chartDatasets = [
+            {
+                label: 'Curah Hujan (mm)',
+                data: precipitation,
+                backgroundColor: 'rgba(0, 0, 255, 0.6)',
+                borderColor: 'blue',
+                borderWidth: 1,
+                type: 'bar',
+                yAxisID: 'y1'
+            },
+            {
+                label: 'Kecepatan Angin (knot)',
+                data: windSpeed,
+                borderColor: 'red',
+                backgroundColor: 'rgba(255, 0, 0, 0.2)',
+                fill: false,
+                type: 'line',
+                yAxisID: 'y2'
+            },
+            {
+                label: 'Arah Angin (°)',
+                data: windDirection,
+                borderColor: 'green',
+                backgroundColor: 'rgba(0, 255, 0, 0.2)',
+                fill: false,
+                type: 'line',
+                yAxisID: 'y2'
+            }
+        ];
+    }
+
+    // Mengatur Axis Y (Jika gabungan, Y2 untuk angin disembunyikan agar grafik rapi)
+    let scalesConfig = {
+        x: { 
+            title: { display: true, text: 'Waktu (UTC)' } 
+        },
+        y1: { 
+            type: 'linear', position: 'left', beginAtZero: true, 
+            title: { display: true, text: 'Curah Hujan (mm)'} 
+        }
+    };
+
+    if (!isGabungan) {
+        scalesConfig.y2 = { 
+            type: 'linear', position: 'right', beginAtZero: true, 
+            title: { display: true, text: 'Angin'} 
+        };
+    }
+
+    let subtitleText = isGabungan 
+        ? `Prakiraan cuaca oleh Open-Meteo. Perbandingan Ensemble Model` 
+        : `Prakiraan cuaca oleh Open-Meteo. Berdasarkan model: ${modelSelect.options[modelSelect.selectedIndex].text}`;
+
     weatherChart = new Chart(ctx, {
-        type: 'bar',
+        type: 'bar', // Base type, akan di-override di setiap dataset
         data: {
-            labels: times.map(t => new Date(t).toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })),
-            datasets: [
-                {
-                    label: 'Curah Hujan (mm)',
-                    data: precipitation,
-                    backgroundColor: 'rgba(0, 0, 255, 0.6)',
-                    borderColor: 'blue',
-                    borderWidth: 1,
-                    type: 'bar',
-                    yAxisID: 'y1'
-                },
-                {
-                    label: 'Kecepatan Angin (knot)',
-                    data: windSpeed,
-                    borderColor: 'red',
-                    backgroundColor: 'rgba(255, 0, 0, 0.2)',
-                    fill: false,
-                    type: 'line',
-                    yAxisID: 'y2'
-                },
-                {
-                    label: 'Arah Angin (°)',
-                    data: windDirection,
-                    borderColor: 'green',
-                    backgroundColor: 'rgba(0, 255, 0, 0.2)',
-                    fill: false,
-                    type: 'line',
-                    yAxisID: 'y2'
-                }
-            ]
+            // Memaksa JS membacanya sebagai UTC (dengan menambah 'Z' pada akhir teks waktu)
+            labels: times.map(t => new Date(t + 'Z').toLocaleString('id-ID', { 
+                timeZone: 'UTC', 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                day: 'numeric', 
+                month: 'short' 
+            }) + 'Z'),
+            datasets: chartDatasets
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            scales: {
-                x: { title: { display: true, text: 'Waktu Setempat' } },
-                y1: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: 'Curah Hujan (mm)'} },
-                y2: { type: 'linear', position: 'right', beginAtZero: true, title: { display: true, text: 'Angin'} }
-            },
+            scales: scalesConfig,
             plugins: {
                 legend: { position: 'top' },
                 title: { display: false },
                 subtitle: {
                     display: true,
-                    text: `Prakiraan cuaca oleh Open-Meteo. Berdasarkan model: ${modelSelect.options[modelSelect.selectedIndex].text}`,
+                    text: subtitleText,
                     align: 'center',
                     font: { size: 12, weight: 'bold' }
                 }
@@ -1171,9 +1250,8 @@ function showChart(times, precipitation, windSpeed, windDirection) {
         }
     });
 }
-
 function downloadCSVFile() {
-    let csvContent = `data:text/csv;charset=utf-8,Koordinat:, ${currentLocation.lat}, ${currentLocation.lon}\nElevasi:, ${currentLocation.elevation} m\n\nWaktu Setempat,Curah Hujan (mm),Kecepatan Angin (knots),Arah Angin (°)\n`;
+    let csvContent = `data:text/csv;charset=utf-8,Koordinat:, ${currentLocation.lat}, ${currentLocation.lon}\nElevasi:, ${currentLocation.elevation} m\n\nWaktu UTC,Curah Hujan (mm),Kecepatan Angin (knots),Arah Angin (°)\n`;
     currentData.times.forEach((time, index) => {
         csvContent += `${time},${currentData.precipitation[index]},${currentData.windSpeed[index]},${currentData.windDirection[index]}\n`;
     });
