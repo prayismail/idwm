@@ -386,8 +386,8 @@
             z-index: 5000;
             width: 90%;
             height: 90%;
-            max-width: 500px;
-            max-height: 50vh;
+            max-width: 600px;
+            max-height: 70vh;
             overflow-y: auto;
             z-index: 5000;
         }
