@@ -1257,14 +1257,46 @@ function showChart(times, precipitation, windSpeed, windDirection, combinedDatas
     });
 }
 function downloadCSVFile() {
-    let csvContent = `data:text/csv;charset=utf-8,Koordinat:, ${currentLocation.lat}, ${currentLocation.lon}\nElevasi:, ${currentLocation.elevation} m\n\nWaktu UTC,Curah Hujan (mm),Kecepatan Angin (knots),Arah Angin (°)\n`;
-    currentData.times.forEach((time, index) => {
-        csvContent += `${time},${currentData.precipitation[index]},${currentData.windSpeed[index]},${currentData.windDirection[index]}\n`;
-    });
+    let csvContent = `data:text/csv;charset=utf-8,Koordinat:, ${currentLocation.lat}, ${currentLocation.lon}\nElevasi:, ${currentLocation.elevation} m\n\n`;
+
+    // Cek apakah saat ini sedang dalam mode Gabungan Model
+    if (currentData.isGabungan) {
+        
+        // 1. Buat Header Kolom CSV untuk Gabungan Model
+        let header = "Waktu UTC";
+        currentData.datasets.forEach(ds => {
+            header += `,${ds.label} (mm)`; // Menambahkan nama model sebagai kolom
+        });
+        csvContent += header + "\n";
+
+        // 2. Isi Baris Data
+        currentData.times.forEach((time, index) => {
+            let row = `${time}`;
+            currentData.datasets.forEach(ds => {
+                row += `,${ds.data[index]}`; // Mengambil curah hujan masing-masing model di jam tersebut
+            });
+            csvContent += row + "\n";
+        });
+
+    } else {
+        
+        // --- LOGIKA LAMA (Untuk Model Tunggal) ---
+        csvContent += `Waktu UTC,Curah Hujan (mm),Kecepatan Angin (knots),Arah Angin (°)\n`;
+        currentData.times.forEach((time, index) => {
+            csvContent += `${time},${currentData.precipitation[index]},${currentData.windSpeed[index]},${currentData.windDirection[index]}\n`;
+        });
+        
+    }
+
+    // Proses Download File
     let encodedUri = encodeURI(csvContent);
     let link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Prakiraan_Cuaca_${currentLocation.lat}_${currentLocation.lon}.csv`);
+    
+    // Sesuaikan nama file tergantung mode yang dipilih
+    let fileName = currentData.isGabungan ? 'Perbandingan_Curah_Hujan' : 'Prakiraan_Cuaca';
+    link.setAttribute("download", `${fileName}_${currentLocation.lat}_${currentLocation.lon}.csv`);
+    
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
