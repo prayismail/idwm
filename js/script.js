@@ -1238,6 +1238,10 @@ function showChart(times, precipitation, windSpeed, windDirection, combinedDatas
         options: {
             responsive: true,
             maintainAspectRatio: false,
+			interaction: {
+            intersect: false, 
+            mode: 'index',     
+        },
             scales: scalesConfig,
             plugins: {
                 legend: { position: 'top' },
