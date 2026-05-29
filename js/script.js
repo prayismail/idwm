@@ -2632,7 +2632,7 @@ function parseVaaForPolygons(vaaFullText) {
 /**
  * 4. Membuat string SIGMET WV dari teks VAA.
  */
-function generateSigmet(vaaFullText, seqNumber = 'XX') { // <-- Tambahan parameter di sini
+function generateSigmet(vaaFullText, seqNumber = 'XX') { 
     const cleanText = vaaFullText.replace(/\r/g, '');
     try {
         const extract = (regex) => (cleanText.match(regex) || [])[1]?.trim() || null;
@@ -2649,23 +2649,34 @@ function generateSigmet(vaaFullText, seqNumber = 'XX') { // <-- Tambahan paramet
         const volcano = extract(/VOLCANO:\s*([\w\s-]+?)\s+\d+/i);
         const position = extract(/PSN:\s*([NS]\d{4}\s*E\d{5})/i);
         const obsTime = extract(/(?:OBS|EST)\s*VA\s*DTG:\s*\d{2}\/(\d{4}Z)/i);
+        
         if (!publicationTime || !validStartTime || !validEndTime || !volcano || !position || !obsTime) {
             console.error("[SIGMET Generator] Gagal parsing informasi umum.");
             return "Error: Gagal mem-parsing header atau informasi umum VAA.";
         }
+        
         const ashCloudBlockMatch = cleanText.match(/(?:OBS|EST) VA CLD:([\s\S]*?)(?=FCST VA CLD|RMK:|NXT ADVISORY:)/i);
         if (!ashCloudBlockMatch) return "Error: Tidak dapat menemukan blok 'EST VA CLD' pada VAA.";
+        
         const ashCloudBlock = ashCloudBlockMatch[1];
         const cloudChunks = ashCloudBlock.split(/SFC\/FL/).filter(chunk => chunk.trim() !== '');
         if (cloudChunks.length === 0) return "Error: Blok 'EST VA CLD' ditemukan, tetapi tidak ada deskripsi awan abu (SFC/FL).";
+        
         const parsedClouds = cloudChunks.map(chunk => {
             const chunkContent = chunk.trim();
             const movParts = chunkContent.split(/\s+MOV\s+/i);
             const flAndCoordsPart = movParts[0].trim();
-            const movementStr = movParts.length > 1 ? `MOV ${movParts.slice(1).join(' MOV ')}`.trim() : 'STNR';
+            
+            // === PERBAIKAN DI SINI ===
+            // Menghapus semua enter (\n) dan spasi ganda yang terbawa dari teks asli
+            let movementStr = movParts.length > 1 ? `MOV ${movParts.slice(1).join(' MOV ')}`.trim() : 'STNR';
+            movementStr = movementStr.replace(/\s+/g, ' '); 
+            // =========================
+
             const flMatch = flAndCoordsPart.match(/^(\d{3})\s*/);
             if (!flMatch) return null;
             const flightLevel = flMatch[1];
+            
             let coords = flAndCoordsPart.substring(flMatch[0].length).replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
             const firstCoord = coords.split(' - ')[0];
             if (firstCoord && !coords.endsWith(firstCoord)) {
@@ -2673,13 +2684,15 @@ function generateSigmet(vaaFullText, seqNumber = 'XX') { // <-- Tambahan paramet
             }
             return { flightLevel, coords, movementStr };
         }).filter(Boolean);
+        
         if (parsedClouds.length === 0) return "Error: Gagal mem-parsing detail awan abu dari blok 'EST VA CLD'.";
+        
         const sigmetHeader = `WVID21 WAAA ${publicationTime}\nWAAF SIGMET ${seqNumber} VALID ${validStartTime}/${validEndTime} WAAA-\nWAAF UJUNG PANDANG FIR VA ERUPTION MT ${volcano} PSN ${position}\n`;
-        // ----------------------------------------------------------------------------
         
         const phenomenonDescription = parsedClouds.map((cloud, index) => {
             const prefix = (index === 0) ? `VA CLD OBS AT ${obsTime} WI ` : `AND OBS AT ${obsTime} WI `;
-            const segment = `${prefix}${cloud.coords}\nSFC/FL${cloud.flightLevel} ${cloud.movementStr}`;
+            // === PERBAIKAN DI SINI: Menghapus \n dan menggantinya dengan spasi biasa ===
+            const segment = `${prefix}${cloud.coords} SFC/FL${cloud.flightLevel} ${cloud.movementStr}`;
             if (index === parsedClouds.length - 1) {
                 return `${segment} NC=`;
             } else {
@@ -2693,7 +2706,6 @@ function generateSigmet(vaaFullText, seqNumber = 'XX') { // <-- Tambahan paramet
         return `Terjadi error internal saat membuat SIGMET.\n\nDetail: ${error.message}`;
     }
 }
-
 /**
  * 5. Fungsi untuk menerjemahkan teks SIGMET ke dalam format Bahasa Indonesia.
  */
