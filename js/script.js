@@ -2820,7 +2820,7 @@ function showVaaNotificationOnMap(vaaData) {
     const seqInput = document.createElement('input');
     seqInput.type = 'text';
     seqInput.className = 'sigmet-seq-input';
-    seqInput.placeholder = 'Isi nomor SIGMET (cth: 01)';
+    seqInput.placeholder = 'Isi nomor SIGMET';
     seqInput.maxLength = 2;
     buttonContainer.appendChild(seqInput); // Ditambahkan ke container
     // -----------------------------------------------------
