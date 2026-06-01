@@ -2630,10 +2630,68 @@ function parseVaaForPolygons(vaaFullText) {
 
 
 /**
- * 4. Membuat string SIGMET WV dari teks VAA.
+ * 4. Membuat string SIGMET WV dari teks VAA dengan Deteksi Intensitas Otomatis.
  */
 function generateSigmet(vaaFullText, seqNumber = 'XX') { 
     const cleanText = vaaFullText.replace(/\r/g, '');
+    
+    // --- HELPER ALGORITMA LUAS POLIGON (SHOELACE FORMULA) ---
+    function calculateIntensity(text) {
+        const extractCoords = (block) => {
+            if (!block) return [];
+            const chunks = block.split(/SFC\/FL/);
+            if (chunks.length < 2) return [];
+            const coordsString = chunks[1].split(/\s+MOV\s+/i)[0].replace(/^(\d{3})\s*/, '').replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+            return coordsString.split(' - ').map(pointStr => {
+                const parts = pointStr.trim().split(' ');
+                if (parts.length !== 2) return null;
+                const coordMatch = (str) => {
+                    let match = str.match(/([NS])(\d{2})(\d{2})|([EW])(\d{3})(\d{2})/);
+                    if (!match) return null;
+                    if (match[1]) {
+                        let lat = parseInt(match[2]) + (parseInt(match[3]) / 60);
+                        return match[1].toUpperCase() === 'S' ? -lat : lat;
+                    } else {
+                        let lon = parseInt(match[5]) + (parseInt(match[6]) / 60);
+                        return match[4].toUpperCase() === 'W' ? -lon : lon;
+                    }
+                };
+                const lat = coordMatch(parts[0]);
+                const lon = coordMatch(parts[1]);
+                return (lat !== null && lon !== null) ? [lat, lon] : null;
+            }).filter(Boolean);
+        };
+
+        const getArea = (pts) => {
+            if (pts.length < 3) return 0;
+            let area = 0;
+            for (let i = 0; i < pts.length; i++) {
+                let j = (i + 1) % pts.length;
+                area += pts[i][1] * pts[j][0] - pts[j][1] * pts[i][0];
+            }
+            return Math.abs(area / 2);
+        };
+
+        const obsBlock = (text.match(/(?:OBS|EST) VA CLD:([\s\S]*?)(?=FCST VA CLD|RMK:|NXT ADVISORY:)/i) || [])[1];
+        const fcstBlock = (text.match(/FCST VA CLD \+6 HR:([\s\S]*?)(?=FCST VA CLD|RMK:|NXT ADVISORY:)/i) || [])[1];
+
+        const obsPts = extractCoords(obsBlock);
+        const fcstPts = extractCoords(fcstBlock);
+
+        if (obsPts.length === 0) return "NC";
+
+        const obsArea = getArea(obsPts);
+        const fcstArea = getArea(fcstPts);
+
+        // Jika prediksi poligon mengecil lebih dari 10% atau hilang
+        if (fcstPts.length === 0 || fcstArea < obsArea * 0.9) return "WKN";
+        // Jika prediksi poligon membesar lebih dari 10%
+        if (fcstArea > obsArea * 1.1) return "INTSF";
+        
+        return "NC"; // Jika perubahannya minor / bentuk sama
+    }
+    // ---------------------------------------------------------
+
     try {
         const extract = (regex) => (cleanText.match(regex) || [])[1]?.trim() || null;
         const extractGroup = (regex) => (cleanText.match(regex) || []);
@@ -2667,11 +2725,8 @@ function generateSigmet(vaaFullText, seqNumber = 'XX') {
             const movParts = chunkContent.split(/\s+MOV\s+/i);
             const flAndCoordsPart = movParts[0].trim();
             
-            // === PERBAIKAN DI SINI ===
-            // Menghapus semua enter (\n) dan spasi ganda yang terbawa dari teks asli
             let movementStr = movParts.length > 1 ? `MOV ${movParts.slice(1).join(' MOV ')}`.trim() : 'STNR';
             movementStr = movementStr.replace(/\s+/g, ' '); 
-            // =========================
 
             const flMatch = flAndCoordsPart.match(/^(\d{3})\s*/);
             if (!flMatch) return null;
@@ -2685,18 +2740,20 @@ function generateSigmet(vaaFullText, seqNumber = 'XX') {
             return { flightLevel, coords, movementStr };
         }).filter(Boolean);
         
-        if (parsedClouds.length === 0) return "Error: Gagal mem-parsing detail awan abu dari blok 'EST VA CLD'.";
+        if (parsedClouds.length === 0) return "Error: Gagal mem-parsing detail awan abu.";
+        
+        // --- Eksekusi Cek Intensitas ---
+        const autoIntensity = calculateIntensity(cleanText);
         
         const sigmetHeader = `WVID21 WAAA ${publicationTime}\nWAAF SIGMET ${seqNumber} VALID ${validStartTime}/${validEndTime} WAAA-\nWAAF UJUNG PANDANG FIR VA ERUPTION MT ${volcano} PSN ${position}\n`;
         
         const phenomenonDescription = parsedClouds.map((cloud, index) => {
             const prefix = (index === 0) ? `VA CLD OBS AT ${obsTime} WI ` : `AND OBS AT ${obsTime} WI `;
-            // === PERBAIKAN DI SINI: Menghapus \n dan menggantinya dengan spasi biasa ===
             const segment = `${prefix}${cloud.coords} SFC/FL${cloud.flightLevel} ${cloud.movementStr}`;
             if (index === parsedClouds.length - 1) {
-                return `${segment} NC=`;
+                return `${segment} ${autoIntensity}=`; // Menggunakan variabel intensitas yang didapat
             } else {
-                return `${segment} NC`;
+                return `${segment} ${autoIntensity}`;
             }
         }).join(' ');
         
@@ -2790,22 +2847,61 @@ Sumber informasi:
  */
 function showVaaNotificationOnMap(vaaData) {
     const mapInfo = parseVaaForMapInfo(vaaData.fullText);
-    if (!mapInfo) {
-        alert("Gagal memproses lokasi gunung dari VAA terbaru. Cek console untuk detail.");
-        return;
-    }
+    if (!mapInfo) return;
+    
+    // HANYA hapus marker lama kalau ini bukan proses "Snooze"
     vaAdvisoryLayer.clearLayers();
     vaaPolygonPreviewLayer.clearLayers();
+    
     const alertSound = document.getElementById('vaa-alert-sound');
     const volcanoIcon = L.divIcon({ className: 'blinking-volcano-marker', iconSize: [24, 24], iconAnchor: [12, 22] });
     const volcanoMarker = L.marker([mapInfo.lat, mapInfo.lon], { icon: volcanoIcon });
+    
     const popupContainer = document.createElement('div');
-    popupContainer.innerHTML = `<b>🚨 VA Advisory Baru! 🚨</b><br><b>Gunung:</b> ${mapInfo.volcanoName}<br><b>Posisi:</b> ${mapInfo.lat}, ${mapInfo.lon}`;
+    
+    // --- 1. MEMBANGUN CUSTOM HEADER UNTUK MINIMIZE & CLOSE ---
+    const headerDiv = document.createElement('div');
+    headerDiv.style.cssText = "display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ccc; padding-bottom:8px; margin-bottom:10px;";
+    
+    const titleSpan = document.createElement('span');
+    titleSpan.innerHTML = "<b style='color:#dc3545;'>🚨 VA Advisory Baru!</b>";
+    
+    const controlDiv = document.createElement('div');
+    
+    const btnMinimize = document.createElement('button');
+    btnMinimize.innerText = "−";
+    btnMinimize.style.cssText = "cursor:pointer; background:#e0e0e0; border:1px solid #999; border-radius:3px; padding:0 6px; font-weight:bold; margin-right:5px; font-size:14px;";
+    
+    const btnClose = document.createElement('button');
+    btnClose.innerText = "✕";
+    btnClose.style.cssText = "cursor:pointer; background:#dc3545; color:white; border:1px solid #a71d2a; border-radius:3px; padding:0 6px; font-weight:bold; font-size:14px;";
+    
+    controlDiv.appendChild(btnMinimize);
+    controlDiv.appendChild(btnClose);
+    headerDiv.appendChild(titleSpan);
+    headerDiv.appendChild(controlDiv);
+    popupContainer.appendChild(headerDiv);
+    
+    const infoDiv = document.createElement('div');
+    infoDiv.innerHTML = `<b>Gunung:</b> ${mapInfo.volcanoName}<br><b>Posisi:</b> ${mapInfo.lat}, ${mapInfo.lon}`;
+    popupContainer.appendChild(infoDiv);
+    
+    // --- 2. FITUR SNOOZE (Tidur Sementara) ---
+    // Cek selisih waktu saat ini dengan waktu DTG (waktu penerbitan SIGMET)
+    const dtgMatch = vaaData.fullText.match(/DTG:\s*(\d{4})(\d{2})(\d{2})\/(\d{2})(\d{2})Z/i);
+    let showSnooze = false;
+    let diffMinutes = 0;
+    
+    if (dtgMatch) {
+        const dtgTime = new Date(Date.UTC(parseInt(dtgMatch[1]), parseInt(dtgMatch[2])-1, parseInt(dtgMatch[3]), parseInt(dtgMatch[4]), parseInt(dtgMatch[5])));
+        diffMinutes = (dtgTime.getTime() - Date.now()) / 60000;
+        // Jika validitas SIGMET (DTG) masih > 10 menit dari sekarang, tampilkan tombol Snooze
+        if (diffMinutes >= 10) showSnooze = true;
+    }
     
     const buttonContainer = document.createElement('div');
     buttonContainer.className = 'vaa-popup-buttons';
     
-    // --- 1. UBAH TEKS TOMBOL UNDUH ---
     const downloadBtn = document.createElement('button');
     downloadBtn.innerText = vaaData.imageBase64 ? 'Unduh 3 PDF' : 'Unduh PDF (.txt)';
     downloadBtn.className = 'download-btn';
@@ -2816,74 +2912,79 @@ function showVaaNotificationOnMap(vaaData) {
     viewPolygonBtn.className = 'view-polygon-btn';
     buttonContainer.appendChild(viewPolygonBtn);
 
-    // --- 2. TAMBAH KOTAK INPUT SEQUENCE NUMBER DI SINI ---
+    const inputWrapper = document.createElement('div');
+    inputWrapper.className = 'seq-input-wrapper';
+    const inputLabel = document.createElement('span');
+    inputLabel.innerText = 'Isi No SIGMET:';
+    inputLabel.className = 'seq-input-label';
     const seqInput = document.createElement('input');
     seqInput.type = 'text';
     seqInput.className = 'sigmet-seq-input';
-    seqInput.placeholder = 'Isi nomor SIGMET';
+    seqInput.placeholder = '(cth: 01)';
     seqInput.maxLength = 2;
-    buttonContainer.appendChild(seqInput); // Ditambahkan ke container
-    // -----------------------------------------------------
+    inputWrapper.appendChild(inputLabel);
+    inputWrapper.appendChild(seqInput);
+    buttonContainer.appendChild(inputWrapper);
 
     const generateSigmetBtn = document.createElement('button');
     generateSigmetBtn.innerText = 'Buat SIGMET';
     generateSigmetBtn.className = 'sigmet-btn';
     buttonContainer.appendChild(generateSigmetBtn);
+    
+    // Tombol Snooze akan disisipkan jika memenuhi syarat
+    if (showSnooze) {
+        const snoozeBtn = document.createElement('button');
+        snoozeBtn.innerText = 'Snooze 10m';
+        snoozeBtn.style.cssText = "background-color:#ffc107; color:#333; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold; font-size:12px;";
+        buttonContainer.appendChild(snoozeBtn);
+        
+        snoozeBtn.onclick = () => {
+            console.log("[VAA] Peringatan disnooze selama 10 menit.");
+            volcanoMarker.closePopup();
+            // Akan memanggil pop-up ini lagi secara otomatis setelah 10 menit
+            setTimeout(() => {
+                if (map.hasLayer(volcanoMarker)) volcanoMarker.openPopup();
+                if (alertSound) alertSound.play().catch(e => {});
+            }, 10 * 60 * 1000); 
+        };
+    }
 
-    // --- 3. UBAH TOTAL LOGIKA TOMBOL UNDUH MENJADI PDF ---
+    // --- FUNGSI KLIK HEADER (MINIMIZE & CLOSE) ---
+    btnMinimize.onclick = () => {
+        // Sembunyikan pop-up, tapi biarkan MARKER GUNUNG tetap berkedip di peta
+        volcanoMarker.closePopup();
+    };
+    
+    btnClose.onclick = () => {
+        // Hapus pop-up, hentikan suara, dan HAPUS MARKER secara permanen
+        volcanoMarker.closePopup();
+        vaAdvisoryLayer.clearLayers();
+        vaaPolygonPreviewLayer.clearLayers();
+        if (alertSound) { alertSound.pause(); alertSound.currentTime = 0; }
+    };
+
     downloadBtn.onclick = function() {
-        console.log("[VAA] Tombol Unduh PDF diklik.");
-        
         const { jsPDF } = window.jspdf;
-        if (!jsPDF) {
-            alert("Sistem gagal memuat modul jsPDF. Pastikan koneksi internet stabil.");
-            return;
-        }
-
+        if (!jsPDF) return alert("Modul jsPDF gagal dimuat.");
         const seqNum = seqInput.value.trim().toUpperCase() || 'XX';
-        
-        // Format Nama Gunung: Huruf besar semua dan spasi diganti garis bawah (Contoh: DUKONO)
         const safeVolcanoName = mapInfo.volcanoName.toUpperCase().replace(/\s+/g, '_');
-
-        // --- LOGIKA BARU: Mengambil Waktu (DTG) dari teks VAA ---
         let dtgString = "";
-        // Mencari pola seperti "DTG: 20260514/1300Z"
-        const dtgMatch = vaaData.fullText.match(/DTG:\s*(\d{8})\/(\d{4}Z)/i);
+        const dtgMatch2 = vaaData.fullText.match(/DTG:\s*(\d{8})\/(\d{4}Z)/i);
+        if (dtgMatch2) dtgString = `${dtgMatch2[1]}_${dtgMatch2[2]}`;
+        else dtgString = "NOW";
         
-        if (dtgMatch) {
-            dtgString = `${dtgMatch[1]}_${dtgMatch[2]}`; // Hasil: 20260514_1300Z
-        } else {
-            // Fallback (cadangan) ke waktu komputer saat ini jika format DTG tidak ditemukan
-            const now = new Date();
-            const yyyy = now.getUTCFullYear();
-            const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
-            const dd = String(now.getUTCDate()).padStart(2, '0');
-            const hh = String(now.getUTCHours()).padStart(2, '0');
-            const mins = String(now.getUTCMinutes()).padStart(2, '0');
-            dtgString = `${yyyy}${mm}${dd}_${hh}${mins}Z`;
-        }
-
         try {
-            // PDF 1: SIGMET VA
             const sigmetText = generateSigmet(vaaData.fullText, seqNum); 
             const docSigmet = new jsPDF();
-            docSigmet.setFont("courier", "normal");
-            docSigmet.setFontSize(11);
-            const splitSigmet = docSigmet.splitTextToSize(sigmetText, 180);
-            docSigmet.text(splitSigmet, 10, 20);
+            docSigmet.setFont("courier", "normal"); docSigmet.setFontSize(11);
+            docSigmet.text(docSigmet.splitTextToSize(sigmetText, 180), 10, 20);
             docSigmet.save(`SIGMET_${safeVolcanoName}_${dtgString}.pdf`);
 
-            // PDF 2: VA ADVISORY (Teks Asli)
-            // Sesuai gambar Anda, menggunakan spasi setelah VAA. 
-            // Jika ingin pakai underscore, ubah menjadi `VAA_${safeVolcanoName}...`
             const docVAA = new jsPDF();
-            docVAA.setFont("courier", "normal");
-            docVAA.setFontSize(10);
-            const splitVaa = docVAA.splitTextToSize(vaaData.fullText, 180);
-            docVAA.text(splitVaa, 10, 20);
-            docVAA.save(`VAA ${safeVolcanoName}_${dtgString}.pdf`);
+            docVAA.setFont("courier", "normal"); docVAA.setFontSize(10);
+            docVAA.text(docVAA.splitTextToSize(vaaData.fullText, 180), 10, 20);
+            docVAA.save(`VAA_${safeVolcanoName}_${dtgString}.pdf`);
 
-            // PDF 3: GAMBAR VAG
             if (vaaData.imageBase64) {
                 setTimeout(() => {
                     const docImg = new jsPDF();
@@ -2891,11 +2992,8 @@ function showVaaNotificationOnMap(vaaData) {
                     docImg.save(`VAG_${safeVolcanoName}_${dtgString}.pdf`);
                 }, 600);
             }
-        } catch (e) {
-            console.error("[VAA] Gagal membuat file PDF:", e);
-        }
+        } catch (e) { console.error(e); }
     };
-    // -----------------------------------------------------
     
     const sigmetContainer = document.createElement('div');
     sigmetContainer.className = 'sigmet-output-container';
@@ -2908,6 +3006,7 @@ function showVaaNotificationOnMap(vaaData) {
         <textarea id="sigmet-translation-output" readonly rows="12"></textarea>
         <button id="copy-sigmet-translation-btn">Salin Terjemahan</button>
     `;
+    
     viewPolygonBtn.onclick = () => {
         vaaPolygonPreviewLayer.clearLayers();
         const polygons = parseVaaForPolygons(vaaData.fullText);
@@ -2920,41 +3019,32 @@ function showVaaNotificationOnMap(vaaData) {
             });
             viewPolygonBtn.style.display = 'none';
         } else {
-            alert("Tidak dapat menemukan data poligon yang valid di dalam VAA.");
+            alert("Tidak dapat menemukan data poligon yang valid.");
         }
     };
+    
     generateSigmetBtn.onclick = () => {
         vaaPolygonPreviewLayer.clearLayers();
-        
-        // 1. Ambil nilai angka dari kotak input
         const seqNum = seqInput.value.trim().toUpperCase() || 'XX';
-        
-        // 2. Masukkan angka tersebut ke dalam fungsi
         const sigmetText = generateSigmet(vaaData.fullText, seqNum);
-        
         const translationText = generateSigmetTranslation(sigmetText, mapInfo.lon);
-        const codeTextarea = sigmetContainer.querySelector('#sigmet-code-output');
-        const translationTextarea = sigmetContainer.querySelector('#sigmet-translation-output');
         
-        codeTextarea.value = sigmetText;
-        translationTextarea.value = translationText;
+        sigmetContainer.querySelector('#sigmet-code-output').value = sigmetText;
+        sigmetContainer.querySelector('#sigmet-translation-output').value = translationText;
         sigmetContainer.style.display = 'block';
         
-        // 3. Sembunyikan tombol dan kotak input setelah selesai
         generateSigmetBtn.style.display = 'none';
-        seqInput.style.display = 'none'; 
+        inputWrapper.style.display = 'none'; 
         viewPolygonBtn.style.display = 'none';
-        
         volcanoMarker.getPopup().update();
     };
+    
     sigmetContainer.addEventListener('click', function(e) {
         let targetTextarea = null, button = null;
         if (e.target.id === 'copy-sigmet-code-btn') {
-            targetTextarea = sigmetContainer.querySelector('#sigmet-code-output');
-            button = e.target;
+            targetTextarea = sigmetContainer.querySelector('#sigmet-code-output'); button = e.target;
         } else if (e.target.id === 'copy-sigmet-translation-btn') {
-            targetTextarea = sigmetContainer.querySelector('#sigmet-translation-output');
-            button = e.target;
+            targetTextarea = sigmetContainer.querySelector('#sigmet-translation-output'); button = e.target;
         }
         if (targetTextarea && button) {
             navigator.clipboard.writeText(targetTextarea.value).then(() => {
@@ -2964,23 +3054,30 @@ function showVaaNotificationOnMap(vaaData) {
             });
         }
     });
+    
     popupContainer.appendChild(buttonContainer);
     popupContainer.appendChild(sigmetContainer);
-    volcanoMarker.bindPopup(popupContainer, { minWidth: 350, maxHeight: 500 });
+    
+    // --- 3. SETTING POPUP LEAFLET AGAR TIDAK MUDAH TERTUTUP ---
+    volcanoMarker.bindPopup(popupContainer, { 
+        minWidth: 350, 
+        maxHeight: 500,
+        closeButton: false,   // Matikan tombol 'X' bawaan Leaflet (karena kita sudah buat sendiri)
+        autoClose: false,     // Jangan tutup kalau ada popup lain yang diklik
+        closeOnClick: false   // Jangan tutup kalau area luar peta diklik
+    });
+    
     vaAdvisoryLayer.addLayer(volcanoMarker);
     vaAdvisoryLayer.addTo(map);
     vaaPolygonPreviewLayer.addTo(map);
     map.panTo([mapInfo.lat, mapInfo.lon]);
+    
     volcanoMarker.openPopup();
-    if (alertSound) alertSound.play().catch(e => console.warn("[VAA] Autoplay suara diblokir oleh browser.", e));
+    if (alertSound) alertSound.play().catch(e => console.warn("[VAA] Autoplay suara diblokir.", e));
+    
+    // Matikan alarm saat popup tertutup (baik karena minimize maupun close)
     volcanoMarker.on('popupclose', () => {
-        console.log("[VAA] Pop-up ditutup, alarm dihentikan.");
-        if (alertSound) {
-            alertSound.pause();
-            alertSound.currentTime = 0;
-        }
-        vaAdvisoryLayer.clearLayers();
-        vaaPolygonPreviewLayer.clearLayers();
+        if (alertSound) { alertSound.pause(); alertSound.currentTime = 0; }
     });
 }
 
