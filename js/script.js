@@ -2683,10 +2683,10 @@ function generateSigmet(vaaFullText, seqNumber = 'XX') {
         const obsArea = getArea(obsPts);
         const fcstArea = getArea(fcstPts);
 
-        // Jika prediksi poligon mengecil lebih dari 10% atau hilang
-        if (fcstPts.length === 0 || fcstArea < obsArea * 0.9) return "WKN";
-        // Jika prediksi poligon membesar lebih dari 10%
-        if (fcstArea > obsArea * 1.1) return "INTSF";
+        // Jika prediksi poligon mengecil lebih dari 20% atau hilang
+        if (fcstPts.length === 0 || fcstArea < obsArea * 0.8) return "WKN";
+        // Jika prediksi poligon membesar lebih dari 20%
+        if (fcstArea > obsArea * 1.2) return "INTSF";
         
         return "NC"; // Jika perubahannya minor / bentuk sama
     }
