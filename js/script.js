@@ -2801,7 +2801,9 @@ function generateSigmetTranslation(sigmetText, volcanoLon) {
         const startTime = parseSigmetDateTime(validityMatch[1]);
         const endTime = parseSigmetDateTime(validityMatch[2]);
         const obsTimeStr = obsTimeMatch[1].replace('Z', '');
-        const obsDateTime = parseSigmetDateTime(`${startTime.getUTCDate()}${obsTimeStr}`);
+        // --- PERBAIKAN: Memastikan tanggal selalu 2 digit (misal: "1" menjadi "01") ---
+        const obsDatePad = String(startTime.getUTCDate()).padStart(2, '0');
+        const obsDateTime = parseSigmetDateTime(`${obsDatePad}${obsTimeStr}`);    
         const formattedStart = formatDateTime(startTime);
         const formattedEnd = formatDateTime(endTime);
         const formattedObs = formatDateTime(obsDateTime);
