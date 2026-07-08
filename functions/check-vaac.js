@@ -121,27 +121,25 @@ export async function onRequest(context) {
         const fullText = await txtResponse.text();
 
         // ====================================================================================
-        // 5. FILTER SPESIFIK: Harus AREA INDONESIA & Berada di Dalam Poligon FIR Ujung Pandang
+        // 5. FILTER SPESIFIK: HANYA Berada di Dalam Poligon FIR Ujung Pandang (WAAF)
         // ====================================================================================
-        const isIndonesiaArea = /^AREA:\s*INDONESIA/im.test(fullText);
         let isInsideFIRUPG = false;
-
-        if (isIndonesiaArea) {
-            // Ambil titik koordinat gunung dari teks VAA
-            const volcanoCoords = extractVolcanoCoordinates(fullText);
-            
-            if (volcanoCoords) {
-                // GeoJSON Polygon biasanya dibungkus array 3D, jadi kita ambil index [0]
-                const polygonCoordinates = firUPG_geojson.geometry.coordinates[0];
-                isInsideFIRUPG = isPointInPolygon(volcanoCoords, polygonCoordinates);
-            }
+        
+        // Langsung ambil titik koordinat gunung dari teks VAA (apapun areanya)
+        const volcanoCoords = extractVolcanoCoordinates(fullText);
+        
+        if (volcanoCoords) {
+            // GeoJSON Polygon dibungkus array 3D, jadi ambil index [0]
+            const polygonCoordinates = firUPG_geojson.geometry.coordinates[0];
+            isInsideFIRUPG = isPointInPolygon(volcanoCoords, polygonCoordinates);
         }
 
-        // Jika bukan area Indonesia ATAU berada di luar FIR UPG, batalkan notifikasi (message penolakan)
-        if (!isIndonesiaArea || !isInsideFIRUPG) {
+        // Jika berada di LUAR FIR UPG (termasuk Krakatau di FIR Jakarta), batalkan notifikasi
+        if (!isInsideFIRUPG) {
             return new Response(JSON.stringify({
+                advisoryHash: latestFilename, // <-- PENTING: Wajib ada agar frontend tidak error
                 advisoryNumber: null,
-                message: "not for Indonesia area or outside FIR Ujung Pandang", // Ditangkap oleh JS Frontend untuk diabaikan
+                message: "Outside FIR Ujung Pandang", // Ditangkap frontend untuk diabaikan
                 fullText: fullText,
                 imageBase64: null
             }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, s-maxage=60' } });
@@ -167,6 +165,7 @@ export async function onRequest(context) {
 
         // 7. Kirim respons yang berhasil
         const responseData = {
+            advisoryHash: latestFilename, // <--- JANGAN LUPA TAMBAHKAN INI DI SINI JUGA
             advisoryNumber: advisoryNumber,
             fullText: fullText,
             imageBase64: imageBase64,
