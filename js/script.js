@@ -3093,7 +3093,10 @@ function showVaaNotificationOnMap(vaaData) {
     map.panTo([mapInfo.lat, mapInfo.lon]);
     
     volcanoMarker.openPopup();
-    if (alertSound) alertSound.play().catch(e => console.warn("[VAA] Autoplay suara diblokir.", e));
+    if (alertSound) {
+        alertSound.volume = 0.75; // <--- Mengatur volume menjadi 75%
+        alertSound.play().catch(e => console.warn("[VAA] Autoplay suara diblokir.", e));
+    }
     
     // Matikan alarm saat popup tertutup (baik karena minimize maupun close)
     volcanoMarker.on('popupclose', () => {
