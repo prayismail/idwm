@@ -2259,25 +2259,27 @@ function handleRulerResult() {
     }
 }
 
-// --- FUNGSI HELPER: PAKSA RULER SELESAI DI KLIK KEDUA ---
-function forceRulerEndOnSecondClick() {
+// --- FUNGSI HELPER: PAKSA RULER SELESAI DI KLIK KEDUA (JALUR DALAM) ---
+function forceRulerEndOnSecondClick(e) {
     // Cek apakah mode penggaris (ruler) sedang aktif
     if (rulerControl && rulerControl._choice) {
-        // Beri jeda singkat agar plugin mencatat titik klik kedua terlebih dahulu
+        // Beri jeda 100ms agar plugin Leaflet selesai memproses klik kedua
         setTimeout(() => {
-            // Jika array koordinat sudah berisi 2 titik (Titik Awal & Titik Tujuan)
+            // Jika sudah ada 2 titik terkumpul
             if (rulerControl._clickedLatLong && rulerControl._clickedLatLong.length === 2) {
-                // Simulasikan penekanan tombol ESCAPE untuk menutup/menyelesaikan penggaris
-                const escEvent = new KeyboardEvent('keydown', {
-                    key: 'Escape',
-                    code: 'Escape',
-                    keyCode: 27,
-                    which: 27,
-                    bubbles: true
-                });
-                document.dispatchEvent(escEvent);
+                
+                // Cara paling ampuh: Tembak langsung fungsi internal penutup penggarisnya!
+                if (typeof rulerControl._closePath === 'function') {
+                    rulerControl._closePath();
+                } else {
+                    // Fallback (cadangan) jika nama fungsinya berbeda
+                    map.fire('dblclick', {
+                        latlng: rulerControl._clickedLatLong[1]
+                    });
+                }
+                
             }
-        }, 100); // Jeda 100ms terbukti lebih stabil
+        }, 100);
     }
 }
 
