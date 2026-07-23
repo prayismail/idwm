@@ -2223,18 +2223,18 @@ function createAndAddSearchControl() {
     }
 }
 
-// --- FUNGSI RULER (SETTING KM) ---
+// --- FUNGSI RULER (SETTING NAUTICAL MILES / NM) ---
 function createAndAddRulerControl() {
     if (rulerControl) map.removeControl(rulerControl);
 
     rulerControl = L.control.ruler({
         position: 'topright',
-        // PENGATURAN DIUBAH KE KILOMETER (KM)
+        // PENGATURAN DIUBAH KE NAUTICAL MILES (NM)
         lengthUnit: { 
-            display: 'km',      // Teks yang muncul di layar
-            decimal: 2,         // Jumlah angka belakang koma
-            factor: 1,      // Rumus: 1 Meter dikali 0.001 = KM
-            label: 'Jarak:'     // Label
+            display: 'NM',       // Teks satuan yang muncul di layar (contoh: 215.21 NM)
+            decimal: 2,          // Jumlah angka di belakang koma
+            factor: 0.5399568,   // Rumus: Base perhitungan adalah KM. 1 KM = 0.5399568 NM
+            label: 'Jarak:'      // Label pop-up
         },
         angleUnit: { 
             display: '&deg;', 
