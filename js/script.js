@@ -2123,7 +2123,13 @@ function generateSigmetText() {
         } else {
             // --- Logika lama untuk format daftar koordinat ---
             const coordList = drawnCoordinates.map(latlng => formatCoordinate(latlng.lat, latlng.lng));
-            coordinateString = `${coordList.join(' - ')} - ${coordList[0]}`;
+            
+            // PERBAIKAN: Mencegah titik terakhir ganda
+            if (coordList.length > 1 && coordList[coordList.length - 1] === coordList[0]) {
+                coordinateString = coordList.join(' - ');
+            } else {
+                coordinateString = `${coordList.join(' - ')} - ${coordList[0]}`;
+            }
         }
         
         sigmetText += ` WI ${coordinateString}`;
@@ -2132,7 +2138,6 @@ function generateSigmetText() {
     sigmetText += `\n${level} ${movement} ${change}`;
     sigmetOutput.value = sigmetText;
 }
-
 
 function formatCoordinate(lat, lng) {
     const latDir = lat >= 0 ? 'N' : 'S';
