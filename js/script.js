@@ -2259,10 +2259,28 @@ function handleRulerResult() {
     }
 }
 
+// --- FUNGSI HELPER: PAKSA RULER SELESAI DI KLIK KEDUA ---
+function forceRulerEndOnSecondClick(e) {
+    // Cek apakah mode penggaris (ruler) sedang aktif
+    if (rulerControl && rulerControl._choice) {
+        // Beri jeda sangat singkat (50ms) agar plugin mencatat titik klik tersebut
+        setTimeout(() => {
+            // Jika array koordinat sudah berisi 2 titik (Titik Awal & Titik Tujuan)
+            if (rulerControl._clickedLatLong && rulerControl._clickedLatLong.length === 2) {
+                // Simulasikan event 'double-click' secara otomatis untuk menutup penggaris
+                map.fire('dblclick', e);
+            }
+        }, 50);
+    }
+}
+
 // --- EVENT LISTENER SAAT LAYER "NAV POINTS" DIAKTIFKAN ---
 map.on('overlayadd', function(e) {
     if (e.name === 'NAV POINTS') {
         createAndAddRulerControl();
+
+        // 1. Pasang pendeteksi klik otomatis untuk penggaris
+        map.on('click', forceRulerEndOnSecondClick);
 
         if (!navPointsGeoJsonLayer) {
             console.log("Memuat data NAV POINTS...");
@@ -2296,6 +2314,9 @@ map.on('overlayadd', function(e) {
 map.on('overlayremove', function(e) {
     if (e.name === 'NAV POINTS') {
         console.log("Menghapus alat bantu...");
+        
+        // 2. WAJIB: Hapus pendeteksi klik agar tidak mengganggu fitur peta lain saat Nav Points dimatikan
+        map.off('click', forceRulerEndOnSecondClick);
         
         if (searchControl) {
             map.removeControl(searchControl);
