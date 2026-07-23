@@ -2260,17 +2260,24 @@ function handleRulerResult() {
 }
 
 // --- FUNGSI HELPER: PAKSA RULER SELESAI DI KLIK KEDUA ---
-function forceRulerEndOnSecondClick(e) {
+function forceRulerEndOnSecondClick() {
     // Cek apakah mode penggaris (ruler) sedang aktif
     if (rulerControl && rulerControl._choice) {
-        // Beri jeda sangat singkat (50ms) agar plugin mencatat titik klik tersebut
+        // Beri jeda singkat agar plugin mencatat titik klik kedua terlebih dahulu
         setTimeout(() => {
             // Jika array koordinat sudah berisi 2 titik (Titik Awal & Titik Tujuan)
             if (rulerControl._clickedLatLong && rulerControl._clickedLatLong.length === 2) {
-                // Simulasikan event 'double-click' secara otomatis untuk menutup penggaris
-                map.fire('dblclick', e);
+                // Simulasikan penekanan tombol ESCAPE untuk menutup/menyelesaikan penggaris
+                const escEvent = new KeyboardEvent('keydown', {
+                    key: 'Escape',
+                    code: 'Escape',
+                    keyCode: 27,
+                    which: 27,
+                    bubbles: true
+                });
+                document.dispatchEvent(escEvent);
             }
-        }, 50);
+        }, 100); // Jeda 100ms terbukti lebih stabil
     }
 }
 
