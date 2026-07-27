@@ -2135,7 +2135,7 @@ function generateSigmetText() {
         sigmetText += ` WI ${coordinateString}`;
     }
     
-    sigmetText += `${level} ${movement} ${change}`;
+    sigmetText += ` ${level} ${movement} ${change}`;
     sigmetOutput.value = sigmetText;
 }
 
