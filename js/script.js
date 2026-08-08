@@ -3115,8 +3115,8 @@ function showVaaNotificationOnMap(vaaData) {
     
     // --- 3. SETTING POPUP LEAFLET AGAR TIDAK MUDAH TERTUTUP ---
     volcanoMarker.bindPopup(popupContainer, { 
-        minWidth: 350, 
-        maxHeight: 500,
+        minWidth: 450, 
+        maxHeight: 600,
         closeButton: false,   // Matikan tombol 'X' bawaan Leaflet (karena kita sudah buat sendiri)
         autoClose: false,     // Jangan tutup kalau ada popup lain yang diklik
         closeOnClick: false   // Jangan tutup kalau area luar peta diklik
