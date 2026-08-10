@@ -3225,6 +3225,23 @@ async function checkForNewVAA() {
     if (isFirstCheck) {
         lastAdvisoryData = data;
         isFirstCheck = false;
+
+        // --- TAMBAHAN BARU: Masukkan data awal ke arsip secara diam-diam (tanpa alarm) ---
+        if (!data.message || !data.message.includes("Outside FIR Ujung Pandang")) {
+            const mapInfo = parseVaaForMapInfo(data.fullText);
+            if (mapInfo) {
+                const isInsideWAAF = isPointInPolygon(
+                    [parseFloat(mapInfo.lon), parseFloat(mapInfo.lat)], 
+                    firUPG_geojson_frontend.geometry.coordinates[0]
+                );
+                // Jika titik terbukti di dalam WAAF, simpan ke arsip!
+                if (isInsideWAAF) {
+                    saveToArchive(data); 
+                }
+            }
+        }
+        // ---------------------------------------------------------------------------------
+
         const logMsg = `Pengecekan awal OK. Hash: ${lastAdvisoryData.advisoryHash.substring(0, 7)}...`;
         console.log(`[VAA] ${logMsg}`);
         updateDebugStatus(logMsg);
