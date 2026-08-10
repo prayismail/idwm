@@ -2577,11 +2577,38 @@ let archiveControl = null;
 archiveControl = L.control({position: 'bottomright'}); // Posisinya di pojok kanan bawah
 archiveControl.onAdd = function (map) {
     var div = L.DomUtil.create('div', 'vaa-archive-panel');
-    div.innerHTML = '<h4>📜 Arsip VAA (24 Jam)</h4><ul id="vaa-archive-list"></ul>';
     
-    // Mencegah klik di dalam kotak arsip agar tidak tembus ke peta
+    // Desain ulang HTML untuk menyisipkan Header dan Tombol Minimize
+    div.innerHTML = `
+        <div id="vaa-archive-header" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; border-bottom:1px solid #ccc; padding-bottom:5px; margin-bottom:5px;">
+            <h4 style="margin:0; padding:0; border:none; font-size:14px; color:#dc3545;">📜 Arsip VAA</h4>
+            <button id="vaa-archive-toggle-btn" title="Minimize/Maximize" style="background:transparent; border:none; font-weight:bold; cursor:pointer; font-size:16px; color:#333; padding:0 5px;">−</button>
+        </div>
+        <ul id="vaa-archive-list"></ul>
+    `;
+    
+    // Mencegah klik & scroll tembus ke peta
     L.DomEvent.disableClickPropagation(div);
     L.DomEvent.disableScrollPropagation(div);
+
+    // Fungsi interaktif untuk menyembunyikan/menampilkan isi daftar
+    setTimeout(() => {
+        const headerDiv = div.querySelector('#vaa-archive-header');
+        const listUl = div.querySelector('#vaa-archive-list');
+        const toggleBtn = div.querySelector('#vaa-archive-toggle-btn');
+        let isMinimized = false;
+
+        headerDiv.onclick = () => {
+            isMinimized = !isMinimized;
+            if (isMinimized) {
+                listUl.style.display = 'none';
+                toggleBtn.innerText = '＋'; // Ubah ikon jadi Plus
+            } else {
+                listUl.style.display = 'block';
+                toggleBtn.innerText = '−'; // Ubah ikon jadi Minus
+            }
+        };
+    }, 0);
     
     return div;
 };
