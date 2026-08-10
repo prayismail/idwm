@@ -2968,7 +2968,7 @@ function renderArchiveList() {
     listEl.innerHTML = '';
     
     if (vaaArchive.length === 0) {
-        listEl.innerHTML = '<li style="text-align:center; color:#999;">Belum ada data di FIR UPG dalam 24 jam terakhir.</li>';
+        listEl.innerHTML = '<li style="text-align:center; color:#999; padding: 10px;">Belum ada data di FIR UPG hari ini.</li>';
         return;
     }
 
@@ -2976,17 +2976,28 @@ function renderArchiveList() {
         const mapInfo = parseVaaForMapInfo(item.fullText);
         const name = mapInfo ? mapInfo.volcanoName : 'Gunung Tidak Diketahui';
         
-        // Buat format waktu yang ramah dibaca dari stempel waktu (Format UTC)
-        const dateObj = new Date(item.fetchTime);
-        const timeString = `${String(dateObj.getUTCHours()).padStart(2, '0')}:${String(dateObj.getUTCMinutes()).padStart(2, '0')} UTC`;
+        // --- LOGIKA BARU: Ekstrak Waktu DTG dari Teks VAA ---
+        let timeString = "??:?? UTC";
+        // Mencari pola seperti: DTG: 20260810/1310Z
+        const dtgMatch = item.fullText.match(/DTG:\s*\d{8}\/(\d{2})(\d{2})Z/i);
+        
+        if (dtgMatch) {
+            timeString = `${dtgMatch[1]}:${dtgMatch[2]} UTC`;
+        } else {
+            // Cadangan jika format DTG gagal dibaca (gunakan waktu fetch lokal ke UTC)
+            const dateObj = new Date(item.fetchTime);
+            timeString = `${String(dateObj.getUTCHours()).padStart(2, '0')}:${String(dateObj.getUTCMinutes()).padStart(2, '0')} UTC`;
+        }
+        // ----------------------------------------------------
 
         const li = document.createElement('li');
-        li.innerHTML = `<strong>🌋 ${name}</strong> <br><span class="archive-time">Diterima: ${timeString}</span>`;
+        // Mengganti kata "Diterima" menjadi "DTG" agar lebih baku secara operasional
+        li.innerHTML = `<strong>🌋 ${name}</strong> <br><span class="archive-time">DTG: ${timeString}</span>`;
         
-        // JIKA DIKLIK, AKAN MUNCUL POP-UP NYA LAGI (TANPA SUARA!)
+        // JIKA DIKLIK, AKAN MUNCUL POP-UP NYA LAGI (TANPA SUARA)
         li.onclick = () => {
             console.log("[VAA Archive] Membuka kembali riwayat:", name);
-            showVaaNotificationOnMap(item, true); // <--- Tambahkan parameter 'true' di sini
+            showVaaNotificationOnMap(item, true); 
         };
         
         listEl.appendChild(li);
