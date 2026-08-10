@@ -2949,9 +2949,9 @@ function renderArchiveList() {
         const mapInfo = parseVaaForMapInfo(item.fullText);
         const name = mapInfo ? mapInfo.volcanoName : 'Gunung Tidak Diketahui';
         
-        // Buat format waktu yang ramah dibaca dari stempel waktu
+        // Buat format waktu yang ramah dibaca dari stempel waktu (Format UTC)
         const dateObj = new Date(item.fetchTime);
-        const timeString = `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')} WITA`;
+        const timeString = `${String(dateObj.getUTCHours()).padStart(2, '0')}:${String(dateObj.getUTCMinutes()).padStart(2, '0')} UTC`;
 
         const li = document.createElement('li');
         li.innerHTML = `<strong>🌋 ${name}</strong> <br><span class="archive-time">Diterima: ${timeString}</span>`;
