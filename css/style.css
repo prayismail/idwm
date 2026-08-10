@@ -266,7 +266,47 @@
     gap: 10px;
     margin-top: 15px;
 }
-
+/* --- CSS UNTUK PANEL ARSIP VAA --- */
+.vaa-archive-panel {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+    max-height: 300px;
+    overflow-y: auto;
+    width: 220px;
+    font-family: Arial, sans-serif;
+    border: 2px solid #dc3545;
+}
+.vaa-archive-panel h4 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    color: #dc3545;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 5px;
+    text-align: center;
+}
+.vaa-archive-panel ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.vaa-archive-panel li {
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1.4;
+    transition: background 0.2s;
+}
+.vaa-archive-panel li:hover {
+    background: #f8d7da; /* Warna merah muda saat di-hover */
+}
+.vaa-archive-panel .archive-time {
+    color: #666;
+    font-size: 10px;
+    display: block;
+}
 /* Style untuk overlay cropping */
         #crop-overlay {
             display: none;
