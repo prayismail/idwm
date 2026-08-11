@@ -2976,20 +2976,34 @@ function renderArchiveList() {
         const mapInfo = parseVaaForMapInfo(item.fullText);
         const name = mapInfo ? mapInfo.volcanoName : 'Gunung Tidak Diketahui';
         
-        // --- LOGIKA BARU: Ekstrak Waktu DTG dari Teks VAA ---
-        let timeString = "??:?? UTC";
+       // --- LOGIKA BARU: Ekstrak Waktu DTG dari Teks VAA (Termasuk Tanggal) ---
+        let timeString = "??/??/???? ??:?? UTC";
+        
         // Mencari pola seperti: DTG: 20260810/1310Z
-        const dtgMatch = item.fullText.match(/DTG:\s*\d{8}\/(\d{2})(\d{2})Z/i);
+        // Grup 1: Tahun, Grup 2: Bulan, Grup 3: Tanggal, Grup 4: Jam, Grup 5: Menit
+        const dtgMatch = item.fullText.match(/DTG:\s*(\d{4})(\d{2})(\d{2})\/(\d{2})(\d{2})Z/i);
         
         if (dtgMatch) {
-            timeString = `${dtgMatch[1]}:${dtgMatch[2]} UTC`;
+            const year = dtgMatch[1];
+            const month = dtgMatch[2];
+            const day = dtgMatch[3];
+            const hour = dtgMatch[4];
+            const minute = dtgMatch[5];
+            
+            // Format hasil: DD/MM/YYYY HH:MM UTC
+            timeString = `${day}/${month}/${year} ${hour}:${minute} UTC`;
         } else {
             // Cadangan jika format DTG gagal dibaca (gunakan waktu fetch lokal ke UTC)
             const dateObj = new Date(item.fetchTime);
-            timeString = `${String(dateObj.getUTCHours()).padStart(2, '0')}:${String(dateObj.getUTCMinutes()).padStart(2, '0')} UTC`;
+            const d = String(dateObj.getUTCDate()).padStart(2, '0');
+            const m = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+            const y = dateObj.getUTCFullYear();
+            const hr = String(dateObj.getUTCHours()).padStart(2, '0');
+            const mn = String(dateObj.getUTCMinutes()).padStart(2, '0');
+            
+            timeString = `${d}/${m}/${y} ${hr}:${mn} UTC`;
         }
-        // ----------------------------------------------------
-
+        // -----------------------------------------------------------------------
         const li = document.createElement('li');
         // Mengganti kata "Diterima" menjadi "DTG" agar lebih baku secara operasional
         li.innerHTML = `<strong>🌋 ${name}</strong> <br><span class="archive-time">DTG: ${timeString}</span>`;
