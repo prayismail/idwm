@@ -274,7 +274,8 @@
     box-shadow: 0 1px 5px rgba(0,0,0,0.4);
     max-height: 300px;
     overflow-y: auto;
-    width: 220px;
+    width: max-content; /* <-- Membuat lebar kotak pas dengan panjang teks */
+    min-width: 170px;
     font-family: Arial, sans-serif;
     border: 2px solid #dc3545;
 }
