@@ -2951,9 +2951,9 @@ function saveToArchive(vaaData) {
         vaaArchive.unshift(vaaData); // Masukkan ke urutan paling atas
     }
 
-    // Filter: HANYA simpan yang umurnya kurang dari 24 jam (86400000 milidetik)
-    const twentyFourHoursAgo = Date.now() - 86400000;
-    vaaArchive = vaaArchive.filter(item => item.fetchTime > twentyFourHoursAgo);
+    // Filter: HANYA simpan yang umurnya kurang dari 12 jam (43200000 milidetik)
+    const twelveHoursAgo = Date.now() - 43200000;
+    vaaArchive = vaaArchive.filter(item => item.fetchTime > twelveHoursAgo);
 
     // Simpan permanen ke memori browser
     localStorage.setItem('vaaArchive', JSON.stringify(vaaArchive));
