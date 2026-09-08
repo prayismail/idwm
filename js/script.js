@@ -1789,27 +1789,48 @@ function fetchSIGMET(firIcao) {
                 const sigmetId = sigmet.sigmetId ? ` ${sigmet.sigmetId}` : '';
 
                 parsedPolygons.forEach(polygonData => {
-                    const popupContent = `
-                        <div class="sigmet-popup-header" style="background-color: ${color};">
-                            ${sigmet.hazard} SIGMET${sigmetId}
-                        </div>
-                        <div class="sigmet-popup-body">
-                            <div class="sigmet-level-info">
-                                <strong>Level:</strong> ${polygonData.level}
-                            </div>
-                            <hr>
-                            <div class="sigmet-raw-text">
-                                <pre style="margin: 0; white-space: pre-wrap;">${sigmet.rawSigmet}</pre>
-                            </div>
-                        </div>`;
-
-                    L.polygon(polygonData.coords, { 
-                        color: color, fillColor: color, fillOpacity: 0.2, weight: 2, isSigmetPolygon: true
-                    }).addTo(map).bindPopup(popupContent, { className: 'custom-sigmet-popup' });
+                
+                // --- 1. TAMBAHKAN LOGIKA PERGESERAN KOORDINAT (PASIFIK)---
+                const adjustedCoords = polygonData.coords.map(coord => {
+                    // Jika data berformat array [lat, lon]
+                    if (Array.isArray(coord)) {
+                        let lon = coord[1];
+                        if (lon < 0) lon += 360;
+                        return [coord[0], lon];
+                    } 
+                    // Jika data berformat object {lat, lng} atau {lat, lon}
+                    else if (coord && typeof coord === 'object') {
+                        let lon = coord.lng !== undefined ? coord.lng : coord.lon;
+                        if (lon < 0) lon += 360;
+                        // Kembalikan ke format array [lat, lon] yang diterima standar Leaflet
+                        return [coord.lat, lon]; 
+                    }
+                    return coord;
                 });
+                // ---------------------------------------------------------------
+
+                const popupContent = `
+                    <div class="sigmet-popup-header" style="background-color: ${color};">
+                        ${sigmet.hazard} SIGMET${sigmetId}
+                    </div>
+                    <div class="sigmet-popup-body">
+                        <div class="sigmet-level-info">
+                            <strong>Level:</strong> ${polygonData.level}
+                        </div>
+                        <hr>
+                        <div class="sigmet-raw-text">
+                            <pre style="margin: 0; white-space: pre-wrap;">${sigmet.rawSigmet}</pre>
+                        </div>
+                    </div>`;
+
+                // --- 2. UBAH polygonData.coords MENJADI adjustedCoords DI SINI ---
+                L.polygon(adjustedCoords, { 
+                    color: color, fillColor: color, fillOpacity: 0.2, weight: 2, isSigmetPolygon: true
+                }).addTo(map).bindPopup(popupContent, { className: 'custom-sigmet-popup' });
             });
-        })
-        .catch(error => console.error("Error mengambil atau memproses data SIGMET:", error));
+        });
+    })
+    .catch(error => console.error("Error mengambil atau memproses data SIGMET:", error));
 }
 
 
