@@ -1412,6 +1412,17 @@ var airports = [
             { code: "WIPP", name: "Sultan Mahmud Badaruddin II", lat: -2.8949, lon: 104.70679 },
 	    { code: "WIDD", name: "Hang Nadim", lat: 1.11902, lon: 104.1142 },
 			{ code: "WIEE", name: "Minangkabau", lat: -0.79, lon: 100.28 },
+	// --- MWO / Tetangga FIR Internasional ---
+    { code: "YMMC", name: "Melbourne MWO / Centre", lat: -37.6690, lon: 144.8410 },
+    { code: "RPLL", name: "Manila MWO / Ninoy Aquino", lat: 14.5086, lon: 121.0194 },
+    { code: "AYPY", name: "Port Moresby MWO / Jacksons", lat: -9.4433, lon: 147.2200 },
+    { code: "WMKK", name: "Kuala Lumpur MWO / KLIA", lat: 2.7456, lon: 101.7099 },
+    { code: "WBKK", name: "Kota Kinabalu MWO", lat: 5.9372, lon: 116.0515 },
+    { code: "WSSS", name: "Singapore MWO / Changi", lat: 1.3644, lon: 103.9915 },
+    { code: "VCBI", name: "Colombo MWO / Bandaranaike", lat: 7.1803, lon: 79.8833 },
+    { code: "YBBB", name: "Brisbane MWO / Centre", lat: -27.3842, lon: 153.1175 },
+    { code: "YPDN", name: "Darwin International", lat: -12.4208, lon: 130.8783 }, 
+	{ code: "KZAK", name: "Oakland Oceanic FIR / ARTCC", lat: 37.7323, lon: -122.2154 }
         ];
         
         // =====================================================================
