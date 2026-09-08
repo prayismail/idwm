@@ -1744,32 +1744,36 @@ function fetchSIGMET(firIcao) {
             // Filter berdasarkan ICAO yang di-klik, dengan pengecekan keamanan
             if (firIcao === 'WIII') { // FIR Jakarta
                 relevantSigmets = data.filter(sigmet => {
-                    // SAFETY CHECK: Pastikan sigmet dan sigmet.rawSigmet valid
-                    if (!sigmet || typeof sigmet.rawSigmet !== 'string') {
-                        // Untuk debugging, Anda bisa log data yang bermasalah
-                        // console.warn('Melewatkan data SIGMET tidak valid:', sigmet);
-                        return false; 
-                    }
+                    if (!sigmet || typeof sigmet.rawSigmet !== 'string') return false; 
                     return sigmet.rawSigmet.includes('WSID20') || sigmet.rawSigmet.includes('WVID20');
                 });
                 firToUseForClipping = firJakarta_geojson;
 
             } else if (firIcao === 'WAAA') { // FIR Ujung Pandang
                 relevantSigmets = data.filter(sigmet => {
-                    // SAFETY CHECK: Pastikan sigmet dan sigmet.rawSigmet valid
-                    if (!sigmet || typeof sigmet.rawSigmet !== 'string') {
-                        // console.warn('Melewatkan data SIGMET tidak valid:', sigmet);
-                        return false;
-                    }
+                    if (!sigmet || typeof sigmet.rawSigmet !== 'string') return false;
                     return sigmet.rawSigmet.includes('WSID21') || sigmet.rawSigmet.includes('WVID21');
                 });
                 firToUseForClipping = firUPG_geojson;
 
+            } else if (['YMMC', 'RPLL', 'AYPY', 'WMKK', 'WBKK', 'WSSS', 'VCBI', 'YBBB', 'YPDN', 'KZAK'].includes(firIcao)) { 
+                // --- LOGIKA BARU: FIR TETANGGA / MWO INTERNASIONAL ---
+                relevantSigmets = data.filter(sigmet => {
+                    if (!sigmet || typeof sigmet.rawSigmet !== 'string') return false;
+                    // Cari apakah kode ICAO tetangga (misal: WSSS, KZAK) ada di teks SIGMET API Anda
+                    return sigmet.rawSigmet.includes(firIcao);
+                });
+                
+                // Set null karena kita tidak memiliki batas GeoJSON negara tetangga untuk proses clipping
+                firToUseForClipping = null; 
+
             } else {
-                return; // Jika ICAO tidak dikenal, jangan lakukan apa-apa
+                return; // Jika ICAO tidak dikenal, abaikan
             }
             
             if (relevantSigmets.length === 0) {
+                // Munculkan notifikasi agar forecaster tahu mengapa poligonnya tidak muncul
+                alert(`Tidak ada data SIGMET aktif yang ditarik untuk MWO: ${firIcao}`);
                 console.log(`Tidak ada SIGMET aktif untuk FIR ${firIcao}`);
                 return;
             }
