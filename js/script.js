@@ -2190,7 +2190,7 @@ map.on('overlayremove', (e) => {
 
 var vaAdvisoryLayer = L.layerGroup();
         var baseMaps = {
-            "Peta CartoDB": cartoPositron,
+           // "Peta CartoDB": cartoPositron,
 			"Peta OSM": osmLayer,
             "Peta Esri Imagery": esriImagery,
             "Peta Topografi": topoMap,
