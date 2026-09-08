@@ -1422,7 +1422,7 @@ var airports = [
     { code: "VCBI", name: "Colombo MWO / Bandaranaike", lat: 7.1803, lon: 79.8833 },
     { code: "YBBB", name: "Brisbane MWO / Centre", lat: -27.3842, lon: 153.1175 },
     { code: "YPDN", name: "Darwin International", lat: -12.4208, lon: 130.8783 }, 
-	{ code: "KZAK", name: "Oakland Oceanic FIR / ARTCC", lat: 37.5294, lon: -122.0044 }
+	{ code: "KZAK", name: "Oakland Oceanic FIR / ARTCC", lat: 37.5294, lon: 237.9956 }
         ];
         
         // =====================================================================
