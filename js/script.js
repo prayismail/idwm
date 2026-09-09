@@ -3183,7 +3183,7 @@ function preloadBmkgLogo() {
     
     // Sesuaikan path ini dengan lokasi file logo di folder Anda
     // Jika ada di dalam folder 'img', ubah menjadi 'img/BMKG-Logo.png'
-    img.src = 'BMKG-Logo.png'; 
+    img.src = 'img/BMKG-Logo.png'; 
     
     img.onload = function() {
         const canvas = document.createElement('canvas');
