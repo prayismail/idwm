@@ -3214,31 +3214,33 @@ preloadBmkgLogo();
     const dtgMatch2 = vaaData.fullText.match(/DTG:\s*(\d{8})\/(\d{4}Z)/i);
     if (dtgMatch2) dtgString = `${dtgMatch2[1]}_${dtgMatch2[2]}`;
     
-    // --- FUNGSI BANTUAN PEMBUAT KOP SURAT ---
+    // --- FUNGSI BANTUAN PEMBUAT KOP SURAT (CENTERED) ---
     function addHeader(doc) {
-        // Jika logo sudah berhasil di-load oleh fungsi preloadBmkgLogo
+        // Logo tetap di sebelah kiri
         if (logoBmkgBase64) {
-            // Posisi X: 15, Posisi Y: 10, Lebar: 20, Tinggi: 20
             doc.addImage(logoBmkgBase64, 'PNG', 15, 10, 20, 20);
         }
+        
+        const centerX = 105; // Titik tengah kertas A4 (210mm / 2)
         
         doc.setTextColor(0, 0, 0);
         doc.setFont("helvetica", "bold"); 
         doc.setFontSize(11);
-        doc.text("METEOROLOGICAL WATCH OFFICE UJUNG PANDANG", 40, 15);
+        doc.text("METEOROLOGICAL WATCH OFFICE UJUNG PANDANG", centerX, 15, { align: "center" });
         
         doc.setFont("helvetica", "normal"); 
         doc.setFontSize(10);
-        doc.text("Sultan Hasanuddin Int’l Airport Mandai, Maros Sulawesi Selatan –", 40, 20);
-        doc.text("Indonesia 90552", 40, 25);
-        doc.text("Ph. +62 411 4831296  Fax. +62 411 4813227", 40, 30);
-        doc.text("Email : ", 40, 35);
+        doc.text("Sultan Hasanuddin Int’l Airport Mandai, Maros Sulawesi Selatan –", centerX, 20, { align: "center" });
+        doc.text("Indonesia 90552", centerX, 25, { align: "center" });
+        doc.text("Ph. +62 411 4831296  Fax. +62 411 4813227", centerX, 30, { align: "center" });
         
-        doc.setTextColor(0, 0, 255); 
-        doc.text("hndforecaster@yahoo.co.id", 52, 35);
-        doc.setTextColor(0, 0, 0);   
+        // Teks email digabung agar mudah di-center dengan rapi
+        doc.text("Email : hndforecaster@yahoo.co.id", centerX, 35, { align: "center" });
+        
+        // Tambahkan garis bawah kop surat (Garis lurus resmi)
+        doc.setLineWidth(0.5);
+        doc.line(15, 39, 195, 39); 
     }
-
     try {
         // 1. UNDUH PDF SIGMET
         const sigmetText = generateSigmet(vaaData.fullText, seqNum); 
@@ -3248,7 +3250,7 @@ preloadBmkgLogo();
         docSigmet.setFontSize(10);
         const sigmetLines = docSigmet.splitTextToSize(sigmetText, 170);
         const sigmetBoxHeight = (sigmetLines.length * 4.5) + 10; 
-        docSigmet.rect(15, 45, 180, sigmetBoxHeight); // Gambar kotak batas
+        docSigmet.rect(15, 47, 180, sigmetBoxHeight); // Gambar kotak batas
         docSigmet.text(sigmetLines, 18, 51); // Posisi teks di dalam kotak
         docSigmet.save(`SIGMET_${safeVolcanoName}_${dtgString}.pdf`);
 
@@ -3259,7 +3261,7 @@ preloadBmkgLogo();
         docVAA.setFontSize(9);
         const vaaLines = docVAA.splitTextToSize(vaaData.fullText, 170);
         const vaaBoxHeight = (vaaLines.length * 4.2) + 10;
-        docVAA.rect(15, 45, 180, vaaBoxHeight); 
+        docVAA.rect(15, 47, 180, vaaBoxHeight); 
         docVAA.text(vaaLines, 18, 50);
         docVAA.save(`VAA_${safeVolcanoName}_${dtgString}.pdf`);
 
@@ -3269,7 +3271,7 @@ preloadBmkgLogo();
                 const docImg = new jsPDF();
                 addHeader(docImg);
                 // Gambar diletakkan mulai dari kordinat Y=45 agar berada di bawah kop
-                docImg.addImage(vaaData.imageBase64, 'PNG', 15, 45, 180, 0); 
+                docImg.addImage(vaaData.imageBase64, 'PNG', 15, 47, 180, 0); 
                 docImg.save(`VAG_${safeVolcanoName}_${dtgString}.pdf`);
             }, 600);
         }
