@@ -3174,37 +3174,109 @@ function showVaaNotificationOnMap(vaaData, isFromArchive = false) {
         if (alertSound) { alertSound.pause(); alertSound.currentTime = 0; }
     };
 
-    downloadBtn.onclick = function() {
-        const { jsPDF } = window.jspdf;
-        if (!jsPDF) return alert("Modul jsPDF gagal dimuat.");
-        const seqNum = seqInput.value.trim().toUpperCase() || 'XX';
-        const safeVolcanoName = mapInfo.volcanoName.toUpperCase().replace(/\s+/g, '_');
-        let dtgString = "";
-        const dtgMatch2 = vaaData.fullText.match(/DTG:\s*(\d{8})\/(\d{4}Z)/i);
-        if (dtgMatch2) dtgString = `${dtgMatch2[1]}_${dtgMatch2[2]}`;
-        else dtgString = "NOW";
+	// --- VARIABEL & FUNGSI UNTUK LOGO PDF ---
+let logoBmkgBase64 = null;
+
+function preloadBmkgLogo() {
+    const img = new Image();
+    img.crossOrigin = "Anonymous"; 
+    
+    // Sesuaikan path ini dengan lokasi file logo di folder Anda
+    // Jika ada di dalam folder 'img', ubah menjadi 'img/BMKG-Logo.png'
+    img.src = 'BMKG-Logo.png'; 
+    
+    img.onload = function() {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
         
-        try {
-            const sigmetText = generateSigmet(vaaData.fullText, seqNum); 
-            const docSigmet = new jsPDF();
-            docSigmet.setFont("courier", "normal"); docSigmet.setFontSize(11);
-            docSigmet.text(docSigmet.splitTextToSize(sigmetText, 180), 10, 20);
-            docSigmet.save(`SIGMET_${safeVolcanoName}_${dtgString}.pdf`);
-
-            const docVAA = new jsPDF();
-            docVAA.setFont("courier", "normal"); docVAA.setFontSize(10);
-            docVAA.text(docVAA.splitTextToSize(vaaData.fullText, 180), 10, 20);
-            docVAA.save(`VAA_${safeVolcanoName}_${dtgString}.pdf`);
-
-            if (vaaData.imageBase64) {
-                setTimeout(() => {
-                    const docImg = new jsPDF();
-                    docImg.addImage(vaaData.imageBase64, 'PNG', 10, 20, 190, 0); 
-                    docImg.save(`VAG_${safeVolcanoName}_${dtgString}.pdf`);
-                }, 600);
-            }
-        } catch (e) { console.error(e); }
+        // Konversi otomatis ke Base64 dan simpan di variabel global
+        logoBmkgBase64 = canvas.toDataURL('image/png');
+        console.log("[PDF] Logo BMKG berhasil dimuat dan siap digunakan.");
     };
+    img.onerror = function() {
+        console.warn("[PDF] Gagal memuat logo BMKG. Pastikan nama file dan foldernya benar.");
+    };
+}
+
+// Panggil fungsinya saat web pertama kali dibuka
+preloadBmkgLogo();
+    downloadBtn.onclick = function() {
+    const { jsPDF } = window.jspdf;
+    if (!jsPDF) return alert("Modul jsPDF gagal dimuat.");
+    
+    const seqNum = seqInput.value.trim().toUpperCase() || 'XX';
+    const safeVolcanoName = mapInfo.volcanoName.toUpperCase().replace(/\s+/g, '_');
+    
+    let dtgString = "NOW";
+    const dtgMatch2 = vaaData.fullText.match(/DTG:\s*(\d{8})\/(\d{4}Z)/i);
+    if (dtgMatch2) dtgString = `${dtgMatch2[1]}_${dtgMatch2[2]}`;
+    
+    // --- FUNGSI BANTUAN PEMBUAT KOP SURAT ---
+    function addHeader(doc) {
+        // Jika logo sudah berhasil di-load oleh fungsi preloadBmkgLogo
+        if (logoBmkgBase64) {
+            // Posisi X: 15, Posisi Y: 10, Lebar: 20, Tinggi: 20
+            doc.addImage(logoBmkgBase64, 'PNG', 15, 10, 20, 20);
+        }
+        
+        doc.setTextColor(0, 0, 0);
+        doc.setFont("helvetica", "bold"); 
+        doc.setFontSize(11);
+        doc.text("METEOROLOGICAL WATCH OFFICE UJUNG PANDANG", 40, 15);
+        
+        doc.setFont("helvetica", "normal"); 
+        doc.setFontSize(10);
+        doc.text("Sultan Hasanuddin Int’l Airport Mandai, Maros Sulawesi Selatan –", 40, 20);
+        doc.text("Indonesia 90552", 40, 25);
+        doc.text("Ph. +62 411 4831296  Fax. +62 411 4813227", 40, 30);
+        doc.text("Email : ", 40, 35);
+        
+        doc.setTextColor(0, 0, 255); 
+        doc.text("hndforecaster@yahoo.co.id", 52, 35);
+        doc.setTextColor(0, 0, 0);   
+    }
+
+    try {
+        // 1. UNDUH PDF SIGMET
+        const sigmetText = generateSigmet(vaaData.fullText, seqNum); 
+        const docSigmet = new jsPDF();
+        addHeader(docSigmet);
+        docSigmet.setFont("courier", "normal"); 
+        docSigmet.setFontSize(10);
+        const sigmetLines = docSigmet.splitTextToSize(sigmetText, 170);
+        const sigmetBoxHeight = (sigmetLines.length * 4.5) + 10; 
+        docSigmet.rect(15, 45, 180, sigmetBoxHeight); // Gambar kotak batas
+        docSigmet.text(sigmetLines, 18, 51); // Posisi teks di dalam kotak
+        docSigmet.save(`SIGMET_${safeVolcanoName}_${dtgString}.pdf`);
+
+        // 2. UNDUH PDF VAA
+        const docVAA = new jsPDF();
+        addHeader(docVAA);
+        docVAA.setFont("courier", "normal"); 
+        docVAA.setFontSize(9);
+        const vaaLines = docVAA.splitTextToSize(vaaData.fullText, 170);
+        const vaaBoxHeight = (vaaLines.length * 4.2) + 10;
+        docVAA.rect(15, 45, 180, vaaBoxHeight); 
+        docVAA.text(vaaLines, 18, 50);
+        docVAA.save(`VAA_${safeVolcanoName}_${dtgString}.pdf`);
+
+        // 3. UNDUH PDF VAG (GAMBAR)
+        if (vaaData.imageBase64) {
+            setTimeout(() => {
+                const docImg = new jsPDF();
+                addHeader(docImg);
+                // Gambar diletakkan mulai dari kordinat Y=45 agar berada di bawah kop
+                docImg.addImage(vaaData.imageBase64, 'PNG', 15, 45, 180, 0); 
+                docImg.save(`VAG_${safeVolcanoName}_${dtgString}.pdf`);
+            }, 600);
+        }
+    } catch (e) { 
+        console.error("Gagal membuat dokumen PDF:", e); 
+    }
+};
     
     const sigmetContainer = document.createElement('div');
     sigmetContainer.className = 'sigmet-output-container';
