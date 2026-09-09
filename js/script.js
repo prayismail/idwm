@@ -3238,7 +3238,7 @@ preloadBmkgLogo();
         doc.text("Email : hndforecaster@yahoo.co.id", centerX, 35, { align: "center" });
         
         // Tambahkan garis bawah kop surat (Garis lurus resmi)
-        doc.setLineWidth(0.5);
+        doc.setLineWidth(0.2);
         doc.line(15, 39, 195, 39); 
     }
     try {
