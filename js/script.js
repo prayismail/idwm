@@ -2715,6 +2715,10 @@ function parseVaaForMapInfo(vaaFullText) {
  */
 function parseVaaForPolygons(vaaFullText) {
     const cleanText = vaaFullText.replace(/\r/g, '');
+	// Hentikan fungsi diam-diam tanpa memunculkan error jika ini advisory terakhir
+    if (cleanText.match(/NXT ADVISORY:\s*NO FURTHER ADVISORIES/i)) {
+        return []; 
+    }
     function convertCoordToDecimal(coordStr) {
         if (!coordStr) return null;
         const coordMatch = coordStr.match(/([NS])(\d{2})(\d{2})|([EW])(\d{3})(\d{2})/);
@@ -2766,7 +2770,11 @@ function parseVaaForPolygons(vaaFullText) {
  */
 function generateSigmet(vaaFullText, seqNumber = 'XX') { 
     const cleanText = vaaFullText.replace(/\r/g, '');
-    
+    // --- CEK ADVISORY TERAKHIR (BATAL) ---
+    if (cleanText.match(/NXT ADVISORY:\s*NO FURTHER ADVISORIES/i)) {
+        return "NO FURTHER ADVISORIES";
+    }
+  
     // --- HELPER ALGORITMA LUAS POLIGON (SHOELACE FORMULA) ---
     function calculateIntensity(text) {
         const extractCoords = (block) => {
