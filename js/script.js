@@ -2973,6 +2973,7 @@ function generateSigmetTranslation(sigmetText, volcanoLon) {
         return `Mohon izin update Aktivitas VA Gunung ${volcano.toUpperCase()}
 Berikut berita SIGMET:
 ${sigmetText}
+
 Berikut SIGMET WV terbaru Gunung ${volcano.toUpperCase()} berdasarkan informasi VAAC Darwin, yang berlaku pada tanggal ${formattedStart.date} mulai pukul ${formattedStart.utcTime} (${formattedStart.localTime}) hingga ${formattedEnd.date} pukul ${formattedEnd.utcTime} (${formattedEnd.localTime}). Teramati pada pukul ${formattedObs.utcTime} (${formattedObs.localTime}), ${cloudDescription}.
 
 Sumber informasi:
