@@ -2140,27 +2140,53 @@ function generateSigmetText() {
     // === LOGIKA INTI YANG BARU ===
     if (drawnCoordinates && drawnCoordinates.length > 0) {
         let coordinateString = "";
+        let finalCoords = [...drawnCoordinates];
         
-        // Cek apakah jumlah titik > 7 ATAU flag isSimplified aktif
-        if (drawnCoordinates.length > 7 || isSimplified) {
-            // --- Logika untuk format deskriptif ---
-            const turfPolygon = turf.polygon([drawnCoordinates.map(p => [p.lng, p.lat])]);
-            const bbox = turf.bbox(turfPolygon); // -> [minLon, minLat, maxLon, maxLat]
+        // 1. Jika tombol Simplify (isSimplified) aktif secara manual
+        if (isSimplified) {
+            // Pastikan array tertutup untuk turf.js
+            const closedCoords = finalCoords.map(p => [p.lng, p.lat]);
+            if (closedCoords[0][0] !== closedCoords[closedCoords.length-1][0]) {
+                closedCoords.push([finalCoords[0].lng, finalCoords[0].lat]);
+            }
+            
+            const turfPolygon = turf.polygon([closedCoords]);
+            const bbox = turf.bbox(turfPolygon); 
             const [minLon, minLat, maxLon, maxLat] = bbox;
 
-            const descriptions = [
-                `N OF ${formatCoordinate(minLat, 0).split(' ')[0]}`,
-                `S OF ${formatCoordinate(maxLat, 0).split(' ')[0]}`,
-                `E OF ${formatCoordinate(0, minLon).split(' ')[1]}`,
-                `W OF ${formatCoordinate(0, maxLon).split(' ')[1]}`
-            ];
-            coordinateString = descriptions.join(' AND ');
+            // Jika secara eksplisit meminta N OF dan S OF saja
+            coordinateString = `N OF ${formatCoordinate(minLat, 0).split(' ')[0]} AND S OF ${formatCoordinate(maxLat, 0).split(' ')[0]}`;
 
         } else {
-            // --- Logika lama untuk format daftar koordinat ---
-            const coordList = drawnCoordinates.map(latlng => formatCoordinate(latlng.lat, latlng.lng));
-            
-            // PERBAIKAN: Mencegah titik terakhir ganda
+            // 2. Otomatis SEDERHANAKAN poligon hasil clipping jika > 7 titik
+            if (finalCoords.length > 7) {
+                let tolerance = 0.05; // Toleransi reduksi awal (derajat)
+                
+                // Pastikan array tertutup sebelum diproses
+                let closedCoords = finalCoords.map(p => [p.lng, p.lat]);
+                if (closedCoords[0][0] !== closedCoords[closedCoords.length-1][0]) {
+                    closedCoords.push([finalCoords[0].lng, finalCoords[0].lat]);
+                }
+                let turfPoly = turf.polygon([closedCoords]);
+
+                // Looping reduksi sudut hingga jumlah titik <= 7
+                while (finalCoords.length > 7 && tolerance <= 2.0) {
+                    let simplified = turf.simplify(turfPoly, { tolerance: tolerance, highQuality: true });
+                    let newCoords = simplified.geometry.coordinates[0];
+                    
+                    newCoords.pop(); // Buang kembali titik penutup agar tidak terhitung ganda
+                    finalCoords = newCoords.map(p => L.latLng(p[1], p[0]));
+                    tolerance += 0.05;
+                }
+
+                // Paksa pangkas jika secara ekstrem masih tersisa > 7 titik
+                if (finalCoords.length > 7) {
+                    finalCoords = finalCoords.slice(0, 7);
+                }
+            }
+
+            // 3. Tulis poligon dalam format koordinat standar ICAO (WI S... E... - S... E...)
+            const coordList = finalCoords.map(latlng => formatCoordinate(latlng.lat, latlng.lng));
             if (coordList.length > 1 && coordList[coordList.length - 1] === coordList[0]) {
                 coordinateString = coordList.join(' - ');
             } else {
