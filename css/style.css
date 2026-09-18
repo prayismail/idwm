@@ -846,6 +846,25 @@
         
             }
         /* === CSS UNTUK ALAT SIGMET === */
+        /* Mengecilkan kotak pengatur poligon SIGMET (Leaflet Draw) */
+.leaflet-editing-icon {
+    width: 5px !important;
+    height: 5px !important;
+    margin-left: -4px !important; /* Harus setengah dari width */
+    margin-top: -4px !important;  /* Harus setengah dari height */
+    border-radius: 2px !important;
+    background-color: white !important;
+    border: 1px solid #333 !important;
+}
+
+/* Mengecilkan versi layar sentuh (yang biasanya menyebabkan ukuran raksasa) */
+.leaflet-touch-icon {
+    width: 8px !important;
+    height: 8px !important;
+    margin-left: -5px !important;
+    margin-top: -5px !important;
+}
+
         #sigmet-tool {
             position: absolute; /* PENTING: Agar tombol X bisa diposisikan di dalamnya */
             /* ... sisa aturan #sigmet-tool tetap sama ... */
