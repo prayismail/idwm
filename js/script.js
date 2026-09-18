@@ -2068,6 +2068,14 @@ map.on(L.Draw.Event.CREATED, event => {
     const layer = event.layer;
     drawnPolygon = layer;
     drawnItems.addLayer(layer);
+    
+    // --- KODE BARU: AKTIFKAN FITUR GESER TITIK (EDITING) ---
+    layer.editing.enable(); // Memunculkan kotak-kotak kecil di sudut poligon
+    layer.on('edit', () => { // Deteksi saat forecaster selesai menggeser titik
+        updateCoordinatesFromLayer(layer);
+        generateSigmetText();
+    });
+      
     updateCoordinatesFromLayer(layer);
     generateSigmetText();
 });
@@ -2092,7 +2100,15 @@ clipFirBtn.addEventListener('click', () => {
         drawnItems.clearLayers();
         drawnPolygon = clippedLayer;
         drawnItems.addLayer(clippedLayer);
-        updateCoordinatesFromLayer(clippedLayer);
+        // --- KODE BARU: AKTIFKAN FITUR GESER UNTUK POLIGON HASIL POTONGAN ---
+        if (clippedLayer.editing) {
+            clippedLayer.editing.enable();
+            clippedLayer.on('edit', () => {
+                updateCoordinatesFromLayer(clippedLayer);
+                generateSigmetText();
+            });
+        }
+		updateCoordinatesFromLayer(clippedLayer);
         isSimplified = false; // Reset status, karena ini poligon baru
         generateSigmetText();
     } catch (error) {
