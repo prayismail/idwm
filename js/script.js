@@ -2036,7 +2036,7 @@ startDrawBtn.addEventListener('click', () => {
     if (polygonDrawer) polygonDrawer.disable();
     isSimplified = false; // Reset status simplified
     polygonDrawer = new L.Draw.Polygon(map, {
-        shapeOptions: { color: '#9c27b0', weight: 3 },
+        shapeOptions: { color: '#ff00ff', weight: 3 },
         allowIntersection: false, showArea: false
     });
     polygonDrawer.enable();
@@ -2095,7 +2095,7 @@ clipFirBtn.addEventListener('click', () => {
             return;
         }
         const clippedLayer = L.geoJSON(intersection, {
-            style: { color: '#ff00ff', weight: 3, fillColor: '#9c27b0', fillOpacity: 0.2 }
+            style: { color: '#ff00ff', weight: 3, fillColor: '#ff00ff', fillOpacity: 0.3 }
         }).getLayers()[0];
         drawnItems.clearLayers();
         drawnPolygon = clippedLayer;
