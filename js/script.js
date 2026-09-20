@@ -1977,7 +1977,6 @@ function createLayersForFlightLevel(levelCode) {
         if (newIndex < forecastHours.length) updateMapAndUI(newIndex);
     });
 // === BAGIAN 6: JAVASCRIPT UNTUK ALAT SIGMET (DENGAN FITUR SEDERHANAKAN / SIMPLIFY) ===
-// ==================================================================================
 
 // 1. Inisialisasi variabel dan elemen UI
 const sigmetToolPanel = document.getElementById('sigmet-tool');
@@ -1995,6 +1994,12 @@ const startTimeInput = document.getElementById('sigmet-start-time');
 const endTimeInput = document.getElementById('sigmet-end-time');
 const add4hBtn = document.getElementById('sigmet-add-4h-btn');
 const nowBtn = document.getElementById('sigmet-now-btn');
+
+// Variabel Tambahan Khusus Cancel Mode
+const cancelModeToggle = document.getElementById('sigmet-cancel-mode');
+const origSeqInput = document.getElementById('sigmet-orig-seq');
+const cancelOrigSeqGroup = document.getElementById('cancel-original-seq-group');
+const polygonTools = document.getElementById('polygon-tools');
 
 let drawnPolygon = null;
 let polygonDrawer = null;
@@ -2032,9 +2037,48 @@ add4hBtn.addEventListener('click', () => {
     endTimeInput.value = `${endDay}${endHour}${endMinute}`;
 });
 
+// --- KODE BARU: EVENT LISTENER MODE CANCEL ---
+if (cancelModeToggle) {
+    cancelModeToggle.addEventListener('change', function() {
+        const isCancel = this.checked;
+        const displayStyle = isCancel ? 'none' : 'block';
+        
+        if (isCancel) {
+            if (cancelOrigSeqGroup) cancelOrigSeqGroup.classList.remove('hidden');
+            
+            // Auto-fill memori
+            const lastSeq = localStorage.getItem('lastSigmetSeq');
+            const lastStart = localStorage.getItem('lastSigmetStart');
+            const lastEnd = localStorage.getItem('lastSigmetEnd');
+            
+            if (lastSeq && origSeqInput) {
+                origSeqInput.value = lastSeq;
+                if (!isNaN(lastSeq)) {
+                    document.getElementById('sigmet-seq').value = String(parseInt(lastSeq) + 1).padStart(2, '0');
+                }
+            }
+            if (lastStart) startTimeInput.value = lastStart;
+            if (lastEnd) endTimeInput.value = lastEnd;
+            
+        } else {
+            if (cancelOrigSeqGroup) cancelOrigSeqGroup.classList.add('hidden');
+        }
+
+        // Sembunyikan elemen
+        phenomenonSelect.parentElement.style.display = displayStyle;
+        document.getElementById('sigmet-level').parentElement.style.display = displayStyle;
+        document.getElementById('sigmet-movement').parentElement.style.display = displayStyle;
+        document.getElementById('sigmet-change').parentElement.style.display = displayStyle;
+        if (polygonTools) polygonTools.style.display = displayStyle;
+
+        generateSigmetText(); 
+    });
+}
+// ---------------------------------------------
+
 startDrawBtn.addEventListener('click', () => {
     if (polygonDrawer) polygonDrawer.disable();
-    isSimplified = false; // Reset status simplified
+    isSimplified = false; 
     polygonDrawer = new L.Draw.Polygon(map, {
         shapeOptions: { color: '#ff00ff', weight: 3 },
         allowIntersection: false, showArea: false
@@ -2064,14 +2108,13 @@ copyBtn.addEventListener('click', () => {
 });
 
 map.on(L.Draw.Event.CREATED, event => {
-    clearDrawBtn.click(); // Bersihkan dulu untuk reset state
+    clearDrawBtn.click(); 
     const layer = event.layer;
     drawnPolygon = layer;
     drawnItems.addLayer(layer);
     
-    // --- KODE BARU: AKTIFKAN FITUR GESER TITIK (EDITING) ---
-    layer.editing.enable(); // Memunculkan kotak-kotak kecil di sudut poligon
-    layer.on('edit', () => { // Deteksi saat forecaster selesai menggeser titik
+    layer.editing.enable(); 
+    layer.on('edit', () => { 
         updateCoordinatesFromLayer(layer);
         generateSigmetText();
     });
@@ -2100,7 +2143,7 @@ clipFirBtn.addEventListener('click', () => {
         drawnItems.clearLayers();
         drawnPolygon = clippedLayer;
         drawnItems.addLayer(clippedLayer);
-        // --- KODE BARU: AKTIFKAN FITUR GESER UNTUK POLIGON HASIL POTONGAN ---
+        
         if (clippedLayer.editing) {
             clippedLayer.editing.enable();
             clippedLayer.on('edit', () => {
@@ -2108,8 +2151,8 @@ clipFirBtn.addEventListener('click', () => {
                 generateSigmetText();
             });
         }
-		updateCoordinatesFromLayer(clippedLayer);
-        isSimplified = false; // Reset status, karena ini poligon baru
+        updateCoordinatesFromLayer(clippedLayer);
+        isSimplified = false; 
         generateSigmetText();
     } catch (error) {
         console.error("Gagal melakukan operasi pemotongan:", error);
@@ -2118,23 +2161,21 @@ clipFirBtn.addEventListener('click', () => {
 });
 
 
-
-
 // 3. Fungsi-fungsi pembantu
 function updateCoordinatesFromLayer(layer) {
     const geojson = layer.toGeoJSON();
-    // Menangani Polygon dan MultiPolygon
     const coords = geojson.geometry.type === 'Polygon' 
         ? geojson.geometry.coordinates[0] 
         : geojson.geometry.coordinates[0][0];
-
-    // Konversi dari [lng, lat] ke objek L.latLng
     drawnCoordinates = coords.map(p => L.latLng(p[1], p[0]));
 }
 
 
 function generateSigmetText() {
     const seq = document.getElementById('sigmet-seq').value.padStart(2, '0') || 'XX';
+    const isCancelMode = cancelModeToggle ? cancelModeToggle.checked : false;
+    const origSeq = origSeqInput && origSeqInput.value ? origSeqInput.value.padStart(2, '0') : 'XX';
+
     const phenomenon = phenomenonSelect.value;
     const startTimeStr = startTimeInput.value;
     const endTimeStr = endTimeInput.value;
@@ -2147,6 +2188,24 @@ function generateSigmetText() {
     const now = new Date();
     const issueTime = `${String(now.getUTCDate()).padStart(2, '0')}${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}`;
     
+    // ==========================================
+    // LOGIKA KHUSUS MODE CANCEL
+    // ==========================================
+    if (isCancelMode) {
+        let cancelText = `WSID21 WAAA ${issueTime}\n`;
+        cancelText += `WAAF SIGMET ${seq} VALID ${issueTime}/${endTimeStr} WAAA-\n`;
+        cancelText += `WAAF UJUNG PANDANG FIR CNL SIGMET ${origSeq} ${validPeriod}=`;
+        
+        sigmetOutput.value = cancelText;
+        return; 
+    }
+    // ==========================================
+
+    // SIMPAN MEMORI SIGMET NORMAL
+    localStorage.setItem('lastSigmetSeq', seq);
+    localStorage.setItem('lastSigmetStart', startTimeStr);
+    localStorage.setItem('lastSigmetEnd', endTimeStr);
+    
     let sigmetText = `WSID21 WAAA ${issueTime}\nWAAF SIGMET ${seq} VALID ${validPeriod} WAAA-\nWAAF UJUNG PANDANG FIR SEV TURB ${phenomenon}`;
     
     if (phenomenon === 'OBS' && obsTime) {
@@ -2158,7 +2217,6 @@ function generateSigmetText() {
         let coordinateString = "";
         let finalCoords = [...drawnCoordinates];
 
-        // 1. Jika tombol Sederhanakan (isSimplified) aktif secara manual (Deskriptif)
         if (isSimplified) {
             let closedCoords = finalCoords.map(p => [p.lng, p.lat]);
             if (closedCoords[0][0] !== closedCoords[closedCoords.length-1][0] || closedCoords[0][1] !== closedCoords[closedCoords.length-1][1]) {
@@ -2170,43 +2228,36 @@ function generateSigmetText() {
             coordinateString = `N OF ${formatCoordinate(minLat, 0).split(' ')[0]} AND S OF ${formatCoordinate(maxLat, 0).split(' ')[0]} AND E OF ${formatCoordinate(0, minLon).split(' ')[1]} AND W OF ${formatCoordinate(0, maxLon).split(' ')[1]}`;
 
         } else {
-            // 2. OTOMATIS SEDERHANAKAN POLIGON (MAKSIMAL 7 TITIK)
             if (finalCoords.length > 7) {
-                let tolerance = 0.02; // Mulai reduksi
+                let tolerance = 0.02; 
                 let closedCoords = finalCoords.map(p => [p.lng, p.lat]);
                 
-                // Pastikan poligon tertutup
                 if (closedCoords[0][0] !== closedCoords[closedCoords.length-1][0] || closedCoords[0][1] !== closedCoords[closedCoords.length-1][1]) {
                     closedCoords.push([closedCoords[0][0], closedCoords[0][1]]);
                 }
                 
                 let turfPoly = turf.polygon([closedCoords]);
 
-                // Looping reduksi sudut secara agresif sampai titik <= 7
-                // Toleransi dinaikkan bertahap sampai 3 derajat jika area sangat rumit
                 while (finalCoords.length > 7 && tolerance <= 3.0) {
                     let simplified = turf.simplify(turfPoly, { tolerance: tolerance, highQuality: true });
                     let newCoords = simplified.geometry.coordinates[0];
                     
-                    newCoords.pop(); // Buang sementara titik penutup
+                    newCoords.pop(); 
                     finalCoords = newCoords.map(p => L.latLng(p[1], p[0]));
                     tolerance += 0.05;
                 }
 
-                // 3. FALLBACK: Jika bentuk sangat kacau dan masih > 7 titik, 
-                // jadikan segiempat (4 titik) yang membungkus area tersebut saja.
                 if (finalCoords.length > 7) {
                     const [minLon, minLat, maxLon, maxLat] = turf.bbox(turfPoly);
                     finalCoords = [
-                        L.latLng(minLat, minLon), // Barat Daya
-                        L.latLng(maxLat, minLon), // Barat Laut
-                        L.latLng(maxLat, maxLon), // Timur Laut
-                        L.latLng(minLat, maxLon)  // Timur Tenggara
+                        L.latLng(minLat, minLon), 
+                        L.latLng(maxLat, minLon), 
+                        L.latLng(maxLat, maxLon), 
+                        L.latLng(minLat, maxLon)  
                     ];
                 }
             }
 
-            // 4. Format Output sesuai standar ICAO
             const coordList = finalCoords.map(latlng => formatCoordinate(latlng.lat, latlng.lng));
             if (coordList.length > 1 && coordList[coordList.length - 1] === coordList[0]) {
                 coordinateString = coordList.join(' - ');
