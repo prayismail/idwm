@@ -2051,14 +2051,23 @@ if (cancelModeToggle) {
             const lastStart = localStorage.getItem('lastSigmetStart');
             const lastEnd = localStorage.getItem('lastSigmetEnd');
             
+            const origStartInput = document.getElementById('sigmet-orig-start');
+            const origEndInput = document.getElementById('sigmet-orig-end');
+            
             if (lastSeq && origSeqInput) {
                 origSeqInput.value = lastSeq;
                 if (!isNaN(lastSeq)) {
                     document.getElementById('sigmet-seq').value = String(parseInt(lastSeq) + 1).padStart(2, '0');
                 }
             }
-            if (lastStart) startTimeInput.value = lastStart;
-            if (lastEnd) endTimeInput.value = lastEnd;
+            
+            // Isi otomatis Data SIGMET Lama
+            if (lastStart && origStartInput) origStartInput.value = lastStart;
+            if (lastEnd && origEndInput) origEndInput.value = lastEnd;
+            
+            // Otomatis persiapkan Data SIGMET Baru (Cancel)
+            document.getElementById('sigmet-now-btn').click(); // Start Time baru = Waktu pembatalan sekarang
+            if (lastEnd) endTimeInput.value = lastEnd; // End Time baru = End Time lama
             
         } else {
             if (cancelOrigSeqGroup) cancelOrigSeqGroup.classList.add('hidden');
@@ -2188,13 +2197,20 @@ function generateSigmetText() {
     const now = new Date();
     const issueTime = `${String(now.getUTCDate()).padStart(2, '0')}${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}`;
     
+    const origSeq = origSeqInput && origSeqInput.value ? origSeqInput.value.padStart(2, '0') : 'XX';
+    const origStart = document.getElementById('sigmet-orig-start') && document.getElementById('sigmet-orig-start').value ? document.getElementById('sigmet-orig-start').value : 'XXXXXX';
+    const origEnd = document.getElementById('sigmet-orig-end') && document.getElementById('sigmet-orig-end').value ? document.getElementById('sigmet-orig-end').value : 'XXXXXX';
+    const origValidPeriod = `${origStart}/${origEnd}`;
+
     // ==========================================
     // LOGIKA KHUSUS MODE CANCEL
     // ==========================================
     if (isCancelMode) {
         let cancelText = `WSID21 WAAA ${issueTime}\n`;
+        // Header VALID menggunakan issueTime/endTimeStr yang baru
         cancelText += `WAAF SIGMET ${seq} VALID ${issueTime}/${endTimeStr} WAAA-\n`;
-        cancelText += `WAAF UJUNG PANDANG FIR CNL SIGMET ${origSeq} ${validPeriod}=`;
+        // Teks Body CNL menggunakan Data SIGMET Lama secara spesifik
+        cancelText += `WAAF UJUNG PANDANG FIR CNL SIGMET ${origSeq} ${origValidPeriod}=`;
         
         sigmetOutput.value = cancelText;
         return; 
