@@ -2117,7 +2117,47 @@ clipFirBtn.addEventListener('click', () => {
     }
 });
 
+document.getElementById('sigmet-cancel-mode').addEventListener('change', function() {
+    const isCancel = this.checked;
+    const origSeqGroup = document.getElementById('cancel-original-seq-group');
+    const displayStyle = isCancel ? 'none' : 'block';
+    
+    if (isCancel) {
+        origSeqGroup.classList.remove('hidden');
+        
+        // --- FITUR AUTOFILL DARI MEMORI BROWSER ---
+        const lastSeq = localStorage.getItem('lastSigmetSeq');
+        const lastStart = localStorage.getItem('lastSigmetStart');
+        const lastEnd = localStorage.getItem('lastSigmetEnd');
+        
+        if (lastSeq) {
+            // Isi otomatis nomor SIGMET lama
+            document.getElementById('sigmet-orig-seq').value = lastSeq;
+            
+            // Otomatis sarankan nomor urut SIGMET baru (+1 dari yang lama)
+            if (!isNaN(lastSeq)) {
+                document.getElementById('sigmet-seq').value = String(parseInt(lastSeq) + 1).padStart(2, '0');
+            }
+        }
+        if (lastStart) startTimeInput.value = lastStart;
+        if (lastEnd) endTimeInput.value = lastEnd;
+        // ------------------------------------------
+        
+    } else {
+        origSeqGroup.classList.add('hidden');
+    }
 
+    // Sembunyikan elemen yang tidak perlu
+    document.getElementById('sigmet-phenomenon').parentElement.style.display = displayStyle;
+    document.getElementById('sigmet-level').parentElement.style.display = displayStyle;
+    document.getElementById('sigmet-movement').parentElement.style.display = displayStyle;
+    document.getElementById('sigmet-change').parentElement.style.display = displayStyle;
+    
+    const polygonTools = document.getElementById('polygon-tools'); 
+    if (polygonTools) polygonTools.style.display = displayStyle;
+
+    generateSigmetText(); 
+});
 
 
 // 3. Fungsi-fungsi pembantu
@@ -2146,7 +2186,24 @@ function generateSigmetText() {
     const change = document.getElementById('sigmet-change').value.toUpperCase() || 'NC=';
     const now = new Date();
     const issueTime = `${String(now.getUTCDate()).padStart(2, '0')}${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}`;
-    
+    // ==========================================
+    // LOGIKA KHUSUS MODE CANCEL
+    // ==========================================
+    if (isCancelMode) {
+        let cancelText = `WSID21 WAAA ${issueTime}\n`;
+        cancelText += `WAAF SIGMET ${newSeq} VALID ${issueTime}/${endTimeStr} WAAA-\n`;
+        cancelText += `WAAF UJUNG PANDANG FIR CNL SIGMET ${origSeq} ${validPeriod}=`;
+        
+        sigmetOutput.value = cancelText;
+        return; 
+    }
+    // ==========================================
+
+    // --- KODE BARU: SIMPAN MEMORI SIGMET NORMAL ---
+    localStorage.setItem('lastSigmetSeq', newSeq);
+    localStorage.setItem('lastSigmetStart', startTimeStr);
+    localStorage.setItem('lastSigmetEnd', endTimeStr);
+    // ----------------------------------------------
     let sigmetText = `WSID21 WAAA ${issueTime}\nWAAF SIGMET ${seq} VALID ${validPeriod} WAAA-\nWAAF UJUNG PANDANG FIR SEV TURB ${phenomenon}`;
     
     if (phenomenon === 'OBS' && obsTime) {
