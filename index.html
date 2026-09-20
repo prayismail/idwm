@@ -68,36 +68,17 @@
     </div>
 </div>
   <!-- === BAGIAN 5: HTML BARU UNTUK ALAT PEMBUAT SIGMET === -->
- <div id="sigmet-tool" class="hidden">
-    <span id="sigmet-tool-close-btn" title="Tutup Panel">×</span>
-    <h3>SIGMET Creation Tool (SEV TURB)</h3>
+     <div id="sigmet-tool" class="hidden">
+<span id="sigmet-tool-close-btn" title="Tutup Panel">×</span>
+        <h3>SIGMET Creation Tool (SEV TURB)</h3>
         
-    <!-- Tambahkan id="polygon-tools" di sini -->
-    <div id="polygon-tools" class="sigmet-button-group" style="margin-bottom: 15px;">
-        <button id="start-draw-btn" class="btn btn-draw">Gambar Poligon</button>
-        <button id="clip-fir-btn" class="btn" style="background-color: #17a2b8;">Potong ke FIR</button>
-        <button id="clear-draw-btn" class="btn btn-clear">Hapus Poligon</button>
-    </div>
+           <div class="sigmet-button-group" style="margin-bottom: 15px;">
+            <button id="start-draw-btn" class="btn btn-draw">Gambar Poligon</button>
+	<button id="clip-fir-btn" class="btn" style="background-color: #17a2b8;">Potong ke FIR</button>
+            <button id="clear-draw-btn" class="btn btn-clear">Hapus Poligon</button>
 
-    <!-- Toggle Mode Cancel -->
-    <div style="margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #ddd;">
-        <label style="color: #d9534f; font-weight: bold; display: flex; align-items: center; cursor: pointer;">
-            <input type="checkbox" id="sigmet-cancel-mode" style="margin-right: 8px; transform: scale(1.2);">
-            Aktifkan Mode CANCEL (CNL SIGMET)
-        </label>
-    </div>
+        </div>
 
-    <!-- Input tambahan khusus untuk Mode Cancel (Awalnya tersembunyi) -->
-    <div id="cancel-original-seq-group" class="hidden" style="margin-bottom: 10px; background: #ffebe5; padding: 8px; border-radius: 4px;">
-        <label style="color: #d9534f; font-weight: bold; margin-bottom: 4px; display: block;">No. Urut (Seq) Lama:</label>
-        <input type="text" id="sigmet-orig-seq" placeholder="Contoh: 01" style="width: 100%; border: 1px solid #d9534f; padding: 4px; box-sizing: border-box;">
-    </div>
-
-<!-- Input tambahan khusus untuk Mode Cancel (Sembunyi secara default) -->
-<div id="cancel-original-seq-group" class="hidden" style="margin-bottom: 10px; background: #ffebe5; padding: 8px; border-radius: 4px;">
-    <label style="color: #d9534f; font-weight: bold;">No. Urut (Seq) SIGMET yang Dibatalkan:</label>
-    <input type="text" id="sigmet-orig-seq" placeholder="Contoh: 01" style="width: 100%; border: 1px solid #d9534f;">
-</div>
         <div class="sigmet-form-group sigmet-form-inline">
             <div><label for="sigmet-seq">Sequence No.</label><input type="text" id="sigmet-seq" placeholder="e.g., 01"></div>
             <div><label>Phenomenon</label><select id="sigmet-phenomenon"><option value="OBS">Observed (OBS)</option><option value="FCST" selected>Forecast (FCST)</option></select></div>
@@ -327,7 +308,6 @@
     
 </body>
 </html>
-
 
 
 
