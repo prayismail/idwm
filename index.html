@@ -68,47 +68,62 @@
     </div>
 </div>
   <!-- === BAGIAN 5: HTML BARU UNTUK ALAT PEMBUAT SIGMET === -->
-     <div id="sigmet-tool" class="hidden">
-<span id="sigmet-tool-close-btn" title="Tutup Panel">×</span>
-        <h3>SIGMET Creation Tool (SEV TURB)</h3>
-        
-           <div class="sigmet-button-group" style="margin-bottom: 15px;">
-            <button id="start-draw-btn" class="btn btn-draw">Gambar Poligon</button>
-	<button id="clip-fir-btn" class="btn" style="background-color: #17a2b8;">Potong ke FIR</button>
-            <button id="clear-draw-btn" class="btn btn-clear">Hapus Poligon</button>
-
-        </div>
-
-        <div class="sigmet-form-group sigmet-form-inline">
-            <div><label for="sigmet-seq">Sequence No.</label><input type="text" id="sigmet-seq" placeholder="e.g., 01"></div>
-            <div><label>Phenomenon</label><select id="sigmet-phenomenon"><option value="OBS">Observed (OBS)</option><option value="FCST" selected>Forecast (FCST)</option></select></div>
-        </div>
-        
-        <div class="sigmet-form-group sigmet-form-inline">
-            <div>
-                <label for="sigmet-start-time">Start Time (DDHHMM)</label>
-                <div class="time-input-group">
-                    <input type="text" id="sigmet-start-time" maxlength="6">
-                    <button id="sigmet-now-btn" class="button" title="Isi dengan Waktu Sekarang (UTC)">NOW</button>
-                </div>
-            </div>
-            <div>
-                <label for="sigmet-end-time">End Time (DDHHMM)</label>
-                <div class="time-input-group">
-                    <input type="text" id="sigmet-end-time" maxlength="6">
-                    <button id="sigmet-add-4h-btn" class="button" title="Tambah 4 Jam dari Start Time">+</button>
-                </div>
-            </div>
-        </div>
-        
-        <div id="obs-time-group" class="sigmet-form-group hidden"><label for="sigmet-obs-time">Observation Time (UTC)</label><input type="text" id="sigmet-obs-time" placeholder="e.g., 2350Z"></div>
-        <div class="sigmet-form-group"><label for="sigmet-level">Flight Level</label><input type="text" id="sigmet-level" placeholder="e.g., FL340, FL260/390, ABV FL340"></div>
-        <div class="sigmet-form-group"><label for="sigmet-movement">Movement</label><input type="text" id="sigmet-movement" placeholder="e.g., STNR, MOV SE 10KT"></div>
-        <div class="sigmet-form-group"><label for="sigmet-change">Intensity Change</label><input type="text" id="sigmet-change" placeholder="e.g., NC=, WKN=, INTSF="></div>
-        <button id="generate-sigmet-btn" class="btn btn-generate">Generate SIGMET</button>
-        <textarea id="sigmet-output" readonly></textarea>
-        <div class="sigmet-button-group"><button id="copy-sigmet-btn" class="btn btn-copy">Salin SIGMET</button></div>
+<div id="sigmet-tool" class="hidden">
+    <span id="sigmet-tool-close-btn" title="Tutup Panel">×</span>
+    <h3>SIGMET Creation Tool (SEV TURB)</h3>
+    
+    <!-- Tambahkan id="polygon-tools" agar tombol ini bisa disembunyikan otomatis saat mode Cancel -->
+    <div id="polygon-tools" class="sigmet-button-group" style="margin-bottom: 15px;">
+        <button id="start-draw-btn" class="btn btn-draw">Gambar Poligon</button>
+        <button id="clip-fir-btn" class="btn" style="background-color: #17a2b8;">Potong ke FIR</button>
+        <button id="clear-draw-btn" class="btn btn-clear">Hapus Poligon</button>
     </div>
+
+    <!-- --- KODE BARU: Toggle Mode Cancel dan Input Seq Lama --- -->
+    <div style="margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #ddd;">
+        <label style="color: #d9534f; font-weight: bold; display: flex; align-items: center; cursor: pointer;">
+            <input type="checkbox" id="sigmet-cancel-mode" style="margin-right: 8px; transform: scale(1.2);">
+            Aktifkan Mode CANCEL (CNL SIGMET)
+        </label>
+    </div>
+
+    <div id="cancel-original-seq-group" class="hidden" style="margin-bottom: 10px; background: #ffebe5; padding: 8px; border-radius: 4px;">
+        <label style="color: #d9534f; font-weight: bold; margin-bottom: 4px; display: block;">No. Urut (Seq) Lama:</label>
+        <input type="text" id="sigmet-orig-seq" placeholder="Contoh: 01" style="width: 100%; border: 1px solid #d9534f; padding: 4px; box-sizing: border-box;">
+    </div>
+    <!-- -------------------------------------------------------- -->
+
+    <div class="sigmet-form-group sigmet-form-inline">
+        <div><label for="sigmet-seq">Sequence No.</label><input type="text" id="sigmet-seq" placeholder="e.g., 01"></div>
+        <div><label>Phenomenon</label><select id="sigmet-phenomenon"><option value="OBS">Observed (OBS)</option><option value="FCST" selected>Forecast (FCST)</option></select></div>
+    </div>
+    
+    <div class="sigmet-form-group sigmet-form-inline">
+        <div>
+            <label for="sigmet-start-time">Start Time (DDHHMM)</label>
+            <div class="time-input-group">
+                <input type="text" id="sigmet-start-time" maxlength="6">
+                <button id="sigmet-now-btn" class="button" title="Isi dengan Waktu Sekarang (UTC)">NOW</button>
+            </div>
+        </div>
+        <div>
+            <label for="sigmet-end-time">End Time (DDHHMM)</label>
+            <div class="time-input-group">
+                <input type="text" id="sigmet-end-time" maxlength="6">
+                <button id="sigmet-add-4h-btn" class="button" title="Tambah 4 Jam dari Start Time">+</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="obs-time-group" class="sigmet-form-group hidden"><label for="sigmet-obs-time">Observation Time (UTC)</label><input type="text" id="sigmet-obs-time" placeholder="e.g., 2350Z"></div>
+    <div class="sigmet-form-group"><label for="sigmet-level">Flight Level</label><input type="text" id="sigmet-level" placeholder="e.g., FL340, FL260/390, ABV FL340"></div>
+    <div class="sigmet-form-group"><label for="sigmet-movement">Movement</label><input type="text" id="sigmet-movement" placeholder="e.g., STNR, MOV SE 10KT"></div>
+    <div class="sigmet-form-group"><label for="sigmet-change">Intensity Change</label><input type="text" id="sigmet-change" placeholder="e.g., NC=, WKN=, INTSF="></div>
+    
+    <button id="generate-sigmet-btn" class="btn btn-generate">Generate SIGMET</button>
+    <textarea id="sigmet-output" readonly></textarea>
+    <div class="sigmet-button-group"><button id="copy-sigmet-btn" class="btn btn-copy">Salin SIGMET</button></div>
+</div>
 	
 <div id="controls">
         <button id="downloadCsv">Unduh CSV</button>
