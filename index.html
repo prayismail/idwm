@@ -87,9 +87,24 @@
         </label>
     </div>
 
-    <div id="cancel-original-seq-group" class="hidden" style="margin-bottom: 10px; background: #ffebe5; padding: 8px; border-radius: 4px;">
-        <label style="color: #d9534f; font-weight: bold; margin-bottom: 4px; display: block;">No. Urut (Seq) Lama:</label>
-        <input type="text" id="sigmet-orig-seq" placeholder="Contoh: 01" style="width: 100%; border: 1px solid #d9534f; padding: 4px; box-sizing: border-box;">
+    <!-- Input tambahan khusus untuk Mode Cancel (Awalnya tersembunyi) -->
+    <div id="cancel-original-seq-group" class="hidden" style="margin-bottom: 10px; background: #ffebe5; padding: 10px; border-radius: 4px; border: 1px dashed #d9534f;">
+        <label style="color: #d9534f; font-weight: bold; margin-bottom: 8px; display: block; font-size: 0.9em;">DATA SIGMET LAMA (YANG DIBATALKAN):</label>
+        
+        <div style="display: flex; gap: 8px;">
+            <div style="flex: 1;">
+                <label style="font-size: 0.8em; color: #333; margin-bottom: 2px; display: block;">No. Urut (Seq)</label>
+                <input type="text" id="sigmet-orig-seq" placeholder="01" style="width: 100%; border: 1px solid #ccc; padding: 4px; box-sizing: border-box;">
+            </div>
+            <div style="flex: 1;">
+                <label style="font-size: 0.8em; color: #333; margin-bottom: 2px; display: block;">Start Time</label>
+                <input type="text" id="sigmet-orig-start" placeholder="e.g 180100" style="width: 100%; border: 1px solid #ccc; padding: 4px; box-sizing: border-box;">
+            </div>
+            <div style="flex: 1;">
+                <label style="font-size: 0.8em; color: #333; margin-bottom: 2px; display: block;">End Time</label>
+                <input type="text" id="sigmet-orig-end" placeholder="e.g 180500" style="width: 100%; border: 1px solid #ccc; padding: 4px; box-sizing: border-box;">
+            </div>
+        </div>
     </div>
     <!-- -------------------------------------------------------- -->
 
