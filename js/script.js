@@ -1785,12 +1785,20 @@ function fetchSIGMET(firIcao) {
                 const color = getSigmetColor(sigmet.hazard);
                 const sigmetId = sigmet.sigmetId ? ` ${sigmet.sigmetId}` : '';
                 
-                // Encode teks raw agar aman disisipkan ke dalam tombol HTML popup
-                const encodedRawSigmet = encodeURIComponent(sigmet.rawSigmet);
+                // --- KODE BARU: FORMATTING TEKS SIGMET AGAR RAPI ---
+                // 1. Hapus semua enter bawaan (jadikan satu baris dengan spasi tunggal)
+                let tidySigmet = sigmet.rawSigmet.replace(/\r?\n|\r/g, ' ').replace(/\s+/g, ' ').trim();
+                // 2. Beri enter setelah WMO Header (contoh: WSID21 WAAA 121200)
+                tidySigmet = tidySigmet.replace(/^([A-Z0-9]{6}\s+[A-Z]{4}\s+\d{6})\s+/, '$1\n');
+                // 3. Beri enter setelah SIGMET Header (contoh: VALID 121200/121600 WAAA-)
+                tidySigmet = tidySigmet.replace(/(VALID\s+\d{6}\/\d{6}\s+[A-Z]{4}-)\s+/, '$1\n');
+                // ----------------------------------------------------
+
+                // Encode teks yang sudah rapi agar aman disisipkan ke tombol Cancel
+                const encodedRawSigmet = encodeURIComponent(tidySigmet);
 
                 parsedPolygons.forEach(polygonData => {
                 
-                // --- 1. TAMBAHKAN LOGIKA PERGESERAN KOORDINAT (PASIFIK)---
                 const adjustedCoords = polygonData.coords.map(coord => {
                     if (Array.isArray(coord)) {
                         let lon = coord[1];
@@ -1804,9 +1812,8 @@ function fetchSIGMET(firIcao) {
                     }
                     return coord;
                 });
-                // ---------------------------------------------------------------
 
-                // --- 2. PENYEMPURNAAN POPUP: TAMBAH FITUR CANCEL SIGMET ---
+                // Perhatikan: bagian <pre> sekarang menampilkan ${tidySigmet}
                 const popupContent = `
                     <div class="sigmet-popup-header" style="background-color: ${color};">
                         ${sigmet.hazard} SIGMET${sigmetId}
@@ -1817,10 +1824,9 @@ function fetchSIGMET(firIcao) {
                         </div>
                         <hr>
                         <div class="sigmet-raw-text">
-                            <pre style="margin: 0; white-space: pre-wrap; font-family: monospace;">${sigmet.rawSigmet}</pre>
+                            <pre style="margin: 0; white-space: pre-wrap; font-family: monospace;">${tidySigmet}</pre>
                         </div>
                         
-                        <!-- AREA FITUR CANCEL SIGMET (SEPERTI HKO) -->
                         <div class="sigmet-cancel-section" style="margin-top: 15px; padding-top: 10px; border-top: 2px dashed #ccc;">
                             <div style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
                                 <button onclick="generateInlineCancelSigmet(this, '${encodedRawSigmet}')" style="background-color: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; flex-shrink: 0;">Cancel SIGMET</button>
@@ -1829,7 +1835,6 @@ function fetchSIGMET(firIcao) {
                             <textarea class="cancel-output" style="display:none; width: 100%; height: 90px; margin-top: 5px; font-family: monospace; border: 1px solid #d9534f; background-color: #ffebe5; padding: 5px; box-sizing: border-box;" readonly></textarea>
                             <button class="copy-cancel-btn" style="display:none; margin-top: 5px; background-color: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold;" onclick="copyInlineCancelText(this)">Copy to Clipboard</button>
                         </div>
-                        
                     </div>`;
 
                 L.polygon(adjustedCoords, { 
@@ -1883,9 +1888,14 @@ window.generateInlineCancelSigmet = function(btn, encodedSigmet) {
         const oldValid = header2Parts[4]; 
         const oldEnd = oldValid.split('/')[1]; 
 
-        // Ekstrak Nama FIR (e.g., WAAF UJUNG PANDANG FIR)
-        const firNameMatch = lines[2].match(/^(.*?\sFIR)/);
-        const firName = firNameMatch ? firNameMatch[1] : `${firCode2} FIR`;
+        // --- KODE YANG DISEMPURNAKAN: EKSTRAKSI NAMA FIR ANTI-PATAH BARIS ---
+        // Gabungkan seluruh baris menjadi satu teks panjang 
+        const singleLineText = rawSigmet.replace(/\r?\n|\r/g, ' '); 
+        
+        // Cari teks apa pun yang berada di antara tanda "WAAA- " (atau MWO lain) dan kata " FIR"
+        const firNameMatch = singleLineText.match(/[A-Z]{4}-\s+(.*?\sFIR)/);
+        const firName = firNameMatch ? firNameMatch[1].trim() : `${firCode2} FIR`;
+        // --------------------------------------------------------------------
 
         // Dapatkan Waktu UTC Sekarang untuk Waktu Isu & Waktu Awal Validitas Cancel
         const now = new Date();
