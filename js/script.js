@@ -2174,7 +2174,12 @@ function updateCoordinatesFromLayer(layer) {
 
 
 function generateSigmetText() {
-    const seq = document.getElementById('sigmet-seq').value.padStart(2, '0') || 'XX';
+    // --- TAMBAHKAN 3 BARIS INI UNTUK MENDEFINISIKAN VARIABEL YANG HILANG ---
+    const isCancelMode = document.getElementById('sigmet-cancel-mode').checked;
+    const newSeq = document.getElementById('sigmet-seq').value.padStart(2, '0') || 'XX';
+    const origSeq = document.getElementById('sigmet-orig-seq').value.padStart(2, '0') || 'XX';
+    // -----------------------------------------------------------------------
+
     const phenomenon = phenomenonSelect.value;
     const startTimeStr = startTimeInput.value;
     const endTimeStr = endTimeInput.value;
@@ -2186,6 +2191,7 @@ function generateSigmetText() {
     const change = document.getElementById('sigmet-change').value.toUpperCase() || 'NC=';
     const now = new Date();
     const issueTime = `${String(now.getUTCDate()).padStart(2, '0')}${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}`;
+    
     // ==========================================
     // LOGIKA KHUSUS MODE CANCEL
     // ==========================================
@@ -2204,6 +2210,8 @@ function generateSigmetText() {
     localStorage.setItem('lastSigmetStart', startTimeStr);
     localStorage.setItem('lastSigmetEnd', endTimeStr);
     // ----------------------------------------------
+    
+    // ... (lanjutkan ke logika poligon Anda di bawahnya) ...
     let sigmetText = `WSID21 WAAA ${issueTime}\nWAAF SIGMET ${seq} VALID ${validPeriod} WAAA-\nWAAF UJUNG PANDANG FIR SEV TURB ${phenomenon}`;
     
     if (phenomenon === 'OBS' && obsTime) {
