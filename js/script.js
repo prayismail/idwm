@@ -1832,7 +1832,7 @@ function fetchSIGMET(firIcao) {
                                 <button onclick="generateInlineCancelSigmet(this, '${encodedRawSigmet}')" style="background-color: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; flex-shrink: 0;">Cancel SIGMET</button>
                                 <input type="text" class="cancel-seq-input" placeholder="New Seq (e.g. 03)" style="width: 100%; padding: 4px; border: 1px solid #999; border-radius: 3px;">
                             </div>
-                            <textarea class="cancel-output" style="display:none; width: 100%; height: 90px; margin-top: 5px; font-family: monospace; border: 1px solid #d9534f; background-color: #ffebe5; padding: 5px; box-sizing: border-box;" readonly></textarea>
+                            <textarea class="cancel-output" style="display:none; width: 100%; height: 90px; margin-top: 5px; font-family: monospace; border: 1px solid #d9534f; background-color: #ffebe5; padding: 5px; box-sizing: border-box;"></textarea>
                             <button class="copy-cancel-btn" style="display:none; margin-top: 5px; background-color: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold;" onclick="copyInlineCancelText(this)">Copy to Clipboard</button>
                         </div>
                     </div>`;
