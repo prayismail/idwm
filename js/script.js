@@ -1760,11 +1760,9 @@ function fetchSIGMET(firIcao) {
                 // --- LOGIKA BARU: FIR TETANGGA / MWO INTERNASIONAL ---
                 relevantSigmets = data.filter(sigmet => {
                     if (!sigmet || typeof sigmet.rawSigmet !== 'string') return false;
-                    // Cari apakah kode ICAO tetangga (misal: WSSS, KZAK) ada di teks SIGMET API Anda
                     return sigmet.rawSigmet.includes(firIcao);
                 });
                 
-                // Set null karena kita tidak memiliki batas GeoJSON negara tetangga untuk proses clipping
                 firToUseForClipping = null; 
 
             } else {
@@ -1772,7 +1770,6 @@ function fetchSIGMET(firIcao) {
             }
             
             if (relevantSigmets.length === 0) {
-                // Munculkan notifikasi agar forecaster tahu mengapa poligonnya tidak muncul
                 alert(`Tidak ada data SIGMET aktif yang ditarik untuk MWO: ${firIcao}`);
                 console.log(`Tidak ada SIGMET aktif untuk FIR ${firIcao}`);
                 return;
@@ -1787,28 +1784,29 @@ function fetchSIGMET(firIcao) {
                 
                 const color = getSigmetColor(sigmet.hazard);
                 const sigmetId = sigmet.sigmetId ? ` ${sigmet.sigmetId}` : '';
+                
+                // Encode teks raw agar aman disisipkan ke dalam tombol HTML popup
+                const encodedRawSigmet = encodeURIComponent(sigmet.rawSigmet);
 
                 parsedPolygons.forEach(polygonData => {
                 
                 // --- 1. TAMBAHKAN LOGIKA PERGESERAN KOORDINAT (PASIFIK)---
                 const adjustedCoords = polygonData.coords.map(coord => {
-                    // Jika data berformat array [lat, lon]
                     if (Array.isArray(coord)) {
                         let lon = coord[1];
                         if (lon < 0) lon += 360;
                         return [coord[0], lon];
                     } 
-                    // Jika data berformat object {lat, lng} atau {lat, lon}
                     else if (coord && typeof coord === 'object') {
                         let lon = coord.lng !== undefined ? coord.lng : coord.lon;
                         if (lon < 0) lon += 360;
-                        // Kembalikan ke format array [lat, lon] yang diterima standar Leaflet
                         return [coord.lat, lon]; 
                     }
                     return coord;
                 });
                 // ---------------------------------------------------------------
 
+                // --- 2. PENYEMPURNAAN POPUP: TAMBAH FITUR CANCEL SIGMET ---
                 const popupContent = `
                     <div class="sigmet-popup-header" style="background-color: ${color};">
                         ${sigmet.hazard} SIGMET${sigmetId}
@@ -1819,14 +1817,24 @@ function fetchSIGMET(firIcao) {
                         </div>
                         <hr>
                         <div class="sigmet-raw-text">
-                            <pre style="margin: 0; white-space: pre-wrap;">${sigmet.rawSigmet}</pre>
+                            <pre style="margin: 0; white-space: pre-wrap; font-family: monospace;">${sigmet.rawSigmet}</pre>
                         </div>
+                        
+                        <!-- AREA FITUR CANCEL SIGMET (SEPERTI HKO) -->
+                        <div class="sigmet-cancel-section" style="margin-top: 15px; padding-top: 10px; border-top: 2px dashed #ccc;">
+                            <div style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
+                                <button onclick="generateInlineCancelSigmet(this, '${encodedRawSigmet}')" style="background-color: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; flex-shrink: 0;">Cancel SIGMET</button>
+                                <input type="text" class="cancel-seq-input" placeholder="New Seq (e.g. 03)" style="width: 100%; padding: 4px; border: 1px solid #999; border-radius: 3px;">
+                            </div>
+                            <textarea class="cancel-output" style="display:none; width: 100%; height: 90px; margin-top: 5px; font-family: monospace; border: 1px solid #d9534f; background-color: #ffebe5; padding: 5px; box-sizing: border-box;" readonly></textarea>
+                            <button class="copy-cancel-btn" style="display:none; margin-top: 5px; background-color: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold;" onclick="copyInlineCancelText(this)">Copy to Clipboard</button>
+                        </div>
+                        
                     </div>`;
 
-                // --- 2. UBAH polygonData.coords MENJADI adjustedCoords DI SINI ---
                 L.polygon(adjustedCoords, { 
                     color: color, fillColor: color, fillOpacity: 0.2, weight: 2, isSigmetPolygon: true
-                }).addTo(map).bindPopup(popupContent, { className: 'custom-sigmet-popup' });
+                }).addTo(map).bindPopup(popupContent, { className: 'custom-sigmet-popup', minWidth: 320 });
             });
         });
     })
@@ -1834,7 +1842,7 @@ function fetchSIGMET(firIcao) {
 }
 
 
-// BAGIAN 4: FUNGSI UTILITAS WARNA - TIDAK DIUBAH
+// BAGIAN 4: FUNGSI UTILITAS WARNA & LOGIKA CANCEL INLINE
 // -------------------------------------------------------------------------
 
 function getSigmetColor(hazard) {
@@ -1847,6 +1855,62 @@ function getSigmetColor(hazard) {
     }
 }
 
+// Fungsi Global untuk mengekstrak teks lama dan men-generate teks Cancel baru di dalam Popup
+window.generateInlineCancelSigmet = function(btn, encodedSigmet) {
+    const rawSigmet = decodeURIComponent(encodedSigmet);
+    const container = btn.parentElement.parentElement;
+    const seqInput = container.querySelector('.cancel-seq-input').value.trim().padStart(2, '0');
+    const outputArea = container.querySelector('.cancel-output');
+    const copyBtn = container.querySelector('.copy-cancel-btn');
+
+    if (!seqInput || seqInput === '00') {
+        alert('Masukkan nomor urut (Sequence No.) SIGMET pembatalan yang baru terlebih dahulu.');
+        return;
+    }
+
+    try {
+        const lines = rawSigmet.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        
+        // Ekstrak Header Baris 1 (e.g., WVID21 WAAA 192150)
+        const header1Parts = lines[0].split(/\s+/); 
+        const wmoId = header1Parts[0]; 
+        const firCode1 = header1Parts[1]; 
+
+        // Ekstrak Header Baris 2 (e.g., WAAF SIGMET 21 VALID 192150/200350 WAAA-)
+        const header2Parts = lines[1].split(/\s+/); 
+        const firCode2 = header2Parts[0]; 
+        const oldSeq = header2Parts[2]; 
+        const oldValid = header2Parts[4]; 
+        const oldEnd = oldValid.split('/')[1]; 
+
+        // Ekstrak Nama FIR (e.g., WAAF UJUNG PANDANG FIR)
+        const firNameMatch = lines[2].match(/^(.*?\sFIR)/);
+        const firName = firNameMatch ? firNameMatch[1] : `${firCode2} FIR`;
+
+        // Dapatkan Waktu UTC Sekarang untuk Waktu Isu & Waktu Awal Validitas Cancel
+        const now = new Date();
+        const issueTime = `${String(now.getUTCDate()).padStart(2, '0')}${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}`;
+
+        // Generate Teks Cancel
+        let cancelText = `${wmoId} ${firCode1} ${issueTime}\n`;
+        cancelText += `${firCode2} SIGMET ${seqInput} VALID ${issueTime}/${oldEnd} ${firCode1}-\n`;
+        cancelText += `${firName} CNL SIGMET ${oldSeq} ${oldValid}=`;
+
+        outputArea.value = cancelText;
+        outputArea.style.display = 'block';
+        copyBtn.style.display = 'block';
+    } catch (e) {
+        alert('Gagal memproses teks SIGMET lama. Pastikan format teks memenuhi standar ICAO.');
+        console.error(e);
+    }
+};
+
+window.copyInlineCancelText = function(btn) {
+    const outputArea = btn.parentElement.querySelector('.cancel-output');
+    navigator.clipboard.writeText(outputArea.value).then(() => {
+        alert('Teks Cancel SIGMET berhasil disalin ke clipboard!');
+    });
+};
 // Variabel state dan elemen UI
     const flSelectorContainer = document.getElementById('fl-selector-container');
     const flSelector = document.getElementById('fl-selector');
