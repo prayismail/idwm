@@ -2197,7 +2197,7 @@ function generateSigmetText() {
     const now = new Date();
     const issueTime = `${String(now.getUTCDate()).padStart(2, '0')}${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}`;
     
-    const origSeq = origSeqInput && origSeqInput.value ? origSeqInput.value.padStart(2, '0') : 'XX';
+    
     const origStart = document.getElementById('sigmet-orig-start') && document.getElementById('sigmet-orig-start').value ? document.getElementById('sigmet-orig-start').value : 'XXXXXX';
     const origEnd = document.getElementById('sigmet-orig-end') && document.getElementById('sigmet-orig-end').value ? document.getElementById('sigmet-orig-end').value : 'XXXXXX';
     const origValidPeriod = `${origStart}/${origEnd}`;
