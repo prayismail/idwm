@@ -419,7 +419,7 @@ cropImageButton.addEventListener('click', () => {
         });
         var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'Base map &copy; OpenStreetMap contributors' });
         var esriImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution:  'Base map &copy; Esri, DigitalGlobe, GeoEye, Earthstar Geographics' }).addTo(map);
-        var cartoPositronvar = L.tileLayer(
+        var cartoPositron = L.tileLayer(
     'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=cb1_2i24_1_c147afbdfd7d54a468792435',
     {
         attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
