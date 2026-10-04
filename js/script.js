@@ -419,7 +419,13 @@ cropImageButton.addEventListener('click', () => {
         });
         var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'Base map &copy; OpenStreetMap contributors' });
         var esriImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution:  'Base map &copy; Esri, DigitalGlobe, GeoEye, Earthstar Geographics' }).addTo(map);
-        var cartoPositron = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: 'Base map &copy; CartoDB' });
+        var cartoPositron = const cartoDark = L.tileLayer(
+    'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=cb1_2i24_1_c147afbdfd7d54a468792435',
+    {
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+        subdomains: 'abcd',
+        maxZoom: 20
+    };
         // URL Template untuk CARTO Positron (versi tanpa label agar lebih bersih)
 		var topoMap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: 'Base map &copy; <a href="https://opentopomap.org/">OpenTopoMap</a> contributors' });
         var lulcMap = L.tileLayer.wms("/lulc-wms", {layers: 'WORLDCOVER_2021_MAP', format: 'image/png', transparent: true, attribution: 'Base map &copy; ESA WorldCover 2021' });
@@ -2414,7 +2420,7 @@ map.on('overlayremove', (e) => {
 
 var vaAdvisoryLayer = L.layerGroup();
         var baseMaps = {
-           // "Peta CartoDB": cartoPositron,
+            "Peta CartoDB": cartoPositron,
 			"Peta OSM": osmLayer,
             "Peta Esri Imagery": esriImagery,
             "Peta Topografi": topoMap,
