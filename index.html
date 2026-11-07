@@ -132,6 +132,15 @@
 
     <div class="sigmet-form-group sigmet-form-inline">
         <div><label for="sigmet-seq">Sequence No.</label><input type="text" id="sigmet-seq" placeholder="e.g., 01"></div>
+		<!-- KODE BARU: Pilihan Hazard -->
+        <div>
+            <label>Hazard</label>
+            <select id="sigmet-hazard">
+                <option value="SEV TURB" selected>SEV TURB</option>
+                <option value="SEV ICE">SEV ICE</option>
+            </select>
+        </div>
+        <!-- ----------------------- -->
         <div><label>Phenomenon</label><select id="sigmet-phenomenon"><option value="OBS">Observed (OBS)</option><option value="FCST" selected>Forecast (FCST)</option></select></div>
     </div>
     
