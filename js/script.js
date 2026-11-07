@@ -2327,7 +2327,9 @@ function updateCoordinatesFromLayer(layer) {
 
 
 function generateSigmetText() {
-    const seq = document.getElementById('sigmet-seq').value.padStart(2, '0') || 'XX';
+    const hazard = document.getElementById('sigmet-hazard') ? document.getElementById('sigmet-hazard').value : 'SEV TURB';
+    const phenomenon = phenomenonSelect.value;
+	const seq = document.getElementById('sigmet-seq').value.padStart(2, '0') || 'XX';
     const isCancelMode = cancelModeToggle ? cancelModeToggle.checked : false;
     const origSeq = origSeqInput && origSeqInput.value ? origSeqInput.value.padStart(2, '0') : 'XX';
 
@@ -2368,7 +2370,7 @@ function generateSigmetText() {
     localStorage.setItem('lastSigmetStart', startTimeStr);
     localStorage.setItem('lastSigmetEnd', endTimeStr);
     
-    let sigmetText = `WSID21 WAAA ${issueTime}\nWAAF SIGMET ${seq} VALID ${validPeriod} WAAA-\nWAAF UJUNG PANDANG FIR SEV TURB ${phenomenon}`;
+    let sigmetText = `WSID21 WAAA ${issueTime}\nWAAF SIGMET ${seq} VALID ${validPeriod} WAAA-\nWAAF UJUNG PANDANG FIR ${hazard} ${phenomenon}`;
     
     if (phenomenon === 'OBS' && obsTime) {
         sigmetText += ` AT ${obsTime}Z`;
