@@ -58,7 +58,29 @@
     </div>
     <div class="legend-units">(m²/³ s⁻¹ x 100)</div>
 </div>
+<!-- Dropdown Selector Khusus Icing -->
+<div id="icing-fl-selector-container" class="hidden" style="position: absolute; top: 110px; left: 10px; z-index: 1000; background: #333; padding: 5px; border-radius: 5px;">
+    <select id="icing-fl-selector" style="background: #222; color: white; border: 1px solid #555; padding: 3px;">
+        <!-- Pilihan FL Icing akan diisi oleh JS -->
+    </select>
+</div>
 
+<!-- Legend Khusus Icing (Desain Sesuai Gambar WAFS) -->
+<div id="icing-legend" class="hidden" style="position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); z-index: 1000; background: white; padding: 10px; border-radius: 5px; color: black; border: 2px solid #333; font-family: sans-serif;">
+    <div style="text-align: center; font-weight: bold; margin-bottom: 5px; font-size: 14px;">Icing Severity</div>
+    <div style="display: flex; border: 1px solid black; height: 18px;">
+        <div style="background-color: #ccffff; flex: 1; border-right: 1px solid black;"></div>
+        <div style="background-color: #99ccff; flex: 1; border-right: 1px solid black;"></div>
+        <div style="background-color: #6699ff; flex: 1; border-right: 1px solid black;"></div>
+        <div style="background-color: #3333ff; flex: 1;"></div>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 3px; width: 220px;">
+        <span style="flex: 1; text-align: center;">Trace</span>
+        <span style="flex: 1; text-align: center;">Light</span>
+        <span style="flex: 1; text-align: center;">Mod</span>
+        <span style="flex: 1; text-align: center;">Heavy</span>
+    </div>
+</div>
 <div id="time-slider-container" class="custom-control-container leaflet-control hidden">
     <div id="time-display"></div>
     <div class="slider-controls">
