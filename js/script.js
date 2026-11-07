@@ -2458,11 +2458,9 @@ function formatCoordinate(lat, lng) {
 // 4. Logika untuk menampilkan/menyembunyikan panel (tidak berubah)
 const turbulenceLayerGroup = L.layerGroup();
 // Event Listner Munculnya Layer di Peta
-// Event Listner Munculnya Layer di Peta
-
-// Event Listner Munculnya Layer di Peta
 map.on('overlayadd', (e) => {
     const hazardDropdown = document.getElementById('sigmet-hazard');
+    const toolTitle = document.getElementById('sigmet-tool-title'); // Variabel judul baru
 
     if (e.layer === turbulenceLayerGroup) {
         createLayersForFlightLevel(flSelector.value);
@@ -2474,8 +2472,9 @@ map.on('overlayadd', (e) => {
         
         if (sigmetToolPanel) sigmetToolPanel.classList.remove('hidden');
         
-        // OTOMATIS: Ubah dropdown ke SEV TURB
+        // OTOMATIS: Ubah dropdown dan Judul ke SEV TURB
         if (hazardDropdown) hazardDropdown.value = 'SEV TURB';
+        if (toolTitle) toolTitle.innerText = 'SIGMET Creation Tool (SEV TURB)';
     }
     
     if (e.layer === icingLayerGroup) {
@@ -2488,14 +2487,16 @@ map.on('overlayadd', (e) => {
         
         if (sigmetToolPanel) sigmetToolPanel.classList.remove('hidden');
         
-        // OTOMATIS: Ubah dropdown ke SEV ICE
+        // OTOMATIS: Ubah dropdown dan Judul ke SEV ICE
         if (hazardDropdown) hazardDropdown.value = 'SEV ICE';
+        if (toolTitle) toolTitle.innerText = 'SIGMET Creation Tool (SEV ICE)';
     }
 });
 
 // Event Listener Hilangnya Layer dari Peta
 map.on('overlayremove', (e) => {
     const hazardDropdown = document.getElementById('sigmet-hazard');
+    const toolTitle = document.getElementById('sigmet-tool-title');
 
     if (e.layer === turbulenceLayerGroup) {
         flSelectorContainer.classList.add('hidden');
@@ -2513,8 +2514,9 @@ map.on('overlayremove', (e) => {
                 clearDrawBtn.click(); 
             }
         } else {
-            // JIKA Icing masih menyala saat Turb dimatikan, kembalikan alat ke SEV ICE
+            // JIKA Icing masih menyala saat Turb dimatikan, kembalikan alat dan judul ke SEV ICE
             if (hazardDropdown) hazardDropdown.value = 'SEV ICE';
+            if (toolTitle) toolTitle.innerText = 'SIGMET Creation Tool (SEV ICE)';
         }
     }
     
@@ -2534,8 +2536,9 @@ map.on('overlayremove', (e) => {
                 clearDrawBtn.click(); 
             }
         } else {
-            // JIKA Turb masih menyala saat Icing dimatikan, kembalikan alat ke SEV TURB
+            // JIKA Turb masih menyala saat Icing dimatikan, kembalikan alat dan judul ke SEV TURB
             if (hazardDropdown) hazardDropdown.value = 'SEV TURB';
+            if (toolTitle) toolTitle.innerText = 'SIGMET Creation Tool (SEV TURB)';
         }
     }
 });
