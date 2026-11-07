@@ -2458,6 +2458,7 @@ function formatCoordinate(lat, lng) {
 // 4. Logika untuk menampilkan/menyembunyikan panel (tidak berubah)
 const turbulenceLayerGroup = L.layerGroup();
 // Event Listner Munculnya Layer di Peta
+// Event Listner Munculnya Layer di Peta
 map.on('overlayadd', (e) => {
     if (e.layer === turbulenceLayerGroup) {
         createLayersForFlightLevel(flSelector.value);
@@ -2466,6 +2467,9 @@ map.on('overlayadd', (e) => {
         sliderContainer.classList.remove('hidden');
         updateMapAndUI(parseInt(timeSlider.value));
         map.attributionControl.addAttribution('EDR data © World Area Forecast System');
+        
+        // KODE YANG HILANG: Tampilkan Alat SIGMET saat layer Turbulensi aktif
+        if (sigmetToolPanel) sigmetToolPanel.classList.remove('hidden');
     }
     
     if (e.layer === icingLayerGroup) {
@@ -2475,6 +2479,13 @@ map.on('overlayadd', (e) => {
         sliderContainer.classList.remove('hidden');
         updateMapAndUI(parseInt(timeSlider.value));
         map.attributionControl.addAttribution('Icing data © World Area Forecast System');
+        
+        // KODE YANG HILANG: Tampilkan Alat SIGMET saat layer Icing aktif
+        if (sigmetToolPanel) sigmetToolPanel.classList.remove('hidden');
+        
+        // Otomatis ubah dropdown Hazard ke SEV ICE jika layer Icing dinyalakan
+        const hazardDropdown = document.getElementById('sigmet-hazard');
+        if (hazardDropdown) hazardDropdown.value = 'SEV ICE';
     }
 });
 
@@ -2489,8 +2500,14 @@ map.on('overlayremove', (e) => {
         }
         map.attributionControl.removeAttribution('EDR data © World Area Forecast System');
         
-        // Sembunyikan slider HANYA JIKA layer Icing juga tidak aktif
-        if (!map.hasLayer(icingLayerGroup)) sliderContainer.classList.add('hidden');
+        // Sembunyikan slider dan Alat SIGMET JIKA layer Icing juga tidak aktif
+        if (!map.hasLayer(icingLayerGroup)) {
+            sliderContainer.classList.add('hidden');
+            if (sigmetToolPanel) {
+                sigmetToolPanel.classList.add('hidden');
+                clearDrawBtn.click(); // Bersihkan poligon yang masih tertinggal
+            }
+        }
     }
     
     if (e.layer === icingLayerGroup) {
@@ -2502,8 +2519,14 @@ map.on('overlayremove', (e) => {
         }
         map.attributionControl.removeAttribution('Icing data © World Area Forecast System');
         
-        // Sembunyikan slider HANYA JIKA layer Turbulensi juga tidak aktif
-        if (!map.hasLayer(turbulenceLayerGroup)) sliderContainer.classList.add('hidden');
+        // Sembunyikan slider dan Alat SIGMET JIKA layer Turbulensi juga tidak aktif
+        if (!map.hasLayer(turbulenceLayerGroup)) {
+            sliderContainer.classList.add('hidden');
+            if (sigmetToolPanel) {
+                sigmetToolPanel.classList.add('hidden');
+                clearDrawBtn.click(); // Bersihkan poligon yang masih tertinggal
+            }
+        }
     }
 });
 
