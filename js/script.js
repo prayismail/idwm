@@ -1996,6 +1996,57 @@ window.copyInlineCancelText = function(btn) {
         flSelector.value = "301";
     }
 
+// =====================================================================
+// === LOGIKA LAYER ICING (WAFS) ===
+// =====================================================================
+
+const icingFlSelectorContainer = document.getElementById('icing-fl-selector-container');
+const icingFlSelector = document.getElementById('icing-fl-selector');
+const icingLegend = document.getElementById('icing-legend');
+
+let icingLayers = {};
+let currentIcingLayer = null;
+const icingLayerGroup = L.layerGroup(); // Layer mandiri untuk Icing
+
+// (Catatan: Pastikan variabel flightLevels lama dikembalikan khusus untuk teks Turbulensi)
+// Gunakan array terpisah ini khusus untuk Icing karena jangkauan FL-nya berbeda
+const icingFlightLevels = [
+    { name: "Icing FL300/301mb", code: "301" }, 
+    { name: "Icing FL240/393mb", code: "393" },
+    { name: "Icing FL180/506mb", code: "506" }, 
+    { name: "Icing FL140/595mb", code: "595" },
+    { name: "Icing FL100/697mb", code: "697" }, 
+    { name: "Icing FL060/812mb", code: "812" }
+];
+
+function populateIcingDropdown() {
+    icingFlightLevels.forEach(level => {
+        const option = document.createElement('option');
+        option.value = level.code;
+        option.textContent = level.name;
+        icingFlSelector.appendChild(option);
+    });
+    icingFlSelector.value = "301";
+}
+populateIcingDropdown();
+
+function createIcingLayersForFlightLevel(levelCode) {
+    icingLayers = {};
+    forecastHours.forEach(hour => {
+        // Perhatikan akhiran "_ice_m.png" yang merupakan sandi khusus icing di AWC
+        const imageUrl = `https://aviationweather.gov/data/products/wafs/${wafsInfo.dateString}/${wafsInfo.cycle}/${wafsInfo.dateString}_${wafsInfo.cycle}_F${hour}_wafs_${levelCode}_icsev_m.png`;
+        
+        icingLayers[hour] = L.imageOverlay(imageUrl, imageBound2, { 
+            opacity: 0.85, 
+            interactive: false 
+        });
+    });
+}
+
+icingFlSelector.addEventListener('change', (e) => {
+    createIcingLayersForFlightLevel(e.target.value);
+    updateMapAndUI(parseInt(timeSlider.value));
+});
     // =====================================================================
 // FUNGSI DIKEMBALIKAN KE L.imageOverlay DENGAN BOUNDS TERKALIBRASI
 // =====================================================================
@@ -2012,21 +2063,35 @@ function createLayersForFlightLevel(levelCode) {
     });
 }
     function updateMapAndUI(index) {
-        if (currentTurbulenceLayer && map.hasLayer(currentTurbulenceLayer)) {
-            map.removeLayer(currentTurbulenceLayer);
+    const hour = forecastHours[index];
+    
+    // 1. Update Layer Turbulence (Jika sedang dicentang)
+    if (map.hasLayer(turbulenceLayerGroup)) {
+        if (currentTurbulenceLayer && map.hasLayer(currentTurbulenceLayer)) map.removeLayer(currentTurbulenceLayer);
+        const newTurbLayer = turbulenceLayers[hour];
+        if (newTurbLayer) {
+            newTurbLayer.addTo(map);
+            currentTurbulenceLayer = newTurbLayer;
         }
-        const hour = forecastHours[index];
-        const newLayer = turbulenceLayers[hour];
-        if (newLayer) {
-            newLayer.addTo(map);
-            currentTurbulenceLayer = newLayer;
-        }
-        const validTime = new Date(wafsInfo.baseDate);
-        validTime.setUTCHours(validTime.getUTCHours() + parseInt(hour));
-        const timeString = validTime.toUTCString().replace("GMT", "UTC");
-        timeDisplay.textContent = `+${hour}hr ${timeString.slice(17,22)} UTC ${timeString.slice(5, 16)}`;
-        timeSlider.value = index;
     }
+
+    // 2. Update Layer Icing (Jika sedang dicentang)
+    if (map.hasLayer(icingLayerGroup)) {
+        if (currentIcingLayer && map.hasLayer(currentIcingLayer)) map.removeLayer(currentIcingLayer);
+        const newIceLayer = icingLayers[hour];
+        if (newIceLayer) {
+            newIceLayer.addTo(map);
+            currentIcingLayer = newIceLayer;
+        }
+    }
+
+    // 3. Update Label Slider
+    const validTime = new Date(wafsInfo.baseDate);
+    validTime.setUTCHours(validTime.getUTCHours() + parseInt(hour));
+    const timeString = validTime.toUTCString().replace("GMT", "UTC");
+    timeDisplay.textContent = `+${hour}hr ${timeString.slice(17,22)} UTC ${timeString.slice(5, 16)}`;
+    timeSlider.value = index;
+}
     
     // Inisialisasi Awal dan Event Listeners
     wafsInfo = getLatestWafsCycle();
@@ -2390,33 +2455,55 @@ function formatCoordinate(lat, lng) {
 
 // 4. Logika untuk menampilkan/menyembunyikan panel (tidak berubah)
 const turbulenceLayerGroup = L.layerGroup();
+// Event Listner Munculnya Layer di Peta
 map.on('overlayadd', (e) => {
     if (e.layer === turbulenceLayerGroup) {
         createLayersForFlightLevel(flSelector.value);
         flSelectorContainer.classList.remove('hidden');
         document.getElementById('turbulence-legend').classList.remove('hidden');
         sliderContainer.classList.remove('hidden');
-        updateMapAndUI(0);
+        updateMapAndUI(parseInt(timeSlider.value));
         map.attributionControl.addAttribution('EDR data © World Area Forecast System');
-        sigmetToolPanel.classList.remove('hidden');
+    }
+    
+    if (e.layer === icingLayerGroup) {
+        createIcingLayersForFlightLevel(icingFlSelector.value);
+        icingFlSelectorContainer.classList.remove('hidden');
+        icingLegend.classList.remove('hidden');
+        sliderContainer.classList.remove('hidden');
+        updateMapAndUI(parseInt(timeSlider.value));
+        map.attributionControl.addAttribution('Icing data © World Area Forecast System');
     }
 });
 
+// Event Listener Hilangnya Layer dari Peta
 map.on('overlayremove', (e) => {
     if (e.layer === turbulenceLayerGroup) {
         flSelectorContainer.classList.add('hidden');
         document.getElementById('turbulence-legend').classList.add('hidden');
-        sliderContainer.classList.add('hidden');
         if (currentTurbulenceLayer) {
             map.removeLayer(currentTurbulenceLayer);
             currentTurbulenceLayer = null;
         }
         map.attributionControl.removeAttribution('EDR data © World Area Forecast System');
-        sigmetToolPanel.classList.add('hidden');
-        clearDrawBtn.click();
+        
+        // Sembunyikan slider HANYA JIKA layer Icing juga tidak aktif
+        if (!map.hasLayer(icingLayerGroup)) sliderContainer.classList.add('hidden');
+    }
+    
+    if (e.layer === icingLayerGroup) {
+        icingFlSelectorContainer.classList.add('hidden');
+        icingLegend.classList.add('hidden');
+        if (currentIcingLayer) {
+            map.removeLayer(currentIcingLayer);
+            currentIcingLayer = null;
+        }
+        map.attributionControl.removeAttribution('Icing data © World Area Forecast System');
+        
+        // Sembunyikan slider HANYA JIKA layer Turbulensi juga tidak aktif
+        if (!map.hasLayer(turbulenceLayerGroup)) sliderContainer.classList.add('hidden');
     }
 });
-
 
 
 var vaAdvisoryLayer = L.layerGroup();
@@ -2581,6 +2668,7 @@ map.on('overlayremove', function(e) {
 var overlayMaps = {
 			"Prakiraan Cuaca": weatherForecastLayer,
 	    "Turbulence (EDR)": turbulenceLayerGroup,
+	"Icing Index ": icingLayerGroup,
             "Satelit Visible": VISsatelliteLayer,
             "Satelit Inframerah": IRsatelliteLayer,
 	    "Satelit Uap Air": WVsatelliteLayer,
