@@ -2327,12 +2327,12 @@ function updateCoordinatesFromLayer(layer) {
 
 
 function generateSigmetText() {
-    const hazard = document.getElementById('sigmet-hazard') ? document.getElementById('sigmet-hazard').value : 'SEV TURB';
-    const phenomenon = phenomenonSelect.value;
+    
+    
 	const seq = document.getElementById('sigmet-seq').value.padStart(2, '0') || 'XX';
     const isCancelMode = cancelModeToggle ? cancelModeToggle.checked : false;
     const origSeq = origSeqInput && origSeqInput.value ? origSeqInput.value.padStart(2, '0') : 'XX';
-
+    const hazard = document.getElementById('sigmet-hazard') ? document.getElementById('sigmet-hazard').value : 'SEV TURB';
     const phenomenon = phenomenonSelect.value;
     const startTimeStr = startTimeInput.value;
     const endTimeStr = endTimeInput.value;
