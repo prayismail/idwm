@@ -3791,7 +3791,7 @@ document.addEventListener('DOMContentLoaded', function() {
             isFirstCheck = true;
             checkForNewVAA();
             if (vaaCheckerInterval) clearInterval(vaaCheckerInterval);
-            vaaCheckerInterval = setInterval(checkForNewVAA, 30000); // Cek setiap 30 detik
+            vaaCheckerInterval = setInterval(checkForNewVAA, 45000); // Cek setiap 45 detik
         }
     });
     map.on('overlayremove', function(e) {
