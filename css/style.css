@@ -868,7 +868,7 @@
         #sigmet-tool {
             position: absolute; /* PENTING: Agar tombol X bisa diposisikan di dalamnya */
             /* ... sisa aturan #sigmet-tool tetap sama ... */
-            top: 80px; right: 10px; width: 350px;
+            bottom: 30px; right: 10px; width: 350px;
             background: rgba(255, 255, 255, 0.9); color: #333; z-index: 4001;
             padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
             font-size: 12px; max-height: 85vh; display: flex; flex-direction: column;
