@@ -831,9 +831,29 @@
 @media screen and (max-width: 768px) {
 	 #sigmet-tool {
         display: none !important;}
-            #fl-selector-container { top: auto; bottom: 180px; left: 50%; transform: translateX(-50%); width: 50vw; }
-            #fl-selector { width: 100%; }
-            #turbulence-legend { bottom: 90px; width: 90vw; padding: 5px; }
+            /* 1. GABUNGKAN WADAH FL SELECTOR TURB & ICING */
+    #fl-selector-container,
+    #icing-fl-selector-container { 
+        top: auto !important; 
+        bottom: 180px !important; 
+        left: 50% !important; 
+        transform: translateX(-50%) !important; 
+        width: 50vw !important; 
+    }
+    
+    /* 2. GABUNGKAN KOTAK DROPDOWN TURB & ICING */
+    #fl-selector,
+    #icing-fl-selector { 
+        width: 100% !important; 
+    }
+    
+    /* 3. GABUNGKAN POSISI LEGENDA TURB & ICING */
+    #turbulence-legend,
+    #icing-legend { 
+        bottom: 90px !important; 
+        width: 90vw !important; 
+        padding: 5px !important; 
+    }
             #turbulence-legend .legend-scale, #turbulence-legend .legend-labels { width: 90%; }
             #turbulence-legend .legend-color { flex-grow: 1; width: auto; height: 20px; }
             #turbulence-legend .legend-labels span:nth-child(1) { left: 2%; }
