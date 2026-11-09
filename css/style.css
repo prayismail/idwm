@@ -156,6 +156,7 @@
 /* Textarea untuk menampilkan teks SIGMET */
 .sigmet-output-container textarea {
     width: 100%;
+	height: 150px;
     box-sizing: border-box; /* Agar padding tidak merusak layout */
     background-color: #2e2e2e;
     color: #f0f0f0;
@@ -164,6 +165,9 @@
     border-radius: 4px;
     padding: 10px;
     margin-bottom: 8px;
+	white-space: pre-wrap; /* Memaksa teks yang kepanjangan untuk turun ke baris baru */
+    overflow-y: auto;      /* Memunculkan scrollbar atas-bawah saja */
+    resize: vertical;
 }
 
 /* Tombol "Salin Teks" di bawah textarea */
