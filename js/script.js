@@ -2916,7 +2916,8 @@ var vaaPolygonPreviewLayer = L.layerGroup();
 let vaaCheckerInterval = null;
 let lastAdvisoryData = null;
 let isFirstCheck = true;
-const vaacApiUrl = 'https://idwm-vaac.netlify.app/api/check-vaac'; // Pastikan URL API Anda benar
+//const vaacApiUrl = 'https://idwm-vaac.netlify.app/api/check-vaac'; // Pastikan URL API Anda benar
+const vaacApiUrl = 'https://vaac-idwm.vercel.app/api/check-vaac'; // Pastikan URL API Anda benar
 const debugStatusElement = document.getElementById('va-debug-status');
 // Data Poligon WAAF untuk Double Protect di Frontend
 const firUPG_geojson_frontend = {
