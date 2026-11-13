@@ -2984,12 +2984,22 @@ function isPointInPolygon(point, polygonArray) {
 // --- Fungsi Helper ---
 
 /**
- * 1. Mengambil data VAA paling baru dari API backend.
+ * 1. Mengambil data VAA paling baru dari API backend (dengan Delta Check).
  */
 async function fetchLatestVAA() {
     updateDebugStatus('Mengambil data VAA...');
     try {
-        const response = await fetch(`${vaacApiUrl}?t=${new Date().getTime()}`);
+        // Ambil hash terakhir jika bukan pengecekan pertama kali
+        const currentHash = (!isFirstCheck && lastAdvisoryData && lastAdvisoryData.advisoryHash)
+            ? lastAdvisoryData.advisoryHash
+            : null;
+
+        // Sisipkan ?lastHash=... jika sudah ada data sebelumnya
+        const requestUrl = currentHash
+            ? `${vaacApiUrl}?lastHash=${encodeURIComponent(currentHash)}`
+            : vaacApiUrl;
+
+        const response = await fetch(requestUrl);
         if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
         const data = await response.json();
         if (!data || data.error) throw new Error(data ? data.error : 'Data VAA tidak valid');
@@ -3703,7 +3713,7 @@ preloadBmkgLogo();
 
 /**
  * 7. Fungsi Pengecek Utama yang berjalan periodik.
- *    (LOGIKA DIPERBARUI UNTUK MENGGUNAKAN HASH DAN FILTER INDONESIA)
+ *    (LOGIKA DIPERBARUI UNTUK MENGGUNAKAN HASH, HEMAT KUOTA, DAN FILTER INDONESIA)
  */
 async function checkForNewVAA() {
     const data = await fetchLatestVAA();
@@ -3711,6 +3721,13 @@ async function checkForNewVAA() {
         const errorMsg = 'Data VAA tidak lengkap (hash tidak ada).';
         console.error(`[VAA] ${errorMsg}`);
         updateDebugStatus(errorMsg, true);
+        return;
+    }
+
+    // [TAMBAHAN HEMAT KUOTA] Jika backend menyatakan advisory belum berubah, langsung berhenti!
+    if (data.unchanged === true) {
+        const logMsg = `Status OK (Hemat Kuota). Hash masih sama: ${data.advisoryHash.substring(0, 7)}...`;
+        updateDebugStatus(logMsg);
         return;
     }
 
@@ -3743,8 +3760,7 @@ async function checkForNewVAA() {
     if (data.advisoryHash !== lastAdvisoryData.advisoryHash) {
         lastAdvisoryData = data;
 
-        // --- FILTER 1 (Backend): Cek penolakan dari Cloudflare ---
-        // (Disesuaikan dengan pesan penolakan yang baru dari backend)
+        // --- FILTER 1 (Backend): Cek penolakan dari Backend ---
         if (data.message && data.message.includes("Outside FIR Ujung Pandang")) {
             console.log("[VAA] VAA diabaikan dari Backend: " + data.message);
             updateDebugStatus(`Status OK. VAA ditolak oleh backend.`);
@@ -3771,7 +3787,7 @@ async function checkForNewVAA() {
         const logMsg = `BARU: Hash baru terdeteksi! Menampilkan notifikasi ${mapInfo ? mapInfo.volcanoName : ''}`;
         console.log(`[VAA] ${logMsg}`);
         updateDebugStatus(logMsg);
-		saveToArchive(data); // <--- TAMBAHKAN BARIS utk ARSIP VAA
+        saveToArchive(data); // <--- Menyimpan ke arsip VAA
         showVaaNotificationOnMap(data);
 
     } else {
@@ -3779,7 +3795,6 @@ async function checkForNewVAA() {
         updateDebugStatus(logMsg);
     }
 }
-
 
 // --- Event Listeners & Helper ---
 document.addEventListener('DOMContentLoaded', function() {
